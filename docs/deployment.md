@@ -1,45 +1,59 @@
-# Deployment and canonical routing
+# Production deployment
 
-## Required sequence
+## Existing project
 
-1. Complete checks and a production build.
-2. Commit source, lockfile, migration, tests and documentation to **tahirmahm/Syrka-Roadmap**.
-3. Push **main**. Confirm `git ls-remote origin refs/heads/main` equals the local full SHA, and inspect the fetched remote tree for actual source/build/docs.
-4. Only then inspect the authorized Vercel account for an existing project linked to this repository. Reuse it if present; otherwise create exactly one free/Hobby project, preferably **syrka-roadmap**, using Vercel's GitHub repository import. Do not upload a disconnected CLI deployment.
-5. Set main as production branch, use Next.js framework defaults, `npm ci`, `npm run build`, and deploy from the verified Git commit. Do not enable paid services.
-6. Observe the production deployment ready state and verify the actual public URL, demo, imported-source branches, persistence, mobile layouts and existing app links. Record deployment ID and Git SHA.
+- Vercel project: **syrkaroadmap**
+- Team: **tahirmahmood439wel-gmailcoms-projects**
+- Plan: **Hobby**
+- Repository: **tahirmahm/Syrka-Roadmap**
+- Production branch: **main**
+- Production alias: **https://syrkaroadmap.vercel.app**
+- Framework: **Next.js**
+- Install: `npm ci`
+- Build: `npm run build`
+- Output: framework default
+- Node: **24.x**
 
-## Manual deployment selected
+The existing project was reused; no new project was created. Other Syrka projects and DNS were not changed. The framework setting was explicitly corrected from an empty setting to Next.js so Vercel packages server routes and framework assets correctly.
 
-The user chose to deploy manually from GitHub. After the verified push, import the existing repository in Vercel, reuse an existing linked project if one exists, select the free/Hobby tier and deploy main. No Vercel token is required in this cloud environment for manual import. The previously saved token requirement can be removed from environment settings. No automated Vercel deployment is being attempted.
+## Reproduce a deployment
 
-## External service status
+Run lint, strict type checks, unit/database tests and the production build before changing application source on main. Commit and push to the existing GitHub repository. Verify the remote SHA and source tree before deployment. The GitHub-connected Vercel project builds main automatically. For a deliberate API-triggered rebuild, provide a GitHub `gitSource` with this repository ID, main ref and verified pushed SHA; never upload a disconnected local snapshot.
 
-There is no configured Vercel account credential in this environment. An earlier onboarding draft declared **VERCEL_TOKEN** scoped to `api.vercel.com`; this is unnecessary for the user-selected manual deployment. A Vercel API credential alone does not prove GitHub App authorization; repository import may still require the account owner to authorize Vercel's GitHub integration. No Vercel project, deployment or URL is claimed until observed.
+Check the actual deployment's source SHA, target, build logs and Ready state, then verify the public application in a browser. A saved project link or Ready state alone does not establish functional correctness. Record any browser/network limitations separately.
 
-No dedicated Supabase project is configured, and no account-management tooling/credential is available. The demo intentionally runs without one. Use only a new dedicated free project within account limits; do not upgrade or reuse Campus/Workspace databases. Hosted auth, real issuer verification and cloud persistence still need separate provisioning and validation.
+In this cloud machine, the CLI is available after:
 
-## `/roadmaps` integration
+```sh
+export PATH="/workspace/.vercel-tools/bin:$PATH"
+vercel whoami --global-config /workspace/.vercel-tools/config
+```
 
-Do not modify the existing domain-owning Syrka project or DNS without approval for its exact changes. Inspect its actual routing configuration first. The domain already serves Campus and Workspace; a new project cannot independently claim the `/roadmaps` path.
+CLI browser sign-in is configured separately from application authentication. Do not read, copy or commit CLI authentication files. If login expires, use `vercel login` and the official browser/device authorization flow. No manually supplied Vercel token is necessary for this workflow. `.vercel/` and `.env.local` remain ignored. Never commit credentials or generated dependencies.
 
-After a dedicated GitHub-connected Roadmaps deployment works, the domain-owning project can receive a narrowly scoped rewrite, for example:
+The demo needs no application environment variables. Hosted Supabase, trusted Career Passport ingestion and external AI remain unconfigured. Use only a dedicated free Supabase project if one is provisioned; do not reuse Campus/Workspace databases or enable paid services.
+
+## Canonical `/roadmaps` integration
+
+**https://www.syrka.co/roadmaps is not configured.** Do not modify the existing domain-owning Syrka project or DNS without approval for the exact changes. Inspect its actual routing configuration first. The domain already serves Campus and Workspace; a separate project cannot independently claim a path on that host.
+
+A narrowly scoped rewrite proposal for the domain owner is:
 
 ```json
 {
   "rewrites": [
     {
       "source": "/roadmaps",
-      "destination": "https://ACTUAL-ROADMAPS-HOST/roadmaps"
+      "destination": "https://syrkaroadmap.vercel.app/roadmaps"
     },
     {
       "source": "/roadmaps/:path*",
-      "destination": "https://ACTUAL-ROADMAPS-HOST/roadmaps/:path*"
+      "destination": "https://syrkaroadmap.vercel.app/roadmaps/:path*"
     }
   ]
 }
 ```
 
-This is a proposal, not an applied change or fabricated host. Before requesting approval, prepare the actual diff against the identified owner repository and merge it with its existing rules. Build the target project with both `ROADMAP_BASE_PATH=/roadmaps` and `NEXT_PUBLIC_BASE_PATH=/roadmaps` so assets, standard links and in-app navigation agree. Next.js configuration handles client links with basePath. Brand masks explicitly use the public base path. Configure future Supabase callbacks on the canonical origin only after secure shared-identity decisions. No tokens are passed through URLs.
+This is a proposal, not an applied configuration. Prepare the actual diff against the identified owner repository and preserve all existing rewrite rules. Before requesting approval, validate a prefixed Roadmaps build with both `ROADMAP_BASE_PATH=/roadmaps` and `NEXT_PUBLIC_BASE_PATH=/roadmaps`. Next.js handles client-link base paths; brand masks use the public base path explicitly. Validate fonts, assets, direct deep links, refreshes, API routes and sign-in links. Future authentication callbacks need their own verified canonical-origin configuration. Never pass authentication tokens through URLs.
 
-Run the full browser suite against the prefixed build and verify direct deep links, refreshes, brand/fonts, `_next` assets, API routes and sign-in links before integrating. Keep the dedicated root deployment while canonical integration is blocked; canonical integration is currently pending, not completed.
+The current production project serves the app at its root. Retain that dedicated deployment until canonical integration has been separately approved and tested.
