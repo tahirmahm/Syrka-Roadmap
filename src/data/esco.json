@@ -1,0 +1,533 @@
+{
+  "source": "European Commission ESCO public API",
+  "retrievedAt": "2026-10-27T15:33:27.751048+00:00",
+  "release": "API default; explicit release not returned, not asserted",
+  "licenceNotice": "European Commission reuse policy; attribution retained. See https://commission.europa.eu/legal-notice_en",
+  "occupations": [
+    {
+      "destinationId": "product-designer",
+      "uri": "http://data.europa.eu/esco/occupation/96e20037-0a25-4bf6-a25e-808d1605d890",
+      "label": "user interface designer",
+      "description": {
+        "literal": "User interface designers are in charge of designing user interfaces for applications and systems. They perform layout, graphics and dialogues design activities as well as adaptation activities.",
+        "mimetype": "plain/text"
+      },
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/occupation?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Foccupation%2F96e20037-0a25-4bf6-a25e-808d1605d890&language=en",
+      "essentialSkills": [
+        "http://data.europa.eu/esco/skill/a8797f21-1af0-4c5e-98ca-bf1442929363",
+        "http://data.europa.eu/esco/skill/1019423b-3368-4f83-b24f-19e5fa23e816",
+        "http://data.europa.eu/esco/skill/465e7c78-cd26-4503-a5ca-40009e807705",
+        "http://data.europa.eu/esco/skill/8696aff0-18c0-4ba6-a4d0-9a21861b3e5e",
+        "http://data.europa.eu/esco/skill/7364cc39-b9c0-449f-9416-57723e2fd9c4",
+        "http://data.europa.eu/esco/skill/f0f5bb34-71df-4715-9c9e-03567b76ec8f",
+        "http://data.europa.eu/esco/skill/7814e88f-c133-4c3b-b27f-857afa145d42",
+        "http://data.europa.eu/esco/skill/69bbd53f-fbb0-4476-b4b2-ef7844464e28",
+        "http://data.europa.eu/esco/skill/d9e5349e-8791-49c2-8ba4-839fdd1606c2",
+        "http://data.europa.eu/esco/skill/9136cbf1-7916-4f1c-bc9a-0318ee1d6016",
+        "http://data.europa.eu/esco/skill/a71577b2-7550-4222-88ee-dcbd2d881516",
+        "http://data.europa.eu/esco/skill/2c28fc20-8a60-4311-8899-5ef8729c05b3",
+        "http://data.europa.eu/esco/skill/c4b626c1-e71c-44ec-9f88-042766f37fcc",
+        "http://data.europa.eu/esco/skill/2d6d4784-0992-48e7-b100-22d7229b3f0a",
+        "http://data.europa.eu/esco/skill/f058bf62-70d1-4f5e-be2a-8b26fac24a96",
+        "http://data.europa.eu/esco/skill/de0be6e8-644c-4cc9-9c8d-925dd98dda56",
+        "http://data.europa.eu/esco/skill/dc72ad0a-c5dc-4abd-bc0d-ca43e82162e1",
+        "http://data.europa.eu/esco/skill/c1f29568-f2bb-49d2-b6c2-28748bd1629b",
+        "http://data.europa.eu/esco/skill/8c4c49d4-9708-433f-8ca7-bf2c5211ee49",
+        "http://data.europa.eu/esco/skill/be64bb4c-84ac-4c83-8cc7-fc8593e15136",
+        "http://data.europa.eu/esco/skill/fc4fcb4b-993f-4f2c-b158-c2171ec18ed8",
+        "http://data.europa.eu/esco/skill/3e23db60-0c3d-498a-a6ac-ffbed0ecb033",
+        "http://data.europa.eu/esco/skill/fd33c66c-70c4-40e6-b87c-5495bd3bf26e",
+        "http://data.europa.eu/esco/skill/0af062de-eb43-41e9-9b96-249e2cd22d26",
+        "http://data.europa.eu/esco/skill/7482a123-e801-48de-9733-262125671410"
+      ]
+    },
+    {
+      "destinationId": "frontend-developer",
+      "uri": "http://data.europa.eu/esco/occupation/c40a2919-48a9-40ea-b506-1f34f693496d",
+      "label": "web developer",
+      "description": {
+        "literal": "Web developers develop, implement and document web-accessible software based on the designs provided. They align the client's web presence with its business strategy, troubleshoot software problems and issues and look for ways to improve the application.",
+        "mimetype": "plain/text"
+      },
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/occupation?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Foccupation%2Fc40a2919-48a9-40ea-b506-1f34f693496d&language=en",
+      "essentialSkills": [
+        "http://data.europa.eu/esco/skill/2b7a79e5-84d8-4880-be66-3d9bb05bea17",
+        "http://data.europa.eu/esco/skill/9d2e926f-53d9-41f5-98f3-19dfaa687f3f",
+        "http://data.europa.eu/esco/skill/2d6d4784-0992-48e7-b100-22d7229b3f0a",
+        "http://data.europa.eu/esco/skill/6014921e-1d25-4039-adc2-04852d61880e",
+        "http://data.europa.eu/esco/skill/c4b1f326-224a-420a-b8b3-814a8f13b6cb",
+        "http://data.europa.eu/esco/skill/c2999f0c-eb37-4cdf-b9b0-82107b628794",
+        "http://data.europa.eu/esco/skill/925463a7-d51f-4d5b-9f79-4d28cf30acde",
+        "http://data.europa.eu/esco/skill/04dfd9fb-e0cf-40f6-96c6-9d2280c4347e",
+        "http://data.europa.eu/esco/skill/f28617ad-afdd-4041-814c-216153a38998",
+        "http://data.europa.eu/esco/skill/69bbd53f-fbb0-4476-b4b2-ef7844464e28",
+        "http://data.europa.eu/esco/skill/797a4416-0b8d-44f3-8fcd-eb10bd0be6b4",
+        "http://data.europa.eu/esco/skill/e74f4f21-8d45-412c-b5c3-652e6167ee32",
+        "http://data.europa.eu/esco/skill/8b94aa1e-89c9-459d-b3b4-1dfab8dec2df",
+        "http://data.europa.eu/esco/skill/8696aff0-18c0-4ba6-a4d0-9a21861b3e5e",
+        "http://data.europa.eu/esco/skill/71746a0b-e58d-4dc4-ad03-bd84082eae21",
+        "http://data.europa.eu/esco/skill/2522a6ce-3202-4ac8-9f5b-b9cb5a3a83a1",
+        "http://data.europa.eu/esco/skill/85c11255-469f-41bd-a6d1-382bc4a87783",
+        "http://data.europa.eu/esco/skill/901105f8-3a08-453e-b1dc-23619e317fd3",
+        "http://data.europa.eu/esco/skill/0af062de-eb43-41e9-9b96-249e2cd22d26",
+        "http://data.europa.eu/esco/skill/21d2f96d-35f7-4e3f-9745-c533d2dd6e97"
+      ]
+    },
+    {
+      "destinationId": "data-analyst",
+      "uri": "http://data.europa.eu/esco/occupation/d3edb8f8-3a06-47a0-8fb9-9b212c006aa2",
+      "label": "data analyst",
+      "description": {
+        "literal": "Data analysts import, inspect, clean, transform, validate, model, or interpret collections of data with regard to the business goals of the company. They ensure that the data sources and repositories provide consistent and reliable data. Data analysts use different algorithms and IT tools as demanded by the situation and the current data. They might prepare reports in the form of visualisations such as graphs, charts, and dashboards.",
+        "mimetype": "plain/text"
+      },
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/occupation?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Foccupation%2Fd3edb8f8-3a06-47a0-8fb9-9b212c006aa2&language=en",
+      "essentialSkills": [
+        "http://data.europa.eu/esco/skill/4a193795-fa63-414e-9f2e-bfdb3924571e",
+        "http://data.europa.eu/esco/skill/327d15c8-29ff-4ad4-a4fe-6536d777a45f",
+        "http://data.europa.eu/esco/skill/93aaf65c-5aad-4e6f-a7ba-ce9bf7c0e6e6",
+        "http://data.europa.eu/esco/skill/4216e465-7baa-4884-a241-54b197bb9278",
+        "http://data.europa.eu/esco/skill/9cf681c7-89ec-470c-b651-7fe03786f586",
+        "http://data.europa.eu/esco/skill/03ff0d53-573a-47a0-a0ad-1995815a4339",
+        "http://data.europa.eu/esco/skill/79e29b8b-47d1-470d-b7b1-32506bfe7d9a",
+        "http://data.europa.eu/esco/skill/348b74cd-49ce-4844-8bdf-ec188b497213",
+        "http://data.europa.eu/esco/skill/c5e8abde-d2ba-4e8e-a65e-720b71180666",
+        "http://data.europa.eu/esco/skill/fecf8a0d-62c4-4e71-9b03-0f4fc2ad7bf5",
+        "http://data.europa.eu/esco/skill/1e77e42a-181f-4b48-8e74-201ce50ffc29",
+        "http://data.europa.eu/esco/skill/31c69100-b612-4a61-8db5-fd314318854c",
+        "http://data.europa.eu/esco/skill/07889c08-7220-47c8-96f7-6068fbea00dc",
+        "http://data.europa.eu/esco/skill/9ff9db9d-d14b-426e-83f3-e7449af6c79f",
+        "http://data.europa.eu/esco/skill/46ec0033-3c71-415e-bcff-b065675ba2dc",
+        "http://data.europa.eu/esco/skill/713fb616-118e-40bc-9366-4a69879a49d5",
+        "http://data.europa.eu/esco/skill/50b100ea-74fd-4706-99db-3e4ca55e51b8",
+        "http://data.europa.eu/esco/skill/7ee4c2ea-b349-4bd2-81a3-ec31475d4833",
+        "http://data.europa.eu/esco/skill/2daec0e6-f0c1-43e8-8178-aedba99130ec",
+        "http://data.europa.eu/esco/skill/25f0ea33-b4a2-4f31-b7b4-7d20e827b180",
+        "http://data.europa.eu/esco/skill/99207709-d076-4cce-ba38-e90d3bb28806",
+        "http://data.europa.eu/esco/skill/a56dec32-05ef-45de-a256-ee6741f356db",
+        "http://data.europa.eu/esco/skill/382c11ed-20d5-4ae7-b60e-15fec527fa6c",
+        "http://data.europa.eu/esco/skill/696e3b5b-8b61-45af-ae4c-3ab700f197ec",
+        "http://data.europa.eu/esco/skill/47a49cd6-097d-457a-9f7b-c290c14930d5",
+        "http://data.europa.eu/esco/skill/cc7370dd-69fa-4c67-a96f-d4d135d38700",
+        "http://data.europa.eu/esco/skill/54c9c155-9293-4329-8ed2-2e76e8b519d4",
+        "http://data.europa.eu/esco/skill/143769cb-b61e-47d8-a61e-eedfbec1016c"
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "uri": "http://data.europa.eu/esco/skill/03ff0d53-573a-47a0-a0ad-1995815a4339",
+      "label": "information structure",
+      "description": "The type of infrastructure which defines the format of data: semi-structured, unstructured and structured.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F03ff0d53-573a-47a0-a0ad-1995815a4339&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/04dfd9fb-e0cf-40f6-96c6-9d2280c4347e",
+      "label": "provide technical documentation",
+      "description": "Prepare documentation for existing and upcoming products or services, describing their functionality and composition in such a way that it is understandable for a wide audience without technical background and compliant with defined requirements and standards. Keep documentation up to date.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F04dfd9fb-e0cf-40f6-96c6-9d2280c4347e&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/07889c08-7220-47c8-96f7-6068fbea00dc",
+      "label": "normalise data",
+      "description": "Reduce data to their accurate core form (normal forms) in order to achieve such results as minimisation of dependency, elimination of redundancy, increase of consistency.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F07889c08-7220-47c8-96f7-6068fbea00dc&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/0af062de-eb43-41e9-9b96-249e2cd22d26",
+      "label": "use markup languages",
+      "description": "Utilise computer languages that are syntactically distinguishable from the text to add annotations to a document, specify layout and process types of documents such as HTML.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F0af062de-eb43-41e9-9b96-249e2cd22d26&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/1019423b-3368-4f83-b24f-19e5fa23e816",
+      "label": "software UI design patterns",
+      "description": "The reusable solutions and formalised best practices to solve common user interface tasks in software development and design.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F1019423b-3368-4f83-b24f-19e5fa23e816&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/143769cb-b61e-47d8-a61e-eedfbec1016c",
+      "label": "business intelligence",
+      "description": "The tools used to transform large amounts of raw data into relevant and helpful business information.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F143769cb-b61e-47d8-a61e-eedfbec1016c&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/1e77e42a-181f-4b48-8e74-201ce50ffc29",
+      "label": "interpret current data",
+      "description": "Analyse data gathered from sources such as market data, scientific papers, customer requirements and questionnaires which are current and up-to-date in order to assess development and innovation in areas of expertise.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F1e77e42a-181f-4b48-8e74-201ce50ffc29&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/21d2f96d-35f7-4e3f-9745-c533d2dd6e97",
+      "label": "computer programming",
+      "description": "The techniques and principles of software development, such as analysis, algorithms, coding, testing and compiling of programming paradigms (e.g. object oriented programming, functional programming) and of programming languages.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F21d2f96d-35f7-4e3f-9745-c533d2dd6e97&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/2522a6ce-3202-4ac8-9f5b-b9cb5a3a83a1",
+      "label": "debug software",
+      "description": "Repair computer code by analysing testing results, locating the defects causing the software to output an incorrect or unexpected result and removing these faults.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F2522a6ce-3202-4ac8-9f5b-b9cb5a3a83a1&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/25f0ea33-b4a2-4f31-b7b4-7d20e827b180",
+      "label": "data mining",
+      "description": "The methods of artificial intelligence, machine learning, statistics and databases used to extract content from a dataset.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F25f0ea33-b4a2-4f31-b7b4-7d20e827b180&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/2b7a79e5-84d8-4880-be66-3d9bb05bea17",
+      "label": "use software design patterns",
+      "description": "Utilise reusable solutions, formalised best practices, to solve common ICT development tasks in software development and design.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F2b7a79e5-84d8-4880-be66-3d9bb05bea17&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/2c28fc20-8a60-4311-8899-5ef8729c05b3",
+      "label": "design process",
+      "description": "Identify the workflow and resource requirements for a particular process, using a variety of tools such as process simulation software, flowcharting and scale models.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F2c28fc20-8a60-4311-8899-5ef8729c05b3&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/2d6d4784-0992-48e7-b100-22d7229b3f0a",
+      "label": "translate requirement concepts into visual design",
+      "description": "Develop visual design from given specifications and requirements, based on the analysis of the scope and target audience. Create a visual representation of ideas such as logos, website graphics, digital games and layouts.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F2d6d4784-0992-48e7-b100-22d7229b3f0a&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/2daec0e6-f0c1-43e8-8178-aedba99130ec",
+      "label": "establish data processes",
+      "description": "Use ICT tools to apply mathematical, algorithmic or other data manipulation processes in order to create information.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F2daec0e6-f0c1-43e8-8178-aedba99130ec&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/31c69100-b612-4a61-8db5-fd314318854c",
+      "label": "execute analytical mathematical calculations",
+      "description": "Apply mathematical methods and make use of calculation technologies in order to perform analyses and devise solutions to specific problems.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F31c69100-b612-4a61-8db5-fd314318854c&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/327d15c8-29ff-4ad4-a4fe-6536d777a45f",
+      "label": "documentation types",
+      "description": "The characteristics of internal and external documentation types aligned with the product life cycle and their specific content types.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F327d15c8-29ff-4ad4-a4fe-6536d777a45f&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/348b74cd-49ce-4844-8bdf-ec188b497213",
+      "label": "visual presentation techniques",
+      "description": "The visual representation and interaction techniques, such as histograms, scatter plots, surface plots, tree maps and parallel coordinate plots, that can be used to present abstract numerical and non-numerical data, in order to reinforce the human understanding of this information.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F348b74cd-49ce-4844-8bdf-ec188b497213&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/382c11ed-20d5-4ae7-b60e-15fec527fa6c",
+      "label": "apply statistical analysis techniques",
+      "description": "Use models (descriptive or inferential statistics) and techniques (data mining or machine learning) for statistical analysis and ICT tools to analyse data, uncover correlations and forecast trends.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F382c11ed-20d5-4ae7-b60e-15fec527fa6c&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/3e23db60-0c3d-498a-a6ac-ffbed0ecb033",
+      "label": "ICT accessibility standards",
+      "description": "The recommendations for making ICT content and applications more accessible to a wider range of people, mostly with disabilities, such as blindness and low vision, deafness and hearing loss and cognitive limitations. It includes standards such as Web Content Accessibility Guidelines (WCAG).",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F3e23db60-0c3d-498a-a6ac-ffbed0ecb033&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/4216e465-7baa-4884-a241-54b197bb9278",
+      "label": "perform data mining",
+      "description": "Explore large datasets to reveal patterns using statistics, database systems or artificial intelligence and present the information in a comprehensible way.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F4216e465-7baa-4884-a241-54b197bb9278&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/465e7c78-cd26-4503-a5ca-40009e807705",
+      "label": "assess users' interaction with ICT applications",
+      "description": "Evaluate how users interact with ICT applications in order to analyse their behaviour, draw conclusions (for instance about their motives, expectations and goals) and improve applications' functionalities.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F465e7c78-cd26-4503-a5ca-40009e807705&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/46ec0033-3c71-415e-bcff-b065675ba2dc",
+      "label": "integrate ICT data",
+      "description": "Combine data from sources to provide unified view of the set of these data.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F46ec0033-3c71-415e-bcff-b065675ba2dc&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/47a49cd6-097d-457a-9f7b-c290c14930d5",
+      "label": "analyse big data",
+      "description": "Collect and evaluate numerical data in large quantities, especially for the purpose of identifying patterns between the data.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F47a49cd6-097d-457a-9f7b-c290c14930d5&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/4a193795-fa63-414e-9f2e-bfdb3924571e",
+      "label": "handle data samples",
+      "description": "Collect and select a set of data from a population by a statistical or other defined procedure.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F4a193795-fa63-414e-9f2e-bfdb3924571e&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/50b100ea-74fd-4706-99db-3e4ca55e51b8",
+      "label": "perform data cleansing",
+      "description": "Detect and correct corrupt records from data sets, ensure that the data become and remain structured according to guidelines.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F50b100ea-74fd-4706-99db-3e4ca55e51b8&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/54c9c155-9293-4329-8ed2-2e76e8b519d4",
+      "label": "define data quality criteria",
+      "description": "Specify the criteria by which data quality is measured for business purposes, such as inconsistencies, incompleteness, usability for purpose and accuracy.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F54c9c155-9293-4329-8ed2-2e76e8b519d4&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/6014921e-1d25-4039-adc2-04852d61880e",
+      "label": "ICT debugging tools",
+      "description": "The ICT tools used to test and debug programs and software code, such as GNU Debugger (GDB), Intel Debugger (IDB), Microsoft Visual Studio Debugger, Valgrind and WinDbg.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F6014921e-1d25-4039-adc2-04852d61880e&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/696e3b5b-8b61-45af-ae4c-3ab700f197ec",
+      "label": "information extraction",
+      "description": "The techniques and methods used for eliciting and extracting information from unstructured or semi-structured digital documents and sources.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F696e3b5b-8b61-45af-ae4c-3ab700f197ec&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/69bbd53f-fbb0-4476-b4b2-ef7844464e28",
+      "label": "web programming",
+      "description": "The programming paradigm that is based on combining markup (which adds context and structure to text) and other web programming code, such as AJAX, javascript and PHP, in order to carry out appropriate actions and visualise the content.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F69bbd53f-fbb0-4476-b4b2-ef7844464e28&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/713fb616-118e-40bc-9366-4a69879a49d5",
+      "label": "implement data quality processes",
+      "description": "Apply quality analysis, validation and verification techniques on data to check data quality integrity.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F713fb616-118e-40bc-9366-4a69879a49d5&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/71746a0b-e58d-4dc4-ad03-bd84082eae21",
+      "label": "collect customer feedback on applications",
+      "description": "Gather a response and analyse data from customers to identify requests or problems in order to improve applications and overall customer satisfaction.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F71746a0b-e58d-4dc4-ad03-bd84082eae21&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/7364cc39-b9c0-449f-9416-57723e2fd9c4",
+      "label": "utilise methodologies for user centered design",
+      "description": "Use design methodologies in which the needs, wishes and limitations of end users of a product, service or process are given extensive attention at each stage of the design process.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F7364cc39-b9c0-449f-9416-57723e2fd9c4&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/7482a123-e801-48de-9733-262125671410",
+      "label": "task algorithmisation",
+      "description": "The techniques to convert unstructured descriptions of a process into step-by-step sequence of actions of a finite number of steps.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F7482a123-e801-48de-9733-262125671410&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/7814e88f-c133-4c3b-b27f-857afa145d42",
+      "label": "ICT security legislation",
+      "description": "The set of legislative rules that safeguards information technology, ICT networks and computer systems and legal consequences which result from their misuse. Regulated measures include firewalls, intrusion detection, anti-virus software and encryption.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F7814e88f-c133-4c3b-b27f-857afa145d42&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/797a4416-0b8d-44f3-8fcd-eb10bd0be6b4",
+      "label": "develop software prototype",
+      "description": "Create a first incomplete or preliminary version of a piece of software application to simulate some specific aspects of the final product.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F797a4416-0b8d-44f3-8fcd-eb10bd0be6b4&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/79e29b8b-47d1-470d-b7b1-32506bfe7d9a",
+      "label": "collect ICT data",
+      "description": "Gather data by designing and applying search and sampling methods.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F79e29b8b-47d1-470d-b7b1-32506bfe7d9a&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/7ee4c2ea-b349-4bd2-81a3-ec31475d4833",
+      "label": "statistics",
+      "description": "The study of statistical theory, methods and practices such as collection, organisation, analysis, interpretation and presentation of data. It deals with all aspects of data including the planning of data collection in terms of the design of surveys and experiments in order to forecast and plan work-related activities.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F7ee4c2ea-b349-4bd2-81a3-ec31475d4833&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/85c11255-469f-41bd-a6d1-382bc4a87783",
+      "label": "interpret technical texts",
+      "description": "Read and understand technical texts that provide information on how to perform a task, usually explained in steps.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F85c11255-469f-41bd-a6d1-382bc4a87783&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/8696aff0-18c0-4ba6-a4d0-9a21861b3e5e",
+      "label": "World Wide Web Consortium standards",
+      "description": "The standards, technical specifications and guidelines developed by the international organisation World Wide Web Consortium (W3C) which allow the design and development of web applications.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F8696aff0-18c0-4ba6-a4d0-9a21861b3e5e&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/8b94aa1e-89c9-459d-b3b4-1dfab8dec2df",
+      "label": "use software libraries",
+      "description": "Utilise collections of codes and software packages which capture frequently used routines to help programmers simplify their work.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F8b94aa1e-89c9-459d-b3b4-1dfab8dec2df&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/8c4c49d4-9708-433f-8ca7-bf2c5211ee49",
+      "label": "develop creative ideas",
+      "description": "Developing new artistic concepts and creative ideas.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F8c4c49d4-9708-433f-8ca7-bf2c5211ee49&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/901105f8-3a08-453e-b1dc-23619e317fd3",
+      "label": "create flowchart diagram",
+      "description": "Compose a diagram that illustrates systematic progress through a procedure or system using connecting lines and a set of symbols.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F901105f8-3a08-453e-b1dc-23619e317fd3&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/9136cbf1-7916-4f1c-bc9a-0318ee1d6016",
+      "label": "human-computer interaction",
+      "description": "The study of the behaviour and interaction between digital devices and human beings.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F9136cbf1-7916-4f1c-bc9a-0318ee1d6016&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/925463a7-d51f-4d5b-9f79-4d28cf30acde",
+      "label": "integrated development environment software",
+      "description": "The suite of software development tools for writing programs, such as compiler, debugger, code editor, code highlights, packaged in a unified user interface, such as Visual Studio or Eclipse.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F925463a7-d51f-4d5b-9f79-4d28cf30acde&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/93aaf65c-5aad-4e6f-a7ba-ce9bf7c0e6e6",
+      "label": "information categorisation",
+      "description": "The process of classifying the information into categories and showing relationships between the data for some clearly defined purposes.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F93aaf65c-5aad-4e6f-a7ba-ce9bf7c0e6e6&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/99207709-d076-4cce-ba38-e90d3bb28806",
+      "label": "resource description framework query language",
+      "description": "The query languages such as SPARQL which are used to retrieve and manipulate data stored in Resource Description Framework format (RDF).",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F99207709-d076-4cce-ba38-e90d3bb28806&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/9cf681c7-89ec-470c-b651-7fe03786f586",
+      "label": "query languages",
+      "description": "The field of standardised computer languages for retrieval of information from a database and of documents containing the needed information.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F9cf681c7-89ec-470c-b651-7fe03786f586&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/9d2e926f-53d9-41f5-98f3-19dfaa687f3f",
+      "label": "tools for software configuration management",
+      "description": "The software programs to perform configuration identification, control, status accounting and audit, such as CVS, ClearCase, Subversion, GIT and TortoiseSVN perform this management.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F9d2e926f-53d9-41f5-98f3-19dfaa687f3f&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/9ff9db9d-d14b-426e-83f3-e7449af6c79f",
+      "label": "manage data",
+      "description": "Administer all types of data resources through their lifecycle by performing data profiling, parsing, standardisation, identity resolution, cleansing, enhancement and auditing. Ensure the data is fit for purpose, using specialised ICT tools to fulfil the data quality criteria.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2F9ff9db9d-d14b-426e-83f3-e7449af6c79f&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/a56dec32-05ef-45de-a256-ee6741f356db",
+      "label": "information confidentiality",
+      "description": "The mechanisms and regulations which allow for selective access control and guarantee that only authorised parties (people, processes, systems and devices) have access to data, the way to comply with confidential information and the risks of non-compliance.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fa56dec32-05ef-45de-a256-ee6741f356db&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/a71577b2-7550-4222-88ee-dcbd2d881516",
+      "label": "graphics editor software",
+      "description": "The field of graphical ICT tools which enable digital editing and composition of graphics, such as GIMP, Adobe Photoshop and Adobe Illustrator, to develop both 2D raster or 2D vector graphics.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fa71577b2-7550-4222-88ee-dcbd2d881516&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/a8797f21-1af0-4c5e-98ca-bf1442929363",
+      "label": "interact with users to gather requirements",
+      "description": "Communicate with users to identify their requirements and collect them. Define all relevant user requirements and document them in an understandable and logical way for further analysis and specification.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fa8797f21-1af0-4c5e-98ca-bf1442929363&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/be64bb4c-84ac-4c83-8cc7-fc8593e15136",
+      "label": "test system accessibility for users with special needs",
+      "description": "Examine whether software interface complies with standards and regulations so that the system can be used by people with special needs.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fbe64bb4c-84ac-4c83-8cc7-fc8593e15136&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/c1f29568-f2bb-49d2-b6c2-28748bd1629b",
+      "label": "manage online content",
+      "description": "Ensure the website content is up to date, organised, attractive and meets the target audience needs, the requirements of the company and international standards by checking the links, setting the publishing time framework and order.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fc1f29568-f2bb-49d2-b6c2-28748bd1629b&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/c2999f0c-eb37-4cdf-b9b0-82107b628794",
+      "label": "style sheet languages",
+      "description": "The field of computer language that conveys the presentation of structured documents such as Cascading Style Sheets (CSS). These documents have to adhere to style sheets, a set of stylistic rules such as font, color and layout.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fc2999f0c-eb37-4cdf-b9b0-82107b628794&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/c4b1f326-224a-420a-b8b3-814a8f13b6cb",
+      "label": "implement front-end website design",
+      "description": "Develop website layout and enhance user experience based on provided design concepts.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fc4b1f326-224a-420a-b8b3-814a8f13b6cb&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/c4b626c1-e71c-44ec-9f88-042766f37fcc",
+      "label": "application usability",
+      "description": "The process through which the learnability, efficiency, usefulness and ease of use of a software application can be defined and measured.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fc4b626c1-e71c-44ec-9f88-042766f37fcc&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/c5e8abde-d2ba-4e8e-a65e-720b71180666",
+      "label": "unstructured data",
+      "description": "The information that is not arranged in a pre-defined manner or does not have a pre-defined data model and is difficult to understand and find patterns in without using techniques such as data mining.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fc5e8abde-d2ba-4e8e-a65e-720b71180666&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/cc7370dd-69fa-4c67-a96f-d4d135d38700",
+      "label": "data quality assessment",
+      "description": "The process of revealing data issues using ​quality indicators, measures and metrics in order to plan data cleansing and data enrichment strategies according to data quality criteria.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fcc7370dd-69fa-4c67-a96f-d4d135d38700&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/d9e5349e-8791-49c2-8ba4-839fdd1606c2",
+      "label": "define technical requirements",
+      "description": "Specify technical properties of goods, materials, methods, processes, services, systems, software and functionalities by identifying and responding to the particular needs that are to be satisfied according to customer requirements.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fd9e5349e-8791-49c2-8ba4-839fdd1606c2&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/dc72ad0a-c5dc-4abd-bc0d-ca43e82162e1",
+      "label": "build business relationships",
+      "description": "Establish a positive, long-term relationship between organisations and interested third parties such as suppliers, distributors, shareholders and other stakeholders in order to inform them of the organisation and its objectives.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fdc72ad0a-c5dc-4abd-bc0d-ca43e82162e1&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/de0be6e8-644c-4cc9-9c8d-925dd98dda56",
+      "label": "software interaction design",
+      "description": "The methodologies for designing interaction between users and a software product or service to satisfy the needs and preferences of most of the people who will interface with the product and to simplify the communication between product and user such as Goal-oriented design.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fde0be6e8-644c-4cc9-9c8d-925dd98dda56&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/e74f4f21-8d45-412c-b5c3-652e6167ee32",
+      "label": "content development processes",
+      "description": "The specialised techniques used to design, write, compile, edit and organise digital content, such as text, graphics and videos for publishing purposes.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Fe74f4f21-8d45-412c-b5c3-652e6167ee32&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/f058bf62-70d1-4f5e-be2a-8b26fac24a96",
+      "label": "design graphics",
+      "description": "Apply a variety of visual techniques in order to design graphic material. Combine graphical elements to communicate concepts and ideas.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Ff058bf62-70d1-4f5e-be2a-8b26fac24a96&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/f0f5bb34-71df-4715-9c9e-03567b76ec8f",
+      "label": "create website wireframe",
+      "description": "Develop an image or set of images that display the functional elements of a website or page, typically used for planning a website's functionality and structure.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Ff0f5bb34-71df-4715-9c9e-03567b76ec8f&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/f28617ad-afdd-4041-814c-216153a38998",
+      "label": "analyse software specifications",
+      "description": "Assess the specifications of a software product or system to be developed by identifying functional and non-functional requirements, constraints and possible sets of use cases which illustrate interactions between the software and its users.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Ff28617ad-afdd-4041-814c-216153a38998&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/fc4fcb4b-993f-4f2c-b158-c2171ec18ed8",
+      "label": "draw design sketches",
+      "description": "Create rough pictures to assist in creating and communicating design concepts.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Ffc4fcb4b-993f-4f2c-b158-c2171ec18ed8&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/fd33c66c-70c4-40e6-b87c-5495bd3bf26e",
+      "label": "design user interface",
+      "description": "Create software or device components which enable interaction between humans and systems or machines, using appropriate techniques, languages and tools so as to streamline interaction while using the system or machine.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Ffd33c66c-70c4-40e6-b87c-5495bd3bf26e&language=en"
+    },
+    {
+      "uri": "http://data.europa.eu/esco/skill/fecf8a0d-62c4-4e71-9b03-0f4fc2ad7bf5",
+      "label": "data models",
+      "description": "The techniques and existing systems used for structuring data elements and showing relationships between them, as well as methods for interpreting the data structures and relationships.",
+      "sourceUrl": "https://ec.europa.eu/esco/api/resource/skill?uri=http%3A%2F%2Fdata.europa.eu%2Fesco%2Fskill%2Ffecf8a0d-62c4-4e71-9b03-0f4fc2ad7bf5&language=en"
+    }
+  ]
+}
