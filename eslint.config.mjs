@@ -5,7 +5,7 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   globalIgnores([
-    ".next/**",
+    ".next/**", "public/document/**", ".cache/**",
     "next-env.d.ts",
     "playwright-report/**",
     "test-results/**",

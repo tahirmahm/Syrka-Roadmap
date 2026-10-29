@@ -1,0 +1,19 @@
+{
+  "version": "esco-english-mirror-3b2d8e6a34c7",
+  "mirrorCommit": "3b2d8e6a34c7f7b0da6e808518b32bb4767d41a3",
+  "retrievedAt": "2026-10-29T18:24:09.672307+00:00",
+  "occupations": 3039,
+  "skills": 13939,
+  "essentialRelations": 67622,
+  "optionalRelations": 61382,
+  "officialSampleLabelMatches": 66,
+  "officialSampleSize": 69,
+  "files": {
+    "occupations_en.csv": "326e766acd77de30c7f7c51c115ab288e85a2823add02c63fc49321b5d9ac104",
+    "skills_en.csv": "5043b546722a252c7dac221c8436a9a9c609ddf664a24773b8175fd1ecfa453d",
+    "occupationSkillRelations_en.csv": "7f6fe7f1be455e0fa9a858d0fa6ecf4f0e3544a0cf4f546dc7f033a7eb5eda55",
+    "broaderRelationsOccPillar_en.csv": "278038ee0d61529b0f3b027f3530e4a3e771812a4532fb477c309c8f93615c87",
+    "broaderRelationsSkillPillar_en.csv": "2fcd3d0fb8a031e22ba06f5b388971b14cb888efd8e4dd5680e9b58e1db14674"
+  },
+  "attribution": "European Commission ESCO. CSVs normalized into an application index; neither mirror software licence nor this transformation changes underlying data rights. See https://commission.europa.eu/legal-notice_en and https://esco.ec.europa.eu/en/use-esco."
+}
