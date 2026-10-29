@@ -281,6 +281,12 @@ const headings: Record<string, ClaimKind> = {
   certifications: "qualification",
   courses: "course",
   employment: "employment",
+  "work experience": "employment",
+  "professional experience": "employment",
+  "research experience": "publication",
+  "technical skills": "skill",
+  "transferable skills": "skill",
+  certificates: "qualification",
   experience: "employment",
   internships: "internship",
   volunteering: "volunteering",
@@ -315,16 +321,21 @@ export async function extractClaims(
         section = line;
         continue;
       }
+      const inline = line.match(/^([^:]{2,40}):\s*.+$/);
+      if (inline && headings[inline[1].toLowerCase().trim()]) {
+        kind = headings[inline[1].toLowerCase().trim()];
+        section = inline[1];
+      }
       const mappings = mapText(line, skills);
       claims.push({
         id: crypto.randomUUID(),
-        kind,
+        kind: kind === "other" && i > 0 && mappings.length ? "skill" : kind,
         text: line,
         quote: line,
         page: page.number,
         section,
-        mappings,
-        approved: false,
+        mappings: mappings.map((m) => ({ ...m, selected: true })),
+        approved: true,
         institution: /university|college|institute/i.test(line)
           ? line
           : undefined,
@@ -344,7 +355,8 @@ export async function extractClaims(
   return claims;
 }
 export function approveClaims(
-  doc: Pick<ExtractedDocument, "id" | "name">,
+  doc: Pick<ExtractedDocument, "id" | "name"> &
+    Partial<Pick<ExtractedDocument, "pages">>,
   claims: Claim[],
   person: Person,
   academic?: {
@@ -355,7 +367,15 @@ export function approveClaims(
     status: Course["status"];
   },
 ): Person {
-  const approved = claims.filter((c) => c.approved && c.text.trim());
+  const seen = new Set(
+    person.claims.map((c) => c.kind + ":" + c.quote.trim().toLowerCase()),
+  );
+  const approved = claims.filter((c) => {
+    const key = c.kind + ":" + c.quote.trim().toLowerCase();
+    if (!c.approved || !c.text.trim() || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   const assertions: Assertion[] = approved
     .filter((c) =>
       [
@@ -372,7 +392,7 @@ export function approveClaims(
     )
     .flatMap((c) =>
       c.mappings
-        .filter((m) => m.confirmed)
+        .filter((m) => m.selected ?? m.confirmed)
         .map((m) => ({
           id: crypto.randomUUID(),
           skillId: m.skillId,
@@ -382,7 +402,10 @@ export function approveClaims(
           sourceRecordId: doc.id,
           quote: c.quote,
           page: c.page,
-          verification: "document-supported",
+          verification: (m.confirmed || ["exact", "alias"].includes(m.method)
+            ? "document-supported"
+            : "inferred") as Assertion["verification"],
+          selected: true,
           consent: true,
         })),
     );
@@ -401,7 +424,7 @@ export function approveClaims(
               text: c.text,
               quote: c.quote,
               skillIds: c.mappings
-                .filter((m) => m.confirmed)
+                .filter((m) => m.selected ?? m.confirmed)
                 .map((m) => m.skillId),
             })),
           assessments: approved
@@ -410,7 +433,7 @@ export function approveClaims(
               title: c.text,
               evidence: c.quote,
               skillIds: c.mappings
-                .filter((m) => m.confirmed)
+                .filter((m) => m.selected ?? m.confirmed)
                 .map((m) => m.skillId),
             })),
         },
@@ -421,7 +444,35 @@ export function approveClaims(
     ...person,
     fictional: false,
     claims: [...person.claims, ...approved],
+    interests: [
+      ...new Set([
+        ...person.interests,
+        ...approved
+          .filter((c) => c.kind === "interest")
+          .flatMap((c) => c.text.split(/[,;]/))
+          .map((x) => x.trim().slice(0, 100))
+          .filter(Boolean),
+      ]),
+    ].slice(0, 30),
+    languages: [
+      ...new Set([
+        ...person.languages,
+        ...approved
+          .filter((c) => c.kind === "language")
+          .map((c) => c.text.slice(0, 100)),
+      ]),
+    ].slice(0, 30),
     assertions: [...person.assertions, ...assertions],
     courses: [...person.courses, ...courses],
+    imports: [
+      ...(person.imports || []),
+      {
+        id: doc.id,
+        name: doc.name,
+        importedAt: new Date().toISOString(),
+        methods: [...new Set((doc.pages || []).map((p) => p.method))],
+        claimCount: approved.length,
+      },
+    ],
   };
 }

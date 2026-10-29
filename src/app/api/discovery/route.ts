@@ -1,7 +1,7 @@
 import { boundedJSON, PayloadTooLarge } from "@/odyssey/server/http";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { catalogue } from "@/odyssey/server/data";
+import { catalogue, ontologySkillById } from "@/odyssey/server/data";
 import { discover } from "@/odyssey/catalogue";
 import { emptyPerson } from "@/odyssey/profile";
 const schema = z
@@ -39,7 +39,21 @@ export async function POST(req: NextRequest) {
       })),
     };
     return NextResponse.json(
-      { matches: discover(catalogue, person), version: catalogue.version },
+      {
+        matches: discover(catalogue, person).map((m) => ({
+          ...m,
+          explanation: {
+            shared: m.shared.map(
+              (id) => ontologySkillById.get(id)?.label || id,
+            ),
+            missing: m.occupation.essential
+              .filter((id) => !m.shared.includes(id))
+              .slice(0, 5)
+              .map((id) => ontologySkillById.get(id)?.label || id),
+          },
+        })),
+        version: catalogue.version,
+      },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (e) {

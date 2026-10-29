@@ -27,9 +27,9 @@ Browser tests use system Chromium or Playwright Chromium. Set `PLAYWRIGHT_BASE_U
 - Transparent capability alignment, requirement gaps, interest relationships and evidence confidence; occupational similarity is never a hiring probability or legal eligibility decision.
 - Three detailed editorial curricula: AI engineering (41 topics), policy/economics (32), product strategy (31). Other occupations expose their actual ESCO requirements without invented prerequisite sequences.
 - XYFlow branching explorer, prerequisites, optional learning routes, expandable groups, search, progress, topic panels, onward occupations and mobile reading mode.
-- Local PDF/DOCX text extraction and English browser-worker OCR for scanned PDFs, PNG and JPEG. Source quotations, editable claims, explicit mapping confirmation and profile approval precede evidence creation.
+- Local PDF/DOCX text extraction and English browser-worker OCR for scanned PDFs, PNG and JPEG. Source quotations, editable claims and default-selected capabilities lead directly to personalized discovery after profile approval. Bulk selection persists; ambiguous matches remain inferred.
 - Academic document/structured-record import, explicit outcome/assessment mappings and coursework panels. Uploaded records remain document-supported, never institutionally verified.
-- Multiple saved roadmaps, compact comparisons, fictional PPE demonstration, profile preferences, export/import and local deletion.
+- Multiple saved roadmaps, compact comparisons, fictional PPE demonstration, profile preferences, export/import and local deletion. New CV imports preserve prior edits and reconcile exact duplicate claims.
 - Optional consented Supabase workspace backup and provider-independent server AI adapters. Deterministic lessons and practice remain available without external services.
 
 ## Data provenance and limitations
@@ -47,5 +47,7 @@ There is no authorized live Campus or Career Passport API integration. No jobs, 
 See `.env.example`. External AI requires a configured provider/model/key, authenticated dedicated Supabase quota storage and explicit user consent. Qwen uses only the supplied prepaid Token Plan endpoint, QWEN_* settings and token reservations; metered providers separately require verified pricing and USD budgets. See [Token Plan configuration](docs/qwen-token-plan.md). Adapters are implemented and mock-tested; current plan terms, model availability and live calls remain unverified. Keys stay server-side. Default quotas are zero.
 
 Apply the additive migrations only to an authorized dedicated Roadmaps database. SQL RLS/budget policies are tested locally; hosted migrations, catalogue table population, authentication and cloud backup are not verified. Runtime discovery uses the packaged indexed JSON catalogue.
+
+For the CONNECT 403 investigation and protected Vercel-side probe, see [Qwen diagnostics](docs/qwen-connectivity.md).
 
 Existing Vercel project: https://syrkaroadmap.vercel.app. See [deployment](docs/deployment.md), [architecture](docs/architecture.md), [audit](docs/v2-audit.md) and [validation](docs/validation.md). Canonical `www.syrka.co/roadmaps` routing requires a separately approved change in the domain-owning project.

@@ -116,7 +116,14 @@ export function feasiblePlan(
 ) {
   const known = new Set(
     person.assertions
-      .filter((a) => a.consent && ["institution-verified","employer-verified"].includes(a.verification))
+      .filter(
+        (a) =>
+          a.consent &&
+          a.selected !== false &&
+          ["institution-verified", "employer-verified"].includes(
+            a.verification,
+          ),
+      )
       .map((a) => a.skillId),
   );
   const done = new Set(completed);
@@ -142,11 +149,43 @@ export function feasiblePlan(
   if (cycles.length) throw new Error("Cyclic prerequisite data");
   // AND dependencies require all missing prerequisites; route cost is an explicit
   // planning preference, never proof that a project satisfies a formal credential.
-  const topicIds=order.filter(id=>required.has(id));
-  const selectedRoutes=topicIds.map(id=>{const topic=byId.get(id)!;const canUseGuided=topic.resources.some(r=>r.kind==='free-material'||r.kind==='official-reference'||person.budget==='unspecified');
-    const choices=[...(canUseGuided?[{from:'start',to:'guided',cost:route==='guided'?0:1,data:'guided'}]:[]),{from:'start',to:'project',cost:route==='project'?0:1,data:'project'},{from:'guided',to:'review',cost:1,data:'review'},{from:'project',to:'review',cost:1,data:'review'}];
-    const shortest=shortestRoute('start','review',choices);
-    return {topicId:id,route:shortest?.edges[0].data||'project',reason:canUseGuided?'Minimum preference-cost learning route; review remains required.':'No suitable free guided resource is recorded; plan practice and request review.'};
+  const topicIds = order.filter((id) => required.has(id));
+  const selectedRoutes = topicIds.map((id) => {
+    const topic = byId.get(id)!;
+    const canUseGuided = topic.resources.some(
+      (r) =>
+        r.kind === "free-material" ||
+        r.kind === "official-reference" ||
+        person.budget === "unspecified",
+    );
+    const choices = [
+      ...(canUseGuided
+        ? [
+            {
+              from: "start",
+              to: "guided",
+              cost: route === "guided" ? 0 : 1,
+              data: "guided",
+            },
+          ]
+        : []),
+      {
+        from: "start",
+        to: "project",
+        cost: route === "project" ? 0 : 1,
+        data: "project",
+      },
+      { from: "guided", to: "review", cost: 1, data: "review" },
+      { from: "project", to: "review", cost: 1, data: "review" },
+    ];
+    const shortest = shortestRoute("start", "review", choices);
+    return {
+      topicId: id,
+      route: shortest?.edges[0].data || "project",
+      reason: canUseGuided
+        ? "Minimum preference-cost learning route; review remains required."
+        : "No suitable free guided resource is recorded; plan practice and request review.",
+    };
   });
   return {
     topicIds,

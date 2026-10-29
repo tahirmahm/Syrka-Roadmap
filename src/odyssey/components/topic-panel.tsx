@@ -48,7 +48,10 @@ export function TopicPanel({
   onProgress: (id: string, status: "completed" | "working" | "reset") => void;
   onRoute: (topic: string, route: string) => void;
   onDiscover: (query: string) => void;
-  plan: {topicIds:string[];selectedRoutes:{topicId:string;route:string;reason:string}[]}|null;
+  plan: {
+    topicIds: string[];
+    selectedRoutes: { topicId: string; route: string; reason: string }[];
+  } | null;
 }) {
   const mobile = useMobile();
   const [tab, setTab] = useState<(typeof tabs)[number]>("Overview"),
@@ -58,7 +61,8 @@ export function TopicPanel({
     [answers, setAnswers] = useState<Record<number, number>>({});
   const panel = useRef<HTMLElement>(null);
   const assertions = person.assertions.filter(
-    (a) => a.consent && topic.skillIds.includes(a.skillId),
+    (a) =>
+      a.consent && a.selected !== false && topic.skillIds.includes(a.skillId),
   );
   const courses = person.courses.filter(
     (c) =>
@@ -396,7 +400,33 @@ export function TopicPanel({
               <li>Retain a source-linked artifact or assessment.</li>
               <li>Confirm which capability the evidence actually supports.</li>
             </ol>
-            <h3>Your prerequisite-aware learning plan</h3><p className="small">Ordered from the curated dependency graph. Source-only skills have no invented order. Route costs express your preference and resource availability, never hours or monetary prices.</p>{plan?.topicIds.length?<ol className="planned-topics">{plan.topicIds.map(id=><li key={id}><button className="text-button" onClick={()=>onTopic(id)}>{topics.find(t=>t.id===id)?.label||id}</button><small>{plan.selectedRoutes.find(r=>r.topicId===id)?.route} route · review required</small></li>)}</ol>:<p>No uncompleted learning step is required by this planning graph. Formal capability evidence still needs separate assessment.</p>}<h3>Where this capability can lead</h3>
+            <h3>Your prerequisite-aware learning plan</h3>
+            <p className="small">
+              Ordered from the curated dependency graph. Source-only skills have
+              no invented order. Route costs express your preference and
+              resource availability, never hours or monetary prices.
+            </p>
+            {plan?.topicIds.length ? (
+              <ol className="planned-topics">
+                {plan.topicIds.map((id) => (
+                  <li key={id}>
+                    <button className="text-button" onClick={() => onTopic(id)}>
+                      {topics.find((t) => t.id === id)?.label || id}
+                    </button>
+                    <small>
+                      {plan.selectedRoutes.find((r) => r.topicId === id)?.route}{" "}
+                      route · review required
+                    </small>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p>
+                No uncompleted learning step is required by this planning graph.
+                Formal capability evidence still needs separate assessment.
+              </p>
+            )}
+            <h3>Where this capability can lead</h3>
             <button
               className="secondary"
               onClick={() =>

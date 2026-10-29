@@ -77,14 +77,12 @@ export function ProfilePanel({
           throw new Error(
             "Profile backup failed. Check the dedicated Roadmaps database configuration.",
           );
-        const r = await db
-          .from("workspace_snapshots")
-          .upsert({
-            owner_id: user.id,
-            schema_version: 2,
-            state: workspace,
-            updated_at: new Date().toISOString(),
-          });
+        const r = await db.from("workspace_snapshots").upsert({
+          owner_id: user.id,
+          schema_version: 2,
+          state: workspace,
+          updated_at: new Date().toISOString(),
+        });
         if (r.error)
           throw new Error(
             "Cloud backup is unavailable. Apply the Roadmaps 2.0 migration to the dedicated database.",
@@ -321,6 +319,43 @@ export function ProfilePanel({
           {person.assertions.length} records · no automatic verification
         </span>
       </div>
+      <div
+        className="review-actions"
+        aria-label="Capability selection controls"
+      >
+        <button
+          className="secondary"
+          onClick={() =>
+            onChange({
+              ...person,
+              assertions: person.assertions.map((a) => ({
+                ...a,
+                selected: true,
+              })),
+            })
+          }
+        >
+          Select All capabilities
+        </button>
+        <button
+          className="secondary"
+          onClick={() =>
+            onChange({
+              ...person,
+              assertions: person.assertions.map((a) => ({
+                ...a,
+                selected: false,
+              })),
+            })
+          }
+        >
+          Deselect All capabilities
+        </button>
+        <span>
+          {person.assertions.filter((a) => a.selected !== false).length}{" "}
+          selected for discovery
+        </span>
+      </div>
       <div className="manual-skill">
         <label className="search-control">
           <Search size={16} />
@@ -353,7 +388,24 @@ export function ProfilePanel({
         {person.assertions.map((a) => (
           <article key={a.id}>
             <div>
-              <strong>{a.label}</strong>
+              <label className="inline-check">
+                <input
+                  type="checkbox"
+                  aria-label={`Use ${a.label} for career discovery`}
+                  checked={a.selected !== false}
+                  onChange={(e) =>
+                    onChange({
+                      ...person,
+                      assertions: person.assertions.map((x) =>
+                        x.id === a.id
+                          ? { ...x, selected: e.target.checked }
+                          : x,
+                      ),
+                    })
+                  }
+                />
+                <strong>{a.label}</strong>
+              </label>
               <span className="status-chip">{a.verification}</span>
               <p>{a.quote}</p>
               <small>
@@ -376,6 +428,20 @@ export function ProfilePanel({
           </article>
         ))}
       </div>
+      {!!person.imports?.length && (
+        <section>
+          <h2>Imported documents</h2>
+          <p>
+            Original files are not retained. New imports append reviewed
+            records; existing records and edits are preserved.
+          </p>
+          {person.imports.map((d) => (
+            <p key={d.id}>
+              {d.name} · {d.claimCount} new claims · {d.methods.join(", ")}
+            </p>
+          ))}
+        </section>
+      )}
       <div className="section-title">
         <h2>Education, experience & projects</h2>
       </div>

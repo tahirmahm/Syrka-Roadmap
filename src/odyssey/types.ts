@@ -58,6 +58,7 @@ export type Mapping = {
     "exact" | "alias" | "lexical-candidate" | "user-confirmed" | "ai-candidate";
   confidence: "high" | "medium" | "low";
   confirmed: boolean;
+  selected?: boolean;
 };
 export type Claim = {
   id: string;
@@ -88,6 +89,7 @@ export type Assertion = {
     | "institution-verified"
     | "employer-verified";
   consent: boolean;
+  selected?: boolean;
 };
 export type Course = {
   id: string;
@@ -116,6 +118,13 @@ export type Person = {
   claims: Claim[];
   assertions: Assertion[];
   courses: Course[];
+  imports?: {
+    id: string;
+    name: string;
+    importedAt: string;
+    methods: string[];
+    claimCount: number;
+  }[];
 };
 export type PathRecord = {
   id: string;
@@ -201,6 +210,7 @@ export type Match = {
     | "Emerging interests"
     | "Longer-term ambitions";
   shared: string[];
+  explanation?: { shared: string[]; missing: string[] };
 };
 export type ExtractedDocument = {
   id: string;

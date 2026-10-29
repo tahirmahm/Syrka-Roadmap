@@ -44,7 +44,14 @@ export function searchOccupations(
       const label = normalize(o.label),
         aliases = o.aliases.map(normalize),
         desc = normalize(o.description);
-      const expanded = expansions[query] ? Math.max(0,...terms.map((t,i)=>label===t?129-i:contains(label,t)?120-i:0)) : 0;
+      const expanded = expansions[query]
+        ? Math.max(
+            0,
+            ...terms.map((t, i) =>
+              label === t ? 129 - i : contains(label, t) ? 120 - i : 0,
+            ),
+          )
+        : 0;
       const score = !query
         ? 1
         : label === query
@@ -99,7 +106,7 @@ export function relatedOccupations(data: Catalogue, id: string, limit = 8) {
 }
 export function matchOccupation(person: Person, o: Occupation): Match {
   const assertions = person.assertions.filter(
-    (a) => a.consent && o.essential.includes(a.skillId),
+    (a) => a.consent && a.selected !== false && o.essential.includes(a.skillId),
   );
   const documented = new Set(
     assertions

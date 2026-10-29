@@ -67,3 +67,7 @@ The existing alias is known, but a fresh Ready deployment/source SHA and live be
 `canonical-route-proposal.patch` is a review artifact against the inspected empty `next.config.mjs` in `tahirmahm/syrka.v12`. It is not applied, and current domain ownership must be reconfirmed before use. Review the complete owner configuration at that time and preserve all existing rules. The paired Roadmaps base-path build/environment change must be coordinated; applying only the rewrite to the current root build will not work correctly. This is not approval to alter either project's production settings.
 
 The prefixed build and local browser smoke checks now pass, including document/OCR workers, catalogue deep links, refresh and sign-in route. No live reverse proxy, authentication callback or cross-project cookies are claimed tested. Actual routing approval and current ownership verification remain pending.
+
+## Operator Qwen investigation
+
+The protected Node.js endpoint `/api/diagnostics/qwen` and `scripts/probe-vercel-qwen.ts` allow testing from the Vercel server, separate from a Codex-to-Qwen request. Configure a separate server-only `QWEN_DIAGNOSTICS_TOKEN` (32+ characters), the Qwen key/base URL and a confirmed included model. The route stays closed by default. See `qwen-connectivity.md` for exact modes, safe output fields and the confirmed CONNECT-layer blocker. No new project, subscription, DNS or canonical rewrite is introduced.

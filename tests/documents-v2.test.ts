@@ -76,7 +76,7 @@ test("MIME spoofing, empty files, unsafe expansion and unsupported files fail cl
     /large/,
   );
 });
-test("claims preserve source pages, require mapping confirmation and never confer verification", async () => {
+test("claims default to selected, respect deselection and preserve source without verification", async () => {
   const doc = {
     id: "d",
     name: "cv.pdf",
@@ -96,9 +96,11 @@ test("claims preserve source pages, require mapping confirmation and never confe
   ]);
   assert.equal(claims[0].page, 2);
   assert.equal(claims[0].mappings[0].confirmed, false);
+  assert.equal(claims[0].mappings[0].selected, true);
+  assert.equal(approveClaims(doc, claims, p).assertions.length, 1);
+  claims[0].mappings[0].selected = false;
   assert.equal(approveClaims(doc, claims, p).assertions.length, 0);
-  claims[0].mappings[0].confirmed = true;
-  assert.equal(approveClaims(doc, claims, p).assertions.length, 0);
+  claims[0].mappings[0].selected = true;
   claims[0].approved = true;
   claims[0].text = "Corrected data analysis";
   const reviewed = approveClaims(doc, claims, p);
@@ -136,4 +138,34 @@ test("coursework mapping comes from explicit reviewed outcomes, not course title
   assert.equal(result.courses[0].outcomes[0].skillIds[0], "esco:economics");
   assert.equal(result.courses[0].verification, "document-supported");
   assert.equal(result.courses[0].campusUrl, undefined);
+});
+
+test("new CV imports reconcile exact duplicates without overwriting edited records", async () => {
+  const doc = {
+    id: "first",
+    name: "first.pdf",
+    mime: "application/pdf",
+    pages: [
+      {
+        number: 1,
+        text: "TECHNICAL SKILLS\nData analysis\nWORK EXPERIENCE\nResearch internship",
+        method: "text" as const,
+      },
+    ],
+  };
+  const claims = await extractClaims(
+    { ...doc, status: "review-required", createdAt: new Date().toISOString() },
+    [{ id: "skill", label: "Data analysis", aliases: [] }],
+  );
+  const first = approveClaims(doc, claims, p);
+  first.claims[0].text = "Manually corrected skill description";
+  const next = approveClaims(
+    { ...doc, id: "second", name: "new.pdf" },
+    claims,
+    first,
+  );
+  assert.equal(next.claims[0].text, "Manually corrected skill description");
+  assert.equal(next.claims.length, first.claims.length);
+  assert.equal(next.assertions.length, first.assertions.length);
+  assert.equal(next.imports?.length, 2);
 });

@@ -45,7 +45,10 @@ export function Discovery({
     [domain, setDomain] = useState(""),
     [data, setData] = useState<SearchResult | null>(null),
     [matches, setMatches] = useState<Match[]>([]),
-    [personalized, setPersonalized] = useState(false),
+    [personalized, setPersonalized] = useState(
+      !initialQuery &&
+        person.assertions.some((a) => a.consent && a.selected !== false),
+    ),
     [category, setCategory] = useState(""),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(false);
@@ -83,6 +86,7 @@ export function Discovery({
       body: JSON.stringify({
         interests: person.interests,
         assertions: person.assertions
+          .filter((a) => a.selected !== false)
           .slice(0, 500)
           .map((a) => ({
             skillId: a.skillId,
@@ -254,6 +258,26 @@ export function Discovery({
                     </>
                   )}
                 </div>
+                {match && (
+                  <details className="match-explanation">
+                    <summary>Why this career?</summary>
+                    <p>
+                      Capabilities from your profile:{" "}
+                      {match.explanation?.shared.join(", ") ||
+                        "No essential capability overlap yet; explore this as a longer-term possibility."}
+                    </p>
+                    <p>
+                      Requirements to develop or demonstrate:{" "}
+                      {match.explanation?.missing.join(", ") ||
+                        "No additional essential skill gaps identified; formal requirements remain unknown."}
+                    </p>
+                    <p>{match.requirements.reason}</p>
+                    <p>
+                      Next action: explore the roadmap to inspect evidence and
+                      learning routes for each requirement.
+                    </p>
+                  </details>
+                )}
                 {match && (
                   <div className="match-dimensions">
                     <span>{match.category}</span>

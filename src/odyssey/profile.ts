@@ -20,6 +20,7 @@ const mapping = z.object({
   ]),
   confidence: z.enum(["high", "medium", "low"]),
   confirmed: z.boolean(),
+  selected: z.boolean().optional(),
 });
 export const claimSchema = z.object({
   id: str,
@@ -67,6 +68,7 @@ const assertion = z.object({
     "employer-verified",
   ]),
   consent: z.boolean(),
+  selected: z.boolean().optional(),
 });
 const course = z.object({
   id: str,
@@ -104,6 +106,18 @@ export const personSchema = z.object({
   claims: z.array(claimSchema).max(1000),
   assertions: z.array(assertion).max(3000),
   courses: z.array(course).max(150),
+  imports: z
+    .array(
+      z.object({
+        id: str,
+        name: str,
+        importedAt: str,
+        methods: strings,
+        claimCount: z.number().int().nonnegative(),
+      }),
+    )
+    .max(1000)
+    .optional(),
 });
 export const workspaceSchema = z.object({
   version: z.literal(2),

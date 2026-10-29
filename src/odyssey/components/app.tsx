@@ -586,6 +586,36 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
           )}
           {view === "home" && (
             <>
+              {!!workspace.person.assertions.length && (
+                <section
+                  className="cv-invitation"
+                  aria-label="Saved capability profile"
+                >
+                  <div>
+                    <span className="eyebrow">WELCOME BACK</span>
+                    <h2>{workspace.person.name}</h2>
+                    <p>
+                      {
+                        workspace.person.assertions.filter(
+                          (a) => a.selected !== false,
+                        ).length
+                      }{" "}
+                      selected capabilities · {workspace.paths.length} saved
+                      roadmaps. Your profile and progress are saved in this
+                      browser.
+                    </p>
+                  </div>
+                  <button className="primary" onClick={() => discover("")}>
+                    Discover careers from my profile
+                  </button>
+                  <button
+                    className="secondary"
+                    onClick={() => navigate("profile")}
+                  >
+                    Refine my profile
+                  </button>
+                </section>
+              )}
               <div className="welcome od-welcome">
                 <span className="eyebrow">
                   FROM WHAT YOU KNOW TO WHAT COULD BE
@@ -637,7 +667,11 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
                   <span className="eyebrow">
                     YOUR EXPERIENCE IS A STARTING POINT
                   </span>
-                  <h2>Add your CV to discover your possibilities.</h2>
+                  <h2>
+                    {workspace.person.imports?.length
+                      ? "Update your CV as your experience grows."
+                      : "Add your CV to discover your possibilities."}
+                  </h2>
                   <p>
                     Extract your education, experience and skills. Review the
                     claims, then explore the occupational landscape.
@@ -645,15 +679,18 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
                   <div className="cv-meta">
                     <span>PDF & DOCX text extraction</span>
                     <span>Scans & images with local OCR</span>
-                    <span>You confirm every mapping</span>
+                    <span>Capabilities selected automatically</span>
                   </div>
                 </div>
                 <button
                   className="primary"
+                  aria-label="Add your CV"
                   onClick={() => setDocumentMode("cv")}
                 >
                   <Upload size={17} />
-                  Add your CV
+                  {workspace.person.imports?.length
+                    ? "Update CV"
+                    : "Add your CV"}
                 </button>
               </section>
               <div className="home-entry-grid">
@@ -1085,7 +1122,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
           person={workspace.person.fictional ? emptyPerson() : workspace.person}
           academic={documentMode === "academic"}
           onClose={() => setDocumentMode(null)}
-          onApprove={(person, id) => {
+          onApprove={(person, id, next = "profile") => {
             commit(
               (w) =>
                 w.person.fictional
@@ -1098,7 +1135,8 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
             setNotice(
               "Reviewed claims saved locally. No institutional verification was created.",
             );
-            navigate("profile");
+            setQuery("");
+            navigate(next);
           }}
         />
       )}

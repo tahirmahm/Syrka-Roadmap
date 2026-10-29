@@ -194,7 +194,10 @@ export function Compare({
                           <>
                             <span className="status-chip">
                               {person.assertions.some(
-                                (a) => a.consent && a.skillId === s.id,
+                                (a) =>
+                                  a.consent &&
+                                  a.selected !== false &&
+                                  a.skillId === s.id,
                               )
                                 ? "Claim linked · review scope"
                                 : "Evidence needed"}

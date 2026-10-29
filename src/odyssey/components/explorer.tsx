@@ -220,7 +220,8 @@ function Tree({
     ...positions.nodes.map((p) => {
       const t = graph.topics.find((t) => t.id === p.id)!;
       const evidence = person.assertions.filter(
-        (a) => a.consent && t.skillIds.includes(a.skillId),
+        (a) =>
+          a.consent && a.selected !== false && t.skillIds.includes(a.skillId),
       );
       const status = path.completed.includes(t.id)
         ? "completed"
@@ -241,7 +242,7 @@ function Tree({
               : status === "working"
                 ? "In progress"
                 : evidence.length
-                  ? `${evidence.length} supporting claims`
+                  ? `${evidence.filter((a) => a.verification !== "inferred").length} supporting claims · ${evidence.filter((a) => a.verification === "inferred").length} inferred`
                   : t.optional
                     ? "Optional specialization"
                     : "Explore learning & evidence",
@@ -463,6 +464,21 @@ export function Explorer({
           </button>
         </div>
       </div>
+      <p className="personalized-roadmap-summary">
+        {
+          graph.topics.filter((t) =>
+            person.assertions.some(
+              (a) =>
+                a.consent &&
+                a.selected !== false &&
+                t.skillIds.includes(a.skillId),
+            ),
+          ).length
+        }{" "}
+        topics have selected profile claims. Highlighted claims retain their
+        document-supported, self-reported or inferred status; they do not
+        establish verified mastery.
+      </p>
       <p className="roadmap-explanation">
         {plan
           ? `${plan.topicIds.length} learning/evidence topics remain to explore. `
@@ -576,7 +592,20 @@ export function Explorer({
               onPath({ routeChoices: { ...path.routeChoices, [id]: route } })
             }
             onDiscover={onDiscover}
-            plan={(()=>{try{return feasiblePlan(graph,person,path.completed,topic.id,(path.routeChoices[topic.id]||'guided') as 'guided'|'project');}catch{return null;}})()}
+            plan={(() => {
+              try {
+                return feasiblePlan(
+                  graph,
+                  person,
+                  path.completed,
+                  topic.id,
+                  (path.routeChoices[topic.id] || "guided") as
+                    "guided" | "project",
+                );
+              } catch {
+                return null;
+              }
+            })()}
           />
         )}
       </div>

@@ -183,8 +183,8 @@ test("normal PDF CV is extracted, reviewed, mapped and saved without issuer veri
     ),
   ).toBe(true);
   expect(
-    state.person.assertions.every(
-      (a: { verification: string }) => a.verification === "document-supported",
+    state.person.assertions.every((a: { verification: string }) =>
+      ["document-supported", "inferred"].includes(a.verification),
     ),
   ).toBe(true);
   expect(
@@ -258,13 +258,11 @@ test("unsafe or spoofed files fail without changing profile; cancellation remain
   await page.goto("/");
   await page.getByRole("button", { name: "Add your CV", exact: true }).click();
   await page.getByRole("dialog").getByRole("checkbox").first().check();
-  await page
-    .getByLabel("Select CV or academic document")
-    .setInputFiles({
-      name: "fake.pdf",
-      mimeType: "application/pdf",
-      buffer: Buffer.from("not a real PDF"),
-    });
+  await page.getByLabel("Select CV or academic document").setInputFiles({
+    name: "fake.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("not a real PDF"),
+  });
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
     "contents",
   );
@@ -514,4 +512,126 @@ test("legacy storage is preserved and untrusted issuer flags are downgraded", as
     JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!),
   );
   expect(state.person.assertions[0].verification).toBe("document-supported");
+});
+
+test("fictional multidisciplinary CV flows directly to personalized careers with persistent bulk selection", async ({
+  page,
+}) => {
+  await upload(page, {
+    name: "fictional-multidisciplinary-cv.pdf",
+    mimeType: "application/pdf",
+    buffer: await textPDF([
+      "Avery Fictional Student",
+      "EDUCATION",
+      "Northbridge University PPE 2021 - 2024",
+      "WORK EXPERIENCE",
+      "Policy research internship 2023",
+      "PROJECTS",
+      "SQL and economic data analysis project",
+      "TECHNICAL SKILLS",
+      "SQL",
+      "Python (computer programming)",
+      "economics",
+      "apply statistical analysis techniques",
+      "conduct literature research",
+      "project management",
+      "data analysis",
+      "LANGUAGES",
+      "English",
+      "INTERESTS",
+      "economics, research, policy",
+      "SKILLS",
+      "communication",
+      "critical thinking",
+    ]),
+  });
+  await expect(
+    page
+      .getByRole("checkbox", { name: /^Confirm .* mapping for claim/ })
+      .first(),
+  ).toBeChecked();
+  await page
+    .getByRole("button", { name: "Deselect All capabilities", exact: true })
+    .click();
+  expect(
+    await page
+      .getByRole("checkbox", { name: /^Confirm .* mapping for claim/ })
+      .evaluateAll((xs) => xs.every((x) => !(x as HTMLInputElement).checked)),
+  ).toBe(true);
+  await page.getByRole("button", { name: /^Select All capabilities/ }).click();
+  await page
+    .getByRole("button", { name: "Continue to career discovery", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Career discovery", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "My possibilities" }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".career-row").first()).toBeVisible();
+  await page.locator(".match-explanation summary").first().click();
+  await expect(page.locator(".match-explanation").first()).toContainText(
+    "Capabilities from your profile:",
+  );
+  const state = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!),
+  );
+  expect(state.person.assertions.length).toBeGreaterThan(3);
+  expect(
+    state.person.assertions.every(
+      (a: { selected: boolean; verification: string }) =>
+        a.selected !== false && !a.verification.includes("verified"),
+    ),
+  ).toBe(true);
+  expect(
+    state.person.claims.some((c: { kind: string }) => c.kind === "employment"),
+  ).toBe(true);
+  expect(
+    state.person.claims.some((c: { kind: string }) => c.kind === "education"),
+  ).toBe(true);
+  expect(state.person.imports[0].name).toBe(
+    "fictional-multidisciplinary-cv.pdf",
+  );
+  await nav(page, "My profile");
+  await page
+    .getByRole("button", { name: "Deselect All capabilities", exact: true })
+    .click();
+  await page.reload();
+  expect(
+    await page
+      .getByRole("checkbox", { name: /^Use .* for career discovery/ })
+      .evaluateAll((xs) => xs.every((x) => !(x as HTMLInputElement).checked)),
+  ).toBe(true);
+  await page
+    .getByRole("button", { name: "Select All capabilities", exact: true })
+    .click();
+  await nav(page, "Career discovery");
+  await expect(page.locator(".career-row").first()).toBeVisible();
+  await page
+    .locator(".career-row")
+    .first()
+    .getByRole("button", { name: "Explore roadmap", exact: true })
+    .click();
+  await expect(page.locator(".personalized-roadmap-summary")).toContainText(
+    "topics have selected profile claims",
+  );
+  await page.getByRole("button", { name: "Reading", exact: true }).click();
+  await page.locator(".reading-topic").first().click();
+  await page
+    .getByRole("button", { name: "Mark completed", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Close topic details", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Save roadmap", exact: true }).click();
+  await page.reload();
+  await expect(page.locator(".od-roadmap-heading")).toContainText(
+    "1 self-reported",
+  );
+  await nav(page, "Career discovery");
+  await page.getByRole("tab", { name: "Full catalogue", exact: true }).click();
+  await page.getByLabel("Search occupations").fill("mechanical engineer");
+  await expect(page.locator(".career-row").first()).toContainText(
+    "mechanical engineer",
+  );
 });

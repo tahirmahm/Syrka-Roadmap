@@ -44,7 +44,7 @@ export function DocumentReview({
   person: Person;
   academic?: boolean;
   onClose: () => void;
-  onApprove: (p: Person, docId: string) => void;
+  onApprove: (p: Person, docId: string, next?: "profile" | "discover") => void;
 }) {
   const [stage, setStage] = useState<
       "queued" | "processing" | "review-required" | "completed" | "failed"
@@ -136,7 +136,9 @@ export function DocumentReview({
           "",
       );
       setStage("review-required");
-      setMessage("Review required. Nothing has been added to your profile.");
+      setMessage(
+        "Capabilities are selected automatically. Continue to discover careers, or refine any claim first. Nothing is institutionally verified.",
+      );
       setProgress(1);
     } catch (e) {
       if (abort.signal.aborted) {
@@ -386,18 +388,46 @@ export function DocumentReview({
                 </>
               )}
             </div>
+            <p className="small" role="status">
+              Local text/OCR extraction and deterministic ontology matching. AI
+              interpretation is optional; inferred mappings remain suggestions.
+              All detected capabilities are selected initially and can be
+              deselected below.
+            </p>
             <div className="review-actions">
               <button
                 className="secondary"
                 onClick={() =>
                   setClaims((cs) =>
-                    cs.map((c, i) =>
-                      i < visible ? { ...c, approved: true } : c,
-                    ),
+                    cs.map((c) => ({
+                      ...c,
+                      approved: true,
+                      mappings: c.mappings.map((m) => ({
+                        ...m,
+                        selected: true,
+                      })),
+                    })),
                   )
                 }
               >
-                Include displayed claims ({Math.min(visible, claims.length)})
+                Select All capabilities (
+                {claims.reduce((n, c) => n + c.mappings.length, 0)})
+              </button>
+              <button
+                className="secondary"
+                onClick={() =>
+                  setClaims((cs) =>
+                    cs.map((c) => ({
+                      ...c,
+                      mappings: c.mappings.map((m) => ({
+                        ...m,
+                        selected: false,
+                      })),
+                    })),
+                  )
+                }
+              >
+                Deselect All capabilities
               </button>
               <button
                 className="secondary"
@@ -519,20 +549,25 @@ export function DocumentReview({
                   {c.mappings.length > 0 && (
                     <div className="mapping-list">
                       <strong>
-                        Candidate ontology mappings — confirm individually
+                        Detected capabilities — selected for discovery; refine
+                        any match
                       </strong>
                       {c.mappings.map((m) => (
                         <label className="inline-check" key={m.skillId}>
                           <input
                             type="checkbox"
                             aria-label={`Confirm ${m.label} mapping for claim ${index + 1}`}
-                            checked={m.confirmed}
+                            checked={m.selected ?? m.confirmed}
                             onChange={(e) =>
                               patch(c.id, {
                                 approved: e.target.checked ? true : c.approved,
                                 mappings: c.mappings.map((x) =>
                                   x.skillId === m.skillId
-                                    ? { ...x, confirmed: e.target.checked }
+                                    ? {
+                                        ...x,
+                                        confirmed: e.target.checked,
+                                        selected: e.target.checked,
+                                      }
                                     : x,
                                 ),
                               })
@@ -642,7 +677,17 @@ export function DocumentReview({
                         })),
                       }),
                     });
-                    if (r.claims) setClaims(r.claims);
+                    if (r.claims)
+                      setClaims(
+                        r.claims.map((c) => ({
+                          ...c,
+                          approved: true,
+                          mappings: c.mappings.map((m) => ({
+                            ...m,
+                            selected: true,
+                          })),
+                        })),
+                      );
                     setMessage(
                       r.notice || "AI candidates require your review.",
                     );
@@ -661,9 +706,9 @@ export function DocumentReview({
             </details>
             <div className="confirm-bar">
               <p>
-                Only accepted claims and confirmed mappings are saved. Original
-                files are not retained. Delete or export your records in My
-                profile.
+                Selected capabilities and included claims are saved with their
+                source and uncertainty. Original files are not retained. Delete
+                or export your records in My profile.
               </p>
               <button
                 className="primary"
@@ -687,6 +732,25 @@ export function DocumentReview({
                 <Check size={16} />
                 Confirm profile
               </button>
+              {!academic && (
+                <button
+                  className="primary"
+                  disabled={!name.trim()}
+                  onClick={() => {
+                    setStage("completed");
+                    onApprove(
+                      approveClaims(doc, claims, {
+                        ...person,
+                        name: name.trim(),
+                      }),
+                      doc.id,
+                      "discover",
+                    );
+                  }}
+                >
+                  Continue to career discovery
+                </button>
+              )}
             </div>
           </>
         )}
