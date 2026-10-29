@@ -14,3 +14,9 @@ An earlier full run had 23 passes and two failures. Low upload-instruction contr
 OCR checks use clear fictional English fixtures, not a representative accuracy benchmark for arbitrary scans. Automated axe checks cover home and the upload consent dialog, not a complete accessibility certification. A desktop screenshot of the actual AI Engineer graph was inspected; source alias ambiguity now resolves to artificial intelligence engineer while preserving source alternatives.
 
 Hosted Supabase migrations, authentication, cloud backup and live provider calls are unverified. Official-source dataset refresh, current provider terms/pricing and external live reference inspection were blocked by destination network policy. The Vercel production hostname and API also returned CONNECT HTTP 403 in this environment; no fresh deployed 2.0 verification is claimed. Canonical domain-owner routing remains a proposal and has not been changed.
+
+## Canonical-prefix readiness
+
+A separate build with `ROADMAP_BASE_PATH=/roadmaps` and `NEXT_PUBLIC_BASE_PATH=/roadmaps` passed. Local Chromium smoke checks passed prefixed home, discovery deep link and refresh, sign-in route, real PDF extraction, and real PNG OCR through prefixed packaged worker assets. Observed local responses in the home/PDF/deep-link run had no HTTP errors. This validates prefix compatibility locally, not a live canonical reverse proxy or hosted authentication callback.
+
+The proposal patch passes `git apply --check` against the inspected domain-owner checkout. It remains unapplied. Domain ownership/current routing must be reconfirmed and the paired production environment/routing changes approved before activation.
