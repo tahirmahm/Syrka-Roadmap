@@ -1,23 +1,454 @@
-import {z} from 'zod';
-import type {Person,Workspace,OntologySkill,Course,Assertion} from './types';
-const str=z.string().max(4000),strings=z.array(str).max(1000);
-const mapping=z.object({skillId:str,label:str,method:z.enum(['exact','alias','lexical-candidate','user-confirmed','ai-candidate']),confidence:z.enum(['high','medium','low']),confirmed:z.boolean()});
-export const claimSchema=z.object({id:str,kind:z.enum(['education','qualification','course','employment','internship','volunteering','project','publication','language','skill','award','interest','learning-outcome','assessment','other']),text:str,quote:str,page:z.number().int().min(1).max(1000),section:str,mappings:z.array(mapping).max(30),approved:z.boolean(),institution:str.optional(),dates:str.optional()});
-const assertion=z.object({id:str,skillId:str,label:str,claimId:str,sourceSystem:str,sourceRecordId:str,quote:str,page:z.number().optional(),verification:z.enum(['self-reported','document-supported','inferred','institution-verified','employer-verified']),consent:z.boolean()});
-const course=z.object({id:str,institution:str,programme:str,code:str,title:str,status:z.enum(['reported-complete','in-progress','unknown']),sourceSystem:str,sourceRecordId:str,verification:z.enum(['document-supported','self-reported']),campusUrl:z.string().regex(/^https:\/\/www\.syrka\.co\/cam\/courses\/[0-9a-f-]{36}(?:\?institution=[0-9a-f-]{36})?$/).optional(),outcomes:z.array(z.object({id:str,text:str,quote:str,skillIds:strings})).max(100),assessments:z.array(z.object({title:str,evidence:str,skillIds:strings})).max(100)});
-export const personSchema=z.object({id:str,name:z.string().min(1).max(150),headline:str,fictional:z.boolean(),hoursPerWeek:z.number().min(1).max(80),interests:z.array(z.string().max(100)).max(30),locations:z.array(z.string().max(100)).max(20),languages:z.array(z.string().max(100)).max(30),budget:z.enum(['free-resources','unspecified']),claims:z.array(claimSchema).max(1000),assertions:z.array(assertion).max(3000),courses:z.array(course).max(150)});
-export const workspaceSchema=z.object({version:z.literal(2),person:personSchema,paths:z.array(z.object({id:str,occupationId:str,title:str,createdAt:str,updatedAt:str,completed:strings,working:strings,expanded:strings,routeChoices:z.record(z.string(),z.string())})).max(100),activePathId:str.nullable(),savedOccupations:strings,compare:z.array(str).max(4),audit:z.array(z.object({event:str,at:str,recordId:str.optional()})).max(500)});
-export const STORAGE_KEY='syrka-roadmaps:v2';
-export function emptyPerson():Person{return {id:'local-profile',name:'Your profile',headline:'A new direction starts here.',fictional:false,hoursPerWeek:6,interests:[],locations:[],languages:[],budget:'free-resources',claims:[],assertions:[],courses:[]};}
-export function emptyWorkspace(person=emptyPerson()):Workspace{return {version:2,person,paths:[],activePathId:null,savedOccupations:[],compare:[],audit:[]};}
-export function parseWorkspace(raw:string):Workspace|null{try{const x=JSON.parse(raw);if(x.version===2){const w=workspaceSchema.parse(x);return {...w,person:{...w.person,assertions:w.person.assertions.map(a=>({...a,verification:['institution-verified','employer-verified'].includes(a.verification)?'document-supported' as const:a.verification}))}};}if(x.version===1&&x.profile){const p=emptyPerson();p.name=String(x.profile.name||p.name).slice(0,150);p.headline=String(x.profile.headline||'');p.fictional=!!x.profile.fictional;p.hoursPerWeek=Math.min(80,Math.max(1,Number(x.profile.hoursPerWeek)||6));p.assertions=(x.profile.evidence||[]).map((e:Record<string,unknown>)=>({id:String(e.id),skillId:String(e.skillId),label:String(e.title),claimId:String(e.id),sourceSystem:String(e.sourceSystem),sourceRecordId:String(e.sourceRecordId),quote:String(e.title),verification:['self-reported','inferred'].includes(String(e.verification))?e.verification:'document-supported',consent:!!e.consent}));return workspaceSchema.parse(emptyWorkspace(p));}return null;}catch{return null;}}
-export function importWorkspace(raw:string){const w=parseWorkspace(raw);if(!w)throw new Error('Invalid workspace format.');return {...w,person:{...w.person,assertions:w.person.assertions.map(a=>({...a,verification:['institution-verified','employer-verified'].includes(a.verification)?'document-supported' as const:a.verification}))}};}
-export function academicImport(input:unknown){return z.object({version:z.literal(1),consent:z.literal(true),courses:z.array(course).max(150)}).parse(input).courses;}
-export function createDemo(skills:Pick<OntologySkill,'id'|'label'|'aliases'>[]):Person{
- const person:Person={...emptyPerson(),id:'fictional-maya',name:'Maya Bennett',headline:'Politics, Philosophy & Economics · exploring evidence, policy and technology',fictional:true,interests:['economics','policy','research','data','product'],locations:['United Kingdom','Remote'],languages:['English · self-reported','French · self-reported'],hoursPerWeek:8};
- const definitions:[string,string,string,string[]][]=[['EC101','Microeconomics','Analyze incentives and compare allocation decisions using economic theory.',['economics','microeconomics']],['EC202','Econometrics','Apply statistical analysis techniques and interpret economic data with uncertainty.',['apply statistical analysis techniques','econometrics','analyse economic trends']],['PS201','Political Institutions','Compare political institutions and interpret political science sources.',['political science','politics']],['PH210','Ethics & Public Policy','Construct a clear argument with traceable reasoning and an account of affected parties.',['ethics','critical thinking']],['RS200','Research Methods','Conduct literature research and document sampling and qualitative methods.',['conduct literature research','research methods']],['CS110','Programming for Social Science','Use Python (computer programming) and SQL to prepare a reproducible analysis.',['Python (computer programming)','SQL']],['WR201','Academic Writing','Draft scientific or academic papers and technical documentation with source attribution.',['draft scientific or academic papers and technical documentation']],['PM120','Collaborative Projects','Apply project management principles to a documented student research project.',['project management principles']]];
- for(const [code,title,outcome,labels] of definitions){const mapped=skills.filter(s=>labels.some(l=>s.label.toLowerCase()===l.toLowerCase()));const course:Course={id:'demo:'+code,institution:'Fictional Northbridge University',programme:'BA Politics, Philosophy & Economics',code,title,status:'reported-complete',sourceSystem:'fictional-demo',sourceRecordId:'course:'+code,verification:'document-supported',outcomes:[{id:'outcome:'+code,text:outcome,quote:'Fictional syllabus: '+outcome,skillIds:mapped.map(s=>s.id)}],assessments:[{title:title+' research assignment',evidence:'Fictional assessed report; no real institutional verification.',skillIds:mapped.map(s=>s.id)}]};person.courses.push(course);for(const s of mapped)person.assertions.push({id:'demo:'+code+':'+s.id,skillId:s.id,label:s.label,claimId:'demo:'+code,sourceSystem:'fictional-demo',sourceRecordId:course.sourceRecordId,quote:outcome,verification:'document-supported',consent:true});}
- const evidence:[string,Assertion['verification'],string][]=[['perform data analysis','self-reported','Fictional local-government internship: assisted with descriptive analysis.'],['conduct literature research','document-supported','Fictional student research project: compared public transport policies.'],['project management','inferred','Candidate inference from coordinating a fictional student research team; requires review.']];
- for(const [label,verification,quote] of evidence){const s=skills.find(s=>s.label===label);if(s)person.assertions.push({id:'demo-extra:'+s.id,skillId:s.id,label,claimId:'demo-extra',sourceSystem:'fictional-demo',sourceRecordId:'project-and-internship',quote,verification,consent:true});}
- person.claims=[{id:'demo-education',kind:'education',text:'BA Politics, Philosophy & Economics · Fictional Northbridge University',quote:'Fictional demonstration record.',page:1,section:'Education',mappings:[],approved:true},{id:'demo-internship',kind:'internship',text:'Fictional local-government policy research internship',quote:'Assisted with data analysis and a literature review in a fictional policy team.',page:1,section:'Experience',mappings:[],approved:true},{id:'demo-project',kind:'project',text:'Fictional transport-policy research project',quote:'Compared policy sources and prepared a reproducible research report.',page:1,section:'Projects',mappings:[],approved:true}];return person;
+import { z } from "zod";
+import type {
+  Person,
+  Workspace,
+  OntologySkill,
+  Course,
+  Assertion,
+} from "./types";
+const str = z.string().max(4000),
+  strings = z.array(str).max(1000);
+const mapping = z.object({
+  skillId: str,
+  label: str,
+  method: z.enum([
+    "exact",
+    "alias",
+    "lexical-candidate",
+    "user-confirmed",
+    "ai-candidate",
+  ]),
+  confidence: z.enum(["high", "medium", "low"]),
+  confirmed: z.boolean(),
+});
+export const claimSchema = z.object({
+  id: str,
+  kind: z.enum([
+    "education",
+    "qualification",
+    "course",
+    "employment",
+    "internship",
+    "volunteering",
+    "project",
+    "publication",
+    "language",
+    "skill",
+    "award",
+    "interest",
+    "learning-outcome",
+    "assessment",
+    "other",
+  ]),
+  text: str,
+  quote: str,
+  page: z.number().int().min(1).max(1000),
+  section: str,
+  mappings: z.array(mapping).max(30),
+  approved: z.boolean(),
+  institution: str.optional(),
+  dates: str.optional(),
+  grade: str.optional(),
+});
+const assertion = z.object({
+  id: str,
+  skillId: str,
+  label: str,
+  claimId: str,
+  sourceSystem: str,
+  sourceRecordId: str,
+  quote: str,
+  page: z.number().optional(),
+  verification: z.enum([
+    "self-reported",
+    "document-supported",
+    "inferred",
+    "institution-verified",
+    "employer-verified",
+  ]),
+  consent: z.boolean(),
+});
+const course = z.object({
+  id: str,
+  institution: str,
+  programme: str,
+  code: str,
+  title: str,
+  status: z.enum(["reported-complete", "in-progress", "unknown"]),
+  sourceSystem: str,
+  sourceRecordId: str,
+  verification: z.enum(["document-supported", "self-reported"]),
+  campusUrl: z
+    .string()
+    .regex(
+      /^https:\/\/www\.syrka\.co\/cam\/courses\/[0-9a-f-]{36}(?:\?institution=[0-9a-f-]{36})?$/,
+    )
+    .optional(),
+  outcomes: z
+    .array(z.object({ id: str, text: str, quote: str, skillIds: strings }))
+    .max(100),
+  assessments: z
+    .array(z.object({ title: str, evidence: str, skillIds: strings }))
+    .max(100),
+});
+export const personSchema = z.object({
+  id: str,
+  name: z.string().min(1).max(150),
+  headline: str,
+  fictional: z.boolean(),
+  hoursPerWeek: z.number().min(1).max(80),
+  interests: z.array(z.string().max(100)).max(30),
+  locations: z.array(z.string().max(100)).max(20),
+  languages: z.array(z.string().max(100)).max(30),
+  budget: z.enum(["free-resources", "unspecified"]),
+  claims: z.array(claimSchema).max(1000),
+  assertions: z.array(assertion).max(3000),
+  courses: z.array(course).max(150),
+});
+export const workspaceSchema = z.object({
+  version: z.literal(2),
+  person: personSchema,
+  paths: z
+    .array(
+      z.object({
+        id: str,
+        occupationId: str,
+        title: str,
+        createdAt: str,
+        updatedAt: str,
+        completed: strings,
+        working: strings,
+        expanded: strings,
+        routeChoices: z.record(z.string(), z.string()),
+      }),
+    )
+    .max(100),
+  activePathId: str.nullable(),
+  savedOccupations: strings,
+  compare: z.array(str).max(4),
+  audit: z
+    .array(z.object({ event: str, at: str, recordId: str.optional() }))
+    .max(500),
+});
+export const STORAGE_KEY = "syrka-roadmaps:v2";
+export function emptyPerson(): Person {
+  return {
+    id: "local-profile",
+    name: "Your profile",
+    headline: "A new direction starts here.",
+    fictional: false,
+    hoursPerWeek: 6,
+    interests: [],
+    locations: [],
+    languages: [],
+    budget: "free-resources",
+    claims: [],
+    assertions: [],
+    courses: [],
+  };
+}
+export function emptyWorkspace(person = emptyPerson()): Workspace {
+  return {
+    version: 2,
+    person,
+    paths: [],
+    activePathId: null,
+    savedOccupations: [],
+    compare: [],
+    audit: [],
+  };
+}
+export function parseWorkspace(raw: string): Workspace | null {
+  try {
+    const x = JSON.parse(raw);
+    if (x.version === 2) {
+      const w = workspaceSchema.parse(x);
+      return {
+        ...w,
+        person: {
+          ...w.person,
+          assertions: w.person.assertions.map((a) => ({
+            ...a,
+            verification: [
+              "institution-verified",
+              "employer-verified",
+            ].includes(a.verification)
+              ? ("document-supported" as const)
+              : a.verification,
+          })),
+        },
+      };
+    }
+    if (x.version === 1 && x.profile) {
+      const p = emptyPerson();
+      p.name = String(x.profile.name || p.name).slice(0, 150);
+      p.headline = String(x.profile.headline || "");
+      p.fictional = !!x.profile.fictional;
+      p.hoursPerWeek = Math.min(
+        80,
+        Math.max(1, Number(x.profile.hoursPerWeek) || 6),
+      );
+      p.assertions = (x.profile.evidence || []).map(
+        (e: Record<string, unknown>) => ({
+          id: String(e.id),
+          skillId: String(e.skillId),
+          label: String(e.title),
+          claimId: String(e.id),
+          sourceSystem: String(e.sourceSystem),
+          sourceRecordId: String(e.sourceRecordId),
+          quote: String(e.title),
+          verification: ["self-reported", "inferred"].includes(
+            String(e.verification),
+          )
+            ? e.verification
+            : "document-supported",
+          consent: !!e.consent,
+        }),
+      );
+      return workspaceSchema.parse(emptyWorkspace(p));
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+export function importWorkspace(raw: string) {
+  const w = parseWorkspace(raw);
+  if (!w) throw new Error("Invalid workspace format.");
+  return {
+    ...w,
+    person: {
+      ...w.person,
+      assertions: w.person.assertions.map((a) => ({
+        ...a,
+        verification: ["institution-verified", "employer-verified"].includes(
+          a.verification,
+        )
+          ? ("document-supported" as const)
+          : a.verification,
+      })),
+    },
+  };
+}
+export function academicImport(input: unknown) {
+  return z
+    .object({
+      version: z.literal(1),
+      consent: z.literal(true),
+      courses: z.array(course).max(150),
+    })
+    .parse(input).courses;
+}
+export function createDemo(
+  skills: Pick<OntologySkill, "id" | "label" | "aliases">[],
+): Person {
+  const person: Person = {
+    ...emptyPerson(),
+    id: "fictional-maya",
+    name: "Maya Bennett",
+    headline:
+      "Politics, Philosophy & Economics · exploring evidence, policy and technology",
+    fictional: true,
+    interests: ["economics", "policy", "research", "data", "product"],
+    locations: ["United Kingdom", "Remote"],
+    languages: ["English · self-reported", "French · self-reported"],
+    hoursPerWeek: 8,
+  };
+  const definitions: [string, string, string, string[]][] = [
+    [
+      "EC101",
+      "Microeconomics",
+      "Analyze incentives and compare allocation decisions using economic theory.",
+      ["economics", "microeconomics"],
+    ],
+    [
+      "EC202",
+      "Econometrics",
+      "Apply statistical analysis techniques and interpret economic data with uncertainty.",
+      [
+        "apply statistical analysis techniques",
+        "econometrics",
+        "analyse economic trends",
+      ],
+    ],
+    [
+      "PS201",
+      "Political Institutions",
+      "Compare political institutions and interpret political science sources.",
+      ["political science", "politics"],
+    ],
+    [
+      "PH210",
+      "Ethics & Public Policy",
+      "Construct a clear argument with traceable reasoning and an account of affected parties.",
+      ["ethics", "critical thinking"],
+    ],
+    [
+      "RS200",
+      "Research Methods",
+      "Conduct literature research and document sampling and qualitative methods.",
+      ["conduct literature research", "research methods"],
+    ],
+    [
+      "CS110",
+      "Programming for Social Science",
+      "Use Python (computer programming) and SQL to prepare a reproducible analysis.",
+      ["Python (computer programming)", "SQL"],
+    ],
+    [
+      "WR201",
+      "Academic Writing",
+      "Draft scientific or academic papers and technical documentation with source attribution.",
+      ["draft scientific or academic papers and technical documentation"],
+    ],
+    [
+      "PM120",
+      "Collaborative Projects",
+      "Apply project management principles to a documented student research project.",
+      ["project management principles"],
+    ],
+  ];
+  for (const [code, title, outcome, labels] of definitions) {
+    const mapped = skills.filter((s) =>
+      labels.some((l) => s.label.toLowerCase() === l.toLowerCase()),
+    );
+    const course: Course = {
+      id: "demo:" + code,
+      institution: "Fictional Northbridge University",
+      programme: "BA Politics, Philosophy & Economics",
+      code,
+      title,
+      status: "reported-complete",
+      sourceSystem: "fictional-demo",
+      sourceRecordId: "course:" + code,
+      verification: "document-supported",
+      outcomes: [
+        {
+          id: "outcome:" + code,
+          text: outcome,
+          quote: "Fictional syllabus: " + outcome,
+          skillIds: mapped.map((s) => s.id),
+        },
+      ],
+      assessments: [
+        {
+          title: title + " research assignment",
+          evidence:
+            "Fictional assessed report; no real institutional verification.",
+          skillIds: mapped.map((s) => s.id),
+        },
+      ],
+    };
+    person.courses.push(course);
+    for (const s of mapped)
+      person.assertions.push({
+        id: "demo:" + code + ":" + s.id,
+        skillId: s.id,
+        label: s.label,
+        claimId: "demo:" + code,
+        sourceSystem: "fictional-demo",
+        sourceRecordId: course.sourceRecordId,
+        quote: outcome,
+        verification: "document-supported",
+        consent: true,
+      });
+  }
+  const evidence: [string, Assertion["verification"], string][] = [
+    [
+      "perform data analysis",
+      "self-reported",
+      "Fictional local-government internship: assisted with descriptive analysis.",
+    ],
+    [
+      "conduct literature research",
+      "document-supported",
+      "Fictional student research project: compared public transport policies.",
+    ],
+    [
+      "project management",
+      "inferred",
+      "Candidate inference from coordinating a fictional student research team; requires review.",
+    ],
+  ];
+  for (const [label, verification, quote] of evidence) {
+    const s = skills.find((s) => s.label === label);
+    if (s)
+      person.assertions.push({
+        id: "demo-extra:" + s.id,
+        skillId: s.id,
+        label,
+        claimId: "demo-extra",
+        sourceSystem: "fictional-demo",
+        sourceRecordId: "project-and-internship",
+        quote,
+        verification,
+        consent: true,
+      });
+  }
+  person.claims = [
+    {
+      id: "demo-education",
+      kind: "education",
+      text: "BA Politics, Philosophy & Economics · Fictional Northbridge University",
+      quote: "Fictional demonstration record.",
+      page: 1,
+      section: "Education",
+      mappings: [],
+      approved: true,
+    },
+    {
+      id: "demo-internship",
+      kind: "internship",
+      text: "Fictional local-government policy research internship",
+      quote:
+        "Assisted with data analysis and a literature review in a fictional policy team.",
+      page: 1,
+      section: "Experience",
+      mappings: [],
+      approved: true,
+    },
+    {
+      id: "demo-project",
+      kind: "project",
+      text: "Fictional transport-policy research project",
+      quote:
+        "Compared policy sources and prepared a reproducible research report.",
+      page: 1,
+      section: "Projects",
+      mappings: [],
+      approved: true,
+    },
+  ];
+  return person;
+}
+
+export function courseworkAssertions(courses: Course[]): Assertion[] {
+  return courses.flatMap((c) => [
+    ...c.outcomes.flatMap((o) =>
+      o.skillIds.map((id) => ({
+        id: crypto.randomUUID(),
+        skillId: id,
+        label: "Course-linked source skill",
+        claimId: o.id,
+        sourceSystem: c.sourceSystem,
+        sourceRecordId: c.sourceRecordId,
+        quote: o.quote,
+        verification: "document-supported" as const,
+        consent: true,
+      })),
+    ),
+    ...c.assessments.flatMap((a) =>
+      a.skillIds.map((id) => ({
+        id: crypto.randomUUID(),
+        skillId: id,
+        label: "Assessment-linked source skill",
+        claimId: c.id,
+        sourceSystem: c.sourceSystem,
+        sourceRecordId: c.sourceRecordId,
+        quote: a.evidence,
+        verification: "document-supported" as const,
+        consent: true,
+      })),
+    ),
+  ]);
 }

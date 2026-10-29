@@ -1,22 +1,16 @@
-# Validation record
+# Roadmaps 2.0 validation — 2026-10-29
 
-Recorded checks are updated after the final run. No hosted production deployment is claimed.
+Validated locally against the rebuilt production application, not merely the development server.
 
-Initial implementation: lint and strict TypeScript passed. PostgreSQL policy tests and graph/import/AI tests passed (15 tests). Initial browser run: 11 passed, 2 failed. The failures identified insufficient contrast for muted navigation labels (4.28:1) and an ambiguous test locator that also selected Next.js's live route announcer. Muted labels were darkened and the import-error assertion was scoped to its dialog. Subsequent results are recorded below after rerun.
+- ESLint and TypeScript: passed.
+- Unit, PostgreSQL authorization and AI adapter tests: **32 passed**, zero failed/skipped. Database tests execute the actual migrations in PGlite with anonymous/authenticated roles. Provider tests use simulated responses; they are not live model verification.
+- Production Next.js build: passed. Catalogue, discovery, learning and CV interpretation deployment traces all include the server-only catalogue JSON.
+- Full serial production Chromium suite: **25 passed**, zero failures (approximately one minute).
 
-Production build succeeded before the final ESCO/contrast changes; a final build and browser run are required for the exact committed tree.
+Browser scenarios cover broad non-featured occupational discovery; AI Engineer alias disambiguation; three distinct detailed curricula; actual digitally generated PDF and DOCX extraction; actual English OCR from a synthetic scanned PDF, PNG and JPEG; source quotations and reviewed mapping; spoofed-file rejection; coursework provenance; academic outcome import; shared/distinct career comparison; persistent per-path progress without evidence verification; deterministic operation without AI; seven viewport widths (320–1440px); home/upload consent accessibility checks; and legacy storage migration with verification downgrading.
 
-External reference HTML returned 200 for the existing Syrka routes and the required research references. External Chromium TLS trust failed; no external visual/interactive verification is claimed. Official ESCO API data was retrieved with verified TLS. No hosted Supabase or Groq call is counted as verified. Local AI tests use simulated provider responses.
+An earlier full run had 23 passes and two failures. Low upload-instruction contrast was corrected. The legacy migration test passed against the fresh production build. The final complete run passed all 25 scenarios; no prior failed/aborted run is counted as a pass.
 
-## Final checked tree
+OCR checks use clear fictional English fixtures, not a representative accuracy benchmark for arbitrary scans. Automated axe checks cover home and the upload consent dialog, not a complete accessibility certification. A desktop screenshot of the actual AI Engineer graph was inspected; source alias ambiguity now resolves to artificial intelligence engineer while preserving source alternatives.
 
-- Frozen `npm ci`: passed with the committed lockfile.
-- ESLint: passed without warnings or errors.
-- Strict TypeScript: passed.
-- Unit / PostgreSQL authorization / AI adapter tests: **15 passed, 0 failed, 0 skipped**.
-- Production build: passed, including App Router prerendering, server routes and strict TypeScript compilation.
-- Final production-browser suite: **12 passed** and three responsive tests exceeded the 30-second budget during parallel Chromium execution. Those exact three tests were rerun with one worker: **3 passed** (375px 5.1s, 390px 4.1s, 430px 3.1s). All 15 browser scenarios have therefore passed on the final application build across the suite and its targeted serial rerun; a single all-green final full-suite run is not claimed. The committed browser configuration now defaults to one worker.
-- Browser checks cover destination search and filtering, different paths, graph selection, branching, source-backed ESCO expansion, pan/zoom controls, keyboard-accessible node list, save/reload, progress updates, invalid imports, consented import/provenance downgrading, no horizontal overflow at 320/375/390/430/768/1024/1440px, deterministic explanation responses and automated WCAG A/AA checks on the home screen. Automated checks are not a full accessibility conformance claim.
-- The prior contrast issue and ambiguous test locator are fixed. ESCO expansion now refits the canvas as the node set changes.
-
-The user selected manual Vercel deployment after GitHub push. No Vercel project or public deployment is claimed. Canonical routing, hosted Supabase, cloud roadmap sync, trusted Passport ingestion and an active verified-free AI service remain outstanding as documented. The local development/demo environment is prepared; the full production integration directive is not complete.
+Hosted Supabase migrations, authentication, cloud backup and live provider calls are unverified. Official-source dataset refresh, current provider terms/pricing and external live reference inspection were blocked by destination network policy. The Vercel production hostname and API also returned CONNECT HTTP 403 in this environment; no fresh deployed 2.0 verification is claimed. Canonical domain-owner routing remains a proposal and has not been changed.

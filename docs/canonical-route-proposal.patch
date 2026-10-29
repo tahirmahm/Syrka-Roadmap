@@ -1,0 +1,15 @@
+--- a/next.config.mjs
++++ b/next.config.mjs
+@@ -1,4 +1,11 @@
+ /** @type {import('next').NextConfig} */
+-const nextConfig = {};
++const nextConfig = {
++  async rewrites() {
++    return [
++      { source: '/roadmaps', destination: 'https://syrkaroadmap.vercel.app/roadmaps' },
++      { source: '/roadmaps/:path*', destination: 'https://syrkaroadmap.vercel.app/roadmaps/:path*' },
++    ];
++  },
++};
+ 
+ export default nextConfig;

@@ -1,4 +1,4 @@
-import { App } from "@/components/app";
+import { OdysseyApp } from "@/odyssey/components/app";
 export default function Home() {
-  return <App />;
+  return <OdysseyApp />;
 }

@@ -1,6 +1,127 @@
-import {NextRequest,NextResponse} from 'next/server';import {z} from 'zod';import {catalogue,occupationById} from '@/odyssey/server/data';import {buildRoadmap} from '@/odyssey/graph';import {deterministicLesson,learningActions} from '@/odyssey/learning';import {aiConfig,aiJSON} from '@/odyssey/server/ai-gateway';import {authenticatedBudget} from '@/odyssey/server/ai-session';
-const requestSchema=z.object({occupationId:z.string().max(200),topicId:z.string().max(200),action:z.enum(learningActions),consent:z.boolean(),evidenceCount:z.number().int().min(0).max(3000)}).strict();
-const output=z.object({text:z.string().min(1).max(6000),steps:z.array(z.string().max(1200)).max(10),quiz:z.array(z.object({question:z.string().max(1500),options:z.array(z.string().max(1000)).min(2).max(5),answer:z.number().int().min(0).max(4),explanation:z.string().max(1500)})).max(5)}).superRefine((v,ctx)=>{v.quiz.forEach((q,i)=>{if(q.answer>=q.options.length)ctx.addIssue({code:'custom',message:'Invalid quiz answer',path:['quiz',i]});});});
-export async function POST(req:NextRequest){try{const raw=await req.text();if(raw.length>3000)return NextResponse.json({error:'Request too large'},{status:413});const input=requestSchema.parse(JSON.parse(raw));const occupation=occupationById.get(input.occupationId);if(!occupation)return NextResponse.json({error:'Unknown occupation'},{status:404});const ids=new Set([...occupation.essential,...occupation.optional]);const graph=buildRoadmap(occupation,catalogue.skills.filter(s=>ids.has(s.id)),[]);const topic=graph.topics.find(t=>t.id===input.topicId);if(!topic)return NextResponse.json({error:'Unknown topic'},{status:404});const fallback=deterministicLesson(topic,input.action,input.evidenceCount);const config=aiConfig();if(!input.consent||!config)return NextResponse.json({...fallback,notice:fallback.notice+' External AI is not configured or was not authorized.'});try{const budget=await authenticatedBudget();const lesson=await aiJSON(config,budget,input.action,{task:input.action,topic:{label:topic.label,summary:topic.summary,prerequisites:topic.prerequisites,resources:topic.resources.map(r=>({title:r.title,url:r.url}))},supportingClaimCount:input.evidenceCount,outputShape:{text:'string',steps:['string'],quiz:[{question:'string',options:['string'],answer:'zero-based index',explanation:'string'}]}},output);return NextResponse.json({...lesson,provider:'ai',notice:'AI-generated learning guidance, grounded in supplied topic context. Practice is not a credential.'});}catch(e){return NextResponse.json({...fallback,notice:(e as Error).message});}}catch{return NextResponse.json({error:'Invalid learning request'},{status:400});}}
+import { boundedJSON, PayloadTooLarge } from "@/odyssey/server/http";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { catalogue, occupationById } from "@/odyssey/server/data";
+import { buildRoadmap } from "@/odyssey/graph";
+import { deterministicLesson, learningActions } from "@/odyssey/learning";
+import { aiConfig, aiJSON } from "@/odyssey/server/ai-gateway";
+import { authenticatedBudget } from "@/odyssey/server/ai-session";
+const requestSchema = z
+  .object({
+    occupationId: z.string().max(200),
+    topicId: z.string().max(200),
+    action: z.enum(learningActions),
+    consent: z.boolean(),
+    evidenceCount: z.number().int().min(0).max(3000),
+  })
+  .strict();
+const output = z
+  .object({
+    text: z.string().min(1).max(6000),
+    steps: z.array(z.string().max(1200)).max(10),
+    quiz: z
+      .array(
+        z.object({
+          question: z.string().max(1500),
+          options: z.array(z.string().max(1000)).min(2).max(5),
+          answer: z.number().int().min(0).max(4),
+          explanation: z.string().max(1500),
+        }),
+      )
+      .max(5),
+  })
+  .superRefine((v, ctx) => {
+    v.quiz.forEach((q, i) => {
+      if (q.answer >= q.options.length)
+        ctx.addIssue({
+          code: "custom",
+          message: "Invalid quiz answer",
+          path: ["quiz", i],
+        });
+    });
+  });
+export async function POST(req: NextRequest) {
+  try {
+    const input = requestSchema.parse(await boundedJSON(req, 3000));
+    const occupation = occupationById.get(input.occupationId);
+    if (!occupation)
+      return NextResponse.json(
+        { error: "Unknown occupation" },
+        { status: 404 },
+      );
+    const ids = new Set([...occupation.essential, ...occupation.optional]);
+    const graph = buildRoadmap(
+      occupation,
+      catalogue.skills.filter((s) => ids.has(s.id)),
+      [],
+    );
+    const topic = graph.topics.find((t) => t.id === input.topicId);
+    if (!topic)
+      return NextResponse.json({ error: "Unknown topic" }, { status: 404 });
+    const fallback = deterministicLesson(
+      topic,
+      input.action,
+      input.evidenceCount,
+    );
+    const config = aiConfig();
+    if (!input.consent || !config)
+      return NextResponse.json({
+        ...fallback,
+        notice:
+          fallback.notice +
+          " External AI is not configured or was not authorized.",
+      });
+    try {
+      const budget = await authenticatedBudget();
+      const lesson = await aiJSON(
+        config,
+        budget,
+        input.action,
+        {
+          task: input.action,
+          topic: {
+            label: topic.label,
+            summary: topic.summary,
+            prerequisites: topic.prerequisites,
+            resources: topic.resources.map((r) => ({
+              title: r.title,
+              url: r.url,
+            })),
+          },
+          supportingClaimCount: input.evidenceCount,
+          outputShape: {
+            text: "string",
+            steps: ["string"],
+            quiz: [
+              {
+                question: "string",
+                options: ["string"],
+                answer: "zero-based index",
+                explanation: "string",
+              },
+            ],
+          },
+        },
+        output,
+      );
+      return NextResponse.json({
+        ...lesson,
+        provider: "ai",
+        notice:
+          "AI-generated learning guidance, grounded in supplied topic context. Practice is not a credential.",
+      });
+    } catch (e) {
+      return NextResponse.json({ ...fallback, notice: (e as Error).message });
+    }
+  } catch (e) {
+    return NextResponse.json(
+      {
+        error:
+          e instanceof PayloadTooLarge ? e.message : "Invalid learning request",
+      },
+      { status: e instanceof PayloadTooLarge ? 413 : 400 },
+    );
+  }
+}
 
-export const maxDuration=60;
+export const maxDuration = 60;

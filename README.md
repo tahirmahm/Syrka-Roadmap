@@ -1,19 +1,15 @@
-# Syrka Roadmaps
+# Syrka Roadmaps 2.0
 
-An evidence-aware career navigation application. The working public demo needs no account, database or AI key.
+Evidence-aware occupational discovery and branching learning roadmaps in the existing Syrka application. The core application runs without an account, database or AI key.
 
-## Develop
+## Develop and validate
 
-Node 22+ (validated with Node 24.19.0), npm. From this repository:
+Node 22+ and npm:
 
 ```sh
 npm ci
 npm run dev
 ```
-
-Production: `npm run build` then `npm start`. Port defaults to 3000. Retained dependencies/build outputs do not retain a running server; start the service in each new environment. Use the existing checkout in isolated cloud tasks; do not create a worktree unless requested.
-
-## Validate
 
 ```sh
 npm run lint
@@ -23,24 +19,33 @@ npm run build
 npm run test:browser
 ```
 
-The browser suite uses `/usr/bin/chromium` in the cloud image, or `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` on another machine. Set that path or install Playwright Chromium with `npx playwright install --with-deps chromium`; the config falls back to Playwright’s managed browser if the system Chromium is absent. Tests start the production server when one is not already running. PostgreSQL authorization tests run the actual migration/seed in PGlite with authenticated/anonymous roles; they do not require Supabase credentials. They do not claim hosted Supabase service validation.
+Browser tests use system Chromium or Playwright Chromium. Set `PLAYWRIGHT_BASE_URL` to select a test server. Document assets are copied locally during install/build; no third-party OCR CDN is needed at runtime.
 
-## Working features
+## Implemented
 
-- Home, searchable career discovery, roadmap, capability evidence, opportunities/resources, progress and path comparison.
-- XYFlow/Dagre directed graph generated from profile and destination, expandable learning alternatives, source-backed ESCO requirement branches, details, pan/zoom and accessible HTML list.
-- Three destination pathways, explicit provenance/uncertainty, prerequisite traversal, cycle detection and evidence-aware matching.
-- Fictional demo, configurable weekly pace, local save/resume, export/restore, consented Passport v1 import and deletion/reset.
-- Official Syrka raster brand references, light responsive shell and standard Campus/Workspace links.
-- PostgreSQL migration and idempotent ESCO seed with ownership RLS and cross-owner graph protection.
-- Deterministic explanations and an isolated server-side Groq adapter with mocked-provider tests. External AI is not activated or verified.
+- Searchable catalogue of 3,039 occupations, 13,939 skills and 129,004 essential/optional occupation–skill relationships, preserving source identifiers, aliases, descriptions and hierarchies.
+- Transparent capability alignment, requirement gaps, interest relationships and evidence confidence; occupational similarity is never a hiring probability or legal eligibility decision.
+- Three detailed editorial curricula: AI engineering (41 topics), policy/economics (32), product strategy (31). Other occupations expose their actual ESCO requirements without invented prerequisite sequences.
+- XYFlow branching explorer, prerequisites, optional learning routes, expandable groups, search, progress, topic panels, onward occupations and mobile reading mode.
+- Local PDF/DOCX text extraction and English browser-worker OCR for scanned PDFs, PNG and JPEG. Source quotations, editable claims, explicit mapping confirmation and profile approval precede evidence creation.
+- Academic document/structured-record import, explicit outcome/assessment mappings and coursework panels. Uploaded records remain document-supported, never institutionally verified.
+- Multiple saved roadmaps, compact comparisons, fictional PPE demonstration, profile preferences, export/import and local deletion.
+- Optional consented Supabase workspace backup and provider-independent server AI adapters. Deterministic lessons and practice remain available without external services.
 
-## Sources and limits
+## Data provenance and limitations
 
-`src/data/esco.json` is an official API snapshot of **3 occupations, 69 essential skills and 73 relationships**. Update intentionally with `python3 scripts/import-esco.py`, review the diff, then run `npx tsx scripts/esco-seed.ts`. Source URIs, retrieval time and attribution are preserved. The API did not explicitly identify its default release. Authored learning prerequisites, evidence suggestions and planning ranges remain separate from source occupational requirements. No formal equivalence is asserted.
+The English ESCO snapshot is reproduced from `Y4SSERk/ESCO-csv2Graph` at commit `3b2d8e6a34c7f7b0da6e808518b32bb4767d41a3`. See `src/data/catalogue-manifest.json` for source hashes and coverage. It is a pinned mirror, **not a verified current official release**. Official refresh tooling is supplied; fresh official downloads were blocked by this environment's network policy. English only; multilingual indexing and O*NET ingestion are unfinished.
 
-The Passport reference was a local-storage fictional demonstration, not a verified integration API. No real student data is included. No live jobs or eligibility feed is connected. Learning resources are explicitly distinguished from opportunities with verified entry criteria. AI, hosted Supabase auth/database, cloud roadmap sync and Vercel deployment remain unconfigured until their prerequisites are supplied. Demo persistence is browser-local, not shared-device multi-user storage.
+Curriculum prerequisites are editorial/resource-derived suggestions with provenance, not verified occupational regulations. No complete curriculum is claimed for all 3,039 occupations. Resources link to original publishers; their content is not republished.
 
-Optional configuration is documented in `.env.example`. Never commit actual credentials. Dedicated Supabase project only: apply `supabase/migrations/202610270001_roadmaps.sql` and `supabase/seed.sql`, then configure public URL/anon key and validate hosted policies. No changes to existing Syrka databases are authorized or needed.
+Document limits: 8 MB, 20 PDF pages, 12-megapixel images, bounded DOCX expansion. OCR is English and browser-dependent; large/non-English asynchronous workers are not implemented. Academic review supports a course context and bulk structured import, not automatic reliable multi-course transcript reconstruction. Files remain local; accepted claims persist in browser storage. Optional cloud backup contains reviewed records, not originals.
 
-See [research](docs/reference-research.md), [architecture](docs/architecture.md), [Passport contract](docs/passport-contract.md), [deployment](docs/deployment.md) and [validation](docs/validation.md).
+There is no authorized live Campus or Career Passport API integration. No jobs, admission rules, salaries, accreditation, visa eligibility or institutional verification are fabricated. Opportunity actions are labelled official-source discovery links.
+
+## Optional services
+
+See `.env.example`. External AI requires a configured provider/model/key, verified operator-supplied pricing, positive budget, authenticated dedicated Supabase quota storage and explicit user consent. DeepSeek/Qwen-compatible adapters are implemented and mock-tested; current commercial terms, model availability and live calls have not been verified. Keys stay server-side. Default budget is zero.
+
+Apply the additive migrations only to an authorized dedicated Roadmaps database. SQL RLS/budget policies are tested locally; hosted migrations, catalogue table population, authentication and cloud backup are not verified. Runtime discovery uses the packaged indexed JSON catalogue.
+
+Existing Vercel project: https://syrkaroadmap.vercel.app. See [deployment](docs/deployment.md), [architecture](docs/architecture.md), [audit](docs/v2-audit.md) and [validation](docs/validation.md). Canonical `www.syrka.co/roadmaps` routing requires a separately approved change in the domain-owning project.

@@ -1,11 +1,107 @@
-import {test} from 'node:test';
-import assert from 'node:assert/strict';
-import {catalogue} from '../src/odyssey/server/data';
-import {searchOccupations,relatedOccupations,matchOccupation,mapText} from '../src/odyssey/catalogue';
-import type {Person} from '../src/odyssey/types';
-const person:Person={id:'test',name:'Test',headline:'',fictional:true,hoursPerWeek:6,interests:['economics'],locations:[],languages:[],budget:'free-resources',claims:[],assertions:[],courses:[]};
-test('broad source catalogue preserves IDs, aliases and relationship referential integrity',()=>{assert.ok(catalogue.occupations.length>3000);assert.ok(catalogue.skills.length>13000);const ids=new Set(catalogue.skills.map(s=>s.id));assert.ok(catalogue.occupations.every(o=>o.id.startsWith('http://data.europa.eu/esco/occupation/')));assert.ok(catalogue.occupations.every(o=>[...o.essential,...o.optional].every(id=>ids.has(id))));});
-test('search covers non-featured careers and alias expansion',()=>{for(const q of ['economist','teacher','mechanical engineer','solicitor','AI engineer','diplomat','policy analyst'])assert.ok(searchOccupations(catalogue,q).length>0,q);assert.ok(searchOccupations(catalogue,'economist')[0].label.includes('economist'));});
-test('related occupations are computed from real shared requirements',()=>{const o=searchOccupations(catalogue,'economist')[0];const related=relatedOccupations(catalogue,o.id);assert.ok(related.length>0);for(const r of related){assert.notEqual(r.occupation.id,o.id);assert.equal(r.shared,r.occupation.essential.filter(id=>o.essential.includes(id)).length);}});
-test('matching separates dimensions and never treats similarity as eligibility',()=>{const o=searchOccupations(catalogue,'economist')[0];const a=matchOccupation(person,o);const b=matchOccupation({...person,assertions:[{id:'1',skillId:o.essential[0],label:'Skill',claimId:'c',sourceSystem:'upload',sourceRecordId:'r',quote:'evidence',verification:'self-reported',consent:true}]},o);assert.equal(a.requirements.status,'not-assessed');assert.equal(b.alignment.partial,1);assert.equal(b.alignment.supported,0);assert.equal(b.confidence.selfReported,1);assert.equal(b.effort.estimatedHours,null);});
-test('mapping uses existing exact/alias IDs and remains unconfirmed',()=>{const s=catalogue.skills.find(s=>s.label==='Python (computer programming)')||catalogue.skills[0];const result=mapText('I have experience with '+s.label,catalogue.skills);assert.ok(result.some(m=>m.skillId===s.id));assert.ok(result.every(m=>!m.confirmed));});
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { catalogue } from "../src/odyssey/server/data";
+import {
+  searchOccupations,
+  relatedOccupations,
+  matchOccupation,
+  mapText,
+} from "../src/odyssey/catalogue";
+import type { Person } from "../src/odyssey/types";
+const person: Person = {
+  id: "test",
+  name: "Test",
+  headline: "",
+  fictional: true,
+  hoursPerWeek: 6,
+  interests: ["economics"],
+  locations: [],
+  languages: [],
+  budget: "free-resources",
+  claims: [],
+  assertions: [],
+  courses: [],
+};
+test("broad source catalogue preserves IDs, aliases and relationship referential integrity", () => {
+  assert.ok(catalogue.occupations.length > 3000);
+  assert.ok(catalogue.skills.length > 13000);
+  const ids = new Set(catalogue.skills.map((s) => s.id));
+  assert.ok(
+    catalogue.occupations.every((o) =>
+      o.id.startsWith("http://data.europa.eu/esco/occupation/"),
+    ),
+  );
+  assert.ok(
+    catalogue.occupations.every((o) =>
+      [...o.essential, ...o.optional].every((id) => ids.has(id)),
+    ),
+  );
+});
+test("search covers non-featured careers and alias expansion", () => {
+  for (const q of [
+    "economist",
+    "teacher",
+    "mechanical engineer",
+    "solicitor",
+    "AI engineer",
+    "diplomat",
+    "policy analyst",
+  ])
+    assert.ok(searchOccupations(catalogue, q).length > 0, q);
+  assert.ok(
+    searchOccupations(catalogue, "economist")[0].label.includes("economist"),
+  );
+  assert.match(
+    searchOccupations(catalogue, "AI engineer")[0].label,
+    /artificial intelligence/,
+  );
+  assert.equal(searchOccupations(catalogue, "solicitor")[0].label, "lawyer");
+});
+test("related occupations are computed from real shared requirements", () => {
+  const o = searchOccupations(catalogue, "economist")[0];
+  const related = relatedOccupations(catalogue, o.id);
+  assert.ok(related.length > 0);
+  for (const r of related) {
+    assert.notEqual(r.occupation.id, o.id);
+    assert.equal(
+      r.shared,
+      r.occupation.essential.filter((id) => o.essential.includes(id)).length,
+    );
+  }
+});
+test("matching separates dimensions and never treats similarity as eligibility", () => {
+  const o = searchOccupations(catalogue, "economist")[0];
+  const a = matchOccupation(person, o);
+  const b = matchOccupation(
+    {
+      ...person,
+      assertions: [
+        {
+          id: "1",
+          skillId: o.essential[0],
+          label: "Skill",
+          claimId: "c",
+          sourceSystem: "upload",
+          sourceRecordId: "r",
+          quote: "evidence",
+          verification: "self-reported",
+          consent: true,
+        },
+      ],
+    },
+    o,
+  );
+  assert.equal(a.requirements.status, "not-assessed");
+  assert.equal(b.alignment.partial, 1);
+  assert.equal(b.alignment.supported, 0);
+  assert.equal(b.confidence.selfReported, 1);
+  assert.equal(b.effort.estimatedHours, null);
+});
+test("mapping uses existing exact/alias IDs and remains unconfirmed", () => {
+  const s =
+    catalogue.skills.find((s) => s.label === "Python (computer programming)") ||
+    catalogue.skills[0];
+  const result = mapText("I have experience with " + s.label, catalogue.skills);
+  assert.ok(result.some((m) => m.skillId === s.id));
+  assert.ok(result.every((m) => !m.confirmed));
+});

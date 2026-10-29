@@ -57,3 +57,11 @@ A narrowly scoped rewrite proposal for the domain owner is:
 This is a proposal, not an applied configuration. Prepare the actual diff against the identified owner repository and preserve all existing rewrite rules. Before requesting approval, validate a prefixed Roadmaps build with both `ROADMAP_BASE_PATH=/roadmaps` and `NEXT_PUBLIC_BASE_PATH=/roadmaps`. Next.js handles client-link base paths; brand masks use the public base path explicitly. Validate fonts, assets, direct deep links, refreshes, API routes and sign-in links. Future authentication callbacks need their own verified canonical-origin configuration. Never pass authentication tokens through URLs.
 
 The current production project serves the app at its root. Retain that dedicated deployment until canonical integration has been separately approved and tested.
+
+## 2.0 deployment status (2026-10-29)
+
+The 2.0 foundation was pushed as `beed1b392d85cf3cacae3b02abceca4a4b0db5f7`; the application milestone follows after browser verification. Runtime network policy currently denies CONNECT requests to both the production hostname and Vercel API (HTTP 403). The saved environment draft includes those hosts but has not become the enforced runtime policy. A user must save/publish the environment settings to apply it. Do not retry interactive login to repair a destination-policy denial.
+
+The existing alias is known, but a fresh Ready deployment/source SHA and live behavior for 2.0 cannot be asserted while that restriction remains. A GitHub push can trigger the existing integration; it does not prove deployment success. No canonical-site configuration, DNS, paid infrastructure or Campus/Workspace backend changes were made.
+
+`canonical-route-proposal.patch` is a review artifact against the inspected empty `next.config.mjs` in `tahirmahm/syrka.v12`. It is not applied, and current domain ownership must be reconfirmed before use. Review the complete owner configuration at that time and preserve all existing rules. The paired Roadmaps base-path build/environment change must be coordinated; applying only the rewrite to the current root build will not work correctly. This is not approval to alter either project's production settings.

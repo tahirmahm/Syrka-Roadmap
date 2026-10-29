@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { App, type View } from "@/components/app";
-export default async function ViewPage({
+import { OdysseyApp } from "@/odyssey/components/app";
+export default async function Page({
   params,
 }: {
   params: Promise<{ view: string }>;
@@ -9,13 +9,15 @@ export default async function ViewPage({
   if (
     ![
       "roadmap",
+      "roadmaps",
       "discover",
+      "profile",
       "capabilities",
-      "opportunities",
-      "progress",
       "compare",
+      "progress",
+      "opportunities",
     ].includes(view)
   )
     notFound();
-  return <App initialView={view as View} />;
+  return <OdysseyApp initialView={view} />;
 }

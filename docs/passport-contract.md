@@ -1,28 +1,11 @@
-# Career Passport import v1
+# Capability and academic import contracts
 
-No live connection is implied. Import an authorized JSON export using My capabilities or the home import action. Maximum upload size: 1 MiB. The user must explicitly consent before file selection. A workspace export can also be restored. Deletion/reset removes local imported records and progress.
+No live Career Passport connection is claimed. The import dialog requires authorization/consent and accepts JSON up to 2 MB. Export a current capability profile from My Profile to obtain a complete example with all required arrays and preferences.
 
-```json
-{
-  "version": 1,
-  "name": "Example user",
-  "headline": "Exploring a new direction",
-  "hoursPerWeek": 6,
-  "consent": true,
-  "evidence": [
-    {
-      "id": "record-1",
-      "skillId": "html",
-      "title": "Personal website",
-      "verification": "self-reported",
-      "sourceSystem": "authorized-export",
-      "sourceRecordId": "original-123",
-      "reference": "portfolio:website",
-      "timestamp": "2026-01-01T00:00:00Z",
-      "consent": true
-    }
-  ]
-}
-```
+The current capability envelope is `{ "schemaVersion": "syrka-capability/2", "consent": true, "person": { ... } }`. `personSchema` in `src/odyssey/profile.ts` is authoritative. Assertions retain skill identifiers, claim/source record references, quotes, consent and reliability. Source occupational skills use stable ESCO URIs. Uploaded institutional/employer verification flags are downgraded to document-supported.
 
-Accepted learning skill IDs are listed in `src/data/ontology.ts`; official ESCO skill URIs in `src/data/esco.json` are also accepted. Unknown IDs are rejected, not guessed. Optional issuer/reference fields are retained. Dates must be ISO timestamps. Nonconsented evidence is excluded from matching. `institution-verified` and `employer-verified` upload claims become `document-supported` with an explicit unauthenticated-issuer notice. A future trusted, server-authenticated ingestion channel must establish actual verification, source authenticity and revocation before supporting issuer-verified states.
+Workspace exports have `version: 2` and contain the person, multiple paths, progress, route choices, bookmarks and audit events. Legacy `version: 1` workspace files with a `profile` are accepted for person migration. Old path identifiers are not silently equated with the new catalogue; the original local v1 storage is retained for recovery.
+
+Academic bulk import is `{ "version": 1, "consent": true, "courses": [...] }`. Each course requires institution, programme, code, title, reported completion state, source references, document-supported/self-reported status, explicit outcomes and assessments. Each outcome includes its source quote and selected skill IDs. Course titles alone do not create skill assertions. The dialog can download the supported example.
+
+A future trusted server interface must verify issuer authorization, record authenticity and revocation before granting verified capability status. File upload, self-completion and fictional demonstrations cannot establish institutional verification. Private capabilities are never scraped from public portfolios.
