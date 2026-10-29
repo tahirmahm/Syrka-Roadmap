@@ -20,3 +20,9 @@ Hosted Supabase migrations, authentication, cloud backup and live provider calls
 A separate build with `ROADMAP_BASE_PATH=/roadmaps` and `NEXT_PUBLIC_BASE_PATH=/roadmaps` passed. Local Chromium smoke checks passed prefixed home, discovery deep link and refresh, sign-in route, real PDF extraction, and real PNG OCR through prefixed packaged worker assets. Observed local responses in the home/PDF/deep-link run had no HTTP errors. This validates prefix compatibility locally, not a live canonical reverse proxy or hosted authentication callback.
 
 The proposal patch passes `git apply --check` against the inspected domain-owner checkout. It remains unapplied. Domain ownership/current routing must be reconfirmed and the paired production environment/routing changes approved before activation.
+
+## Qwen Token Plan adapter follow-up
+
+The exact user-supplied Token Plan endpoint is enforced, with no Qwen Pay-As-You-Go fallback. A separate additive migration implements prepaid token quotas without fictitious USD pricing. All 34 unit/database tests passed; lint, TypeScript and production build passed. Two targeted production-browser regressions passed (normal PDF CV import and AI-disabled catalogue/learning). The prior full 25-test browser run belongs to the preceding application milestone; a new full-suite run is not claimed for this backend-only change.
+
+The live endpoint is still blocked by CONNECT HTTP 403. Model inclusion and live authentication/JSON requests remain untested; mock tests are not counted as completed integration. See qwen-token-plan.md for the bounded probe and configuration prerequisites.

@@ -16,6 +16,12 @@ test("Odyssey private imports, assertions, cloud snapshots and conservative AI q
     await db.exec(
       await readFile("supabase/migrations/202610290001_odyssey.sql", "utf8"),
     );
+    await db.exec(
+      await readFile(
+        "supabase/migrations/202610290002_qwen_token_plan.sql",
+        "utf8",
+      ),
+    );
     const a = "00000000-0000-4000-8000-000000000001",
       b = "00000000-0000-4000-8000-000000000002",
       doc = "00000000-0000-4000-8000-000000000003";
@@ -76,7 +82,42 @@ test("Odyssey private imports, assertions, cloud snapshots and conservative AI q
       ).rows[0].n,
       80,
     );
+    await db.exec(`set role authenticated;set request.jwt.claim.sub='${a}';`);
+    await assert.rejects(
+      db.query("select reserve_roadmaps_qwen_tokens('explain','test',40)"),
+      /not enabled/,
+    );
+    await db.exec(
+      "reset role;update roadmaps_private.qwen_token_settings set daily_token_limit=100;set role authenticated;",
+    );
+    const qr = (
+      await db.query<{ id: string }>(
+        "select reserve_roadmaps_qwen_tokens('explain','test',60) as id",
+      )
+    ).rows[0].id;
+    await db.exec(`select record_roadmaps_qwen_usage('${qr}',0,0,'failed');`);
+    await assert.rejects(
+      db.query("select reserve_roadmaps_qwen_tokens('explain','test',50)"),
+      /quota reached/,
+    );
+    await assert.rejects(
+      db.query("select * from roadmaps_private.qwen_token_reservations"),
+      /permission denied/,
+    );
+    await db.exec("reset role;");
+    assert.equal(
+      (
+        await db.query<{ n: number }>(
+          "select reserved_tokens as n from roadmaps_private.qwen_daily_tokens",
+        )
+      ).rows[0].n,
+      60,
+    );
     await db.exec("set role anon;");
+    await assert.rejects(
+      db.query("select reserve_roadmaps_qwen_tokens('explain','test',1)"),
+      /permission denied/,
+    );
     await assert.rejects(
       db.query("select * from parsed_claims"),
       /permission denied/,

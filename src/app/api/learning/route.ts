@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
           " External AI is not configured or was not authorized.",
       });
     try {
-      const budget = await authenticatedBudget();
+      const budget = await authenticatedBudget(config);
       const lesson = await aiJSON(
         config,
         budget,

@@ -44,7 +44,7 @@ There is no authorized live Campus or Career Passport API integration. No jobs, 
 
 ## Optional services
 
-See `.env.example`. External AI requires a configured provider/model/key, verified operator-supplied pricing, positive budget, authenticated dedicated Supabase quota storage and explicit user consent. DeepSeek/Qwen-compatible adapters are implemented and mock-tested; current commercial terms, model availability and live calls have not been verified. Keys stay server-side. Default budget is zero.
+See `.env.example`. External AI requires a configured provider/model/key, authenticated dedicated Supabase quota storage and explicit user consent. Qwen uses only the supplied prepaid Token Plan endpoint, QWEN_* settings and token reservations; metered providers separately require verified pricing and USD budgets. See [Token Plan configuration](docs/qwen-token-plan.md). Adapters are implemented and mock-tested; current plan terms, model availability and live calls remain unverified. Keys stay server-side. Default quotas are zero.
 
 Apply the additive migrations only to an authorized dedicated Roadmaps database. SQL RLS/budget policies are tested locally; hosted migrations, catalogue table population, authentication and cloud backup are not verified. Runtime discovery uses the packaged indexed JSON catalogue.
 

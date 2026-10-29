@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       30,
     );
     const allowed = new Set(candidates.map((c) => c.skillId));
-    const budget = await authenticatedBudget();
+    const budget = await authenticatedBudget(config);
     const output = await aiJSON(
       config,
       budget,
