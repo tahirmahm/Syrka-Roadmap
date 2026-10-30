@@ -38,7 +38,7 @@
 }
 .nav-count {
   margin-left: auto;
-  background: #dce6f3;
+  background: var(--selected);
   border-radius: 10px;
   padding: 1px 6px;
   font-size: 10px;
@@ -76,8 +76,8 @@
   display: flex;
   gap: 22px;
   align-items: center;
-  background: #eff2f8;
-  border: 1px solid #dfe6f0;
+  background: var(--roadmaps-tint);
+  border: 1px solid var(--line);
   border-radius: 11px;
   padding: 28px;
   margin: 0 0 22px;
@@ -85,7 +85,7 @@
 .cv-invitation-icon {
   padding: 18px;
   border-radius: 13px;
-  background: #e2eaf5;
+  background: var(--selected);
   color: var(--action);
   flex-shrink: 0;
 }
@@ -112,7 +112,7 @@
   margin-top: 13px;
 }
 .cv-meta > span {
-  border-left: 2px solid #bdcce0;
+  border-left: 2px solid var(--line);
   padding-left: 7px;
 }
 .home-entry-grid {
@@ -164,7 +164,7 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  border: 1px dashed #cdd5df;
+  border: 1px dashed var(--line);
   padding: 25px;
   border-radius: 9px;
 }
@@ -206,7 +206,7 @@
   gap: 10px;
   min-width: 0;
   background: #fff;
-  border: 1px solid #ccd5e0;
+  border: 1px solid var(--roadmaps-control-border);
   border-radius: 7px;
   padding: 10px 13px;
   color: var(--action);
@@ -286,7 +286,7 @@
 .filter-chips .selected {
   background: var(--selected);
   color: var(--action);
-  border-color: #b7c7dc;
+  border-color: var(--roadmaps-control-border);
 }
 .results-heading {
   display: flex;
@@ -359,7 +359,7 @@
 }
 .career-actions button[aria-pressed="true"] {
   background: var(--selected);
-  border-color: #b7c7dc;
+  border-color: var(--roadmaps-control-border);
   color: var(--action);
 }
 .career-actions > .primary {
@@ -372,12 +372,12 @@
   margin-top: 13px;
 }
 .match-dimensions span {
-  background: #f2f4f8;
-  border: 1px solid #e9ecf2;
+  background: var(--roadmaps-tint);
+  border: 1px solid var(--line);
   padding: 4px 7px;
   border-radius: 4px;
   font-size: 9px;
-  color: #526580;
+  color: var(--action);
 }
 .load-more {
   margin: 24px auto;
@@ -464,11 +464,11 @@
   position: relative;
   height: min(76vh, 860px);
   min-height: 580px;
-  background: #fafbfc;
+  background: var(--bg);
 }
 .od-node {
   width: 260px;
-  border: 1px solid #ccd5e0;
+  border: 1px solid var(--roadmaps-control-border);
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 2px 5px #26384c06;
@@ -505,11 +505,11 @@
 }
 .od-position {
   background: var(--selected);
-  border-color: #acbfd8;
+  border-color: var(--roadmaps-control-border);
 }
 .od-family {
-  background: #f0edf6;
-  border-color: #cfc5de;
+  background: var(--roadmaps-tint);
+  border-color: var(--line);
 }
 .od-family > button {
   min-height: 90px;
@@ -522,15 +522,15 @@
   border-color: #dbc6b8;
 }
 .od-status-completed {
-  background: #eef3f9;
-  border-color: #91a8c5;
+  background: var(--roadmaps-tint);
+  border-color: var(--roadmaps-control-border);
 }
 .od-status-working {
   border-color: #b29271;
   box-shadow: 0 0 0 2px #f7e9de;
 }
 .od-status-supported .od-node-icon {
-  color: #637a98;
+  color: var(--action);
 }
 .od-canvas-controls {
   position: absolute;
@@ -553,14 +553,14 @@
   text-align: center;
   pointer-events: none;
   color: var(--muted);
-  background: #fafbfce6;
+  background: var(--bg);
   padding: 4px;
 }
 .roadmap-reading {
   max-height: 76vh;
   overflow: auto;
   min-height: 500px;
-  background: #fafbfc;
+  background: var(--bg);
 }
 .reading-family {
   border-bottom: 1px solid var(--line);
@@ -641,8 +641,8 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border: 1px solid #cbd5e3;
-  background: #f6f8fb;
+  border: 1px solid var(--line);
+  background: var(--roadmaps-tint);
   border-radius: 50%;
   color: var(--action);
   flex-shrink: 0;
@@ -690,7 +690,7 @@
 .topic-tabs button {
   padding: 7px 8px;
   min-height: 34px;
-  background: #f5f6f9;
+  background: var(--roadmaps-tint);
   border-radius: 4px;
   font-size: 10px;
   color: var(--muted);
@@ -739,7 +739,7 @@
 }
 .linked-topics button {
   padding: 7px 9px;
-  background: #f0f3f8;
+  background: var(--roadmaps-tint);
   color: var(--action);
   border-radius: 5px;
   font-size: 11px;
@@ -777,8 +777,8 @@
   border-radius: 7px;
 }
 .route-options > button[aria-pressed="true"] {
-  background: #f0f4fa;
-  border-color: #9fb3ce;
+  background: var(--roadmaps-tint);
+  border-color: var(--roadmaps-control-border);
 }
 .route-options > button > svg {
   position: absolute;
@@ -811,7 +811,7 @@
   line-height: 1.8;
 }
 .lesson {
-  background: #f5f7fb;
+  background: var(--roadmaps-tint);
   padding: 15px;
   border-radius: 8px;
 }
@@ -935,7 +935,7 @@
   min-width: 0;
   min-height: 44px;
   background: #fff;
-  border: 1px solid #cfd6df;
+  border: 1px solid var(--line);
   border-radius: 5px;
   padding: 9px 11px;
   margin-top: 6px;
@@ -986,7 +986,7 @@
 .course-link blockquote {
   margin: 13px 0;
   padding-left: 12px;
-  border-left: 2px solid #c5d1e1;
+  border-left: 2px solid var(--line);
   font-size: 12px;
   color: var(--muted);
 }
@@ -1085,9 +1085,9 @@
   gap: 12px;
   align-items: flex-start;
   padding: 16px;
-  border: 1px solid #dce4ee;
+  border: 1px solid var(--line);
   border-radius: 7px;
-  background: #f5f7fb;
+  background: var(--roadmaps-tint);
   margin: 20px 0;
 }
 .privacy-note > svg {
@@ -1170,11 +1170,11 @@
   min-width: 215px;
   position: sticky;
   left: 0;
-  background: #fafaf8;
+  background: var(--bg);
   z-index: 1;
 }
 .comparison-table thead th {
-  background: #f1f4f8;
+  background: var(--roadmaps-tint);
   position: relative;
   font-size: 18px;
   font-weight: 500;
@@ -1325,8 +1325,8 @@
 .drop-zone {
   text-align: center;
   padding: 35px 20px;
-  border: 1px dashed #aabbd2;
-  background: #f4f7fb;
+  border: 1px dashed var(--roadmaps-control-border);
+  background: var(--roadmaps-tint);
   border-radius: 9px;
   margin: 20px 0;
 }
@@ -1387,8 +1387,8 @@
 }
 .review-summary {
   padding: 18px;
-  background: #eff3f9;
-  border: 1px solid #dce4f0;
+  background: var(--roadmaps-tint);
+  border: 1px solid var(--line);
   border-radius: 8px;
   margin: 20px 0;
 }
@@ -1472,7 +1472,7 @@
   color: var(--action);
 }
 .claim-card blockquote {
-  border-left: 2px solid #c3d0e2;
+  border-left: 2px solid var(--line);
   margin: 12px 0;
   padding-left: 13px;
   line-height: 1.85;
@@ -1501,11 +1501,11 @@
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 12px;
-  background: #f8f9fc;
+  background: var(--roadmaps-tint);
 }
 .mapping-search input {
   width: 100%;
-  border: 1px solid #cbd4df;
+  border: 1px solid var(--roadmaps-control-border);
   border-radius: 5px;
   padding: 10px;
   font-size: 12px;
@@ -1523,7 +1523,7 @@
 }
 .optional-ai {
   padding: 18px;
-  background: #f5f7fb;
+  background: var(--roadmaps-tint);
   border: 1px solid var(--line);
   border-radius: 8px;
   margin: 22px 0;
@@ -1914,7 +1914,7 @@
     position: fixed;
     inset: 15dvh 0 0 0;
     z-index: 70;
-    border: 1px solid #cfd7e2;
+    border: 1px solid var(--line);
     border-radius: 14px 14px 0 0;
     width: 100%;
     max-height: 85dvh;
@@ -2160,7 +2160,7 @@
 }
 .od-route {
   width: 180px;
-  background: #fafbfc;
+  background: var(--bg);
   border-style: dashed;
 }
 .od-route > button {
@@ -2179,8 +2179,8 @@
   width: 21px;
 }
 .od-status-chosen {
-  border-color: #7e9abd;
-  background: #e8eff8;
+  border-color: var(--roadmaps-control-border);
+  background: var(--selected);
   border-style: solid;
 }
 .personal-backup-banner {
@@ -2189,8 +2189,8 @@
   justify-content: space-between;
   gap: 15px;
   padding: 13px 17px;
-  background: #f4edf9;
-  border: 1px solid #dfd3eb;
+  background: var(--roadmaps-tint);
+  border: 1px solid var(--line);
   border-radius: 7px;
   font-size: 11px;
   margin: 15px 0;
@@ -2204,6 +2204,62 @@
 }
 .claim-card.excluded {
   opacity: 1;
-  background: #fafbfc;
+  background: var(--bg);
   border-style: dashed;
+}
+
+/* Product recognition uses the existing Syrka mark and typography. */
+.odyssey-shell .sidebar {
+  background: var(--roadmaps-tint);
+  border-right-color: var(--line);
+}
+.odyssey-shell .brand,
+.odyssey-shell h1,
+.odyssey-shell h2 {
+  color: var(--action);
+}
+.odyssey-shell .brand-mask {
+  background: var(--action);
+}
+.odyssey-shell .brand-suite {
+  color: var(--action);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2.2px;
+  margin-top: 4px;
+}
+.odyssey-shell .nav-item.active {
+  background: var(--selected);
+  color: var(--action);
+  box-shadow: inset 3px 0 var(--roadmaps-secondary);
+}
+.odyssey-shell .topbar {
+  border-top: 3px solid var(--roadmaps-primary);
+}
+.odyssey-shell .secondary {
+  color: var(--action);
+  border-color: var(--roadmaps-control-border);
+}
+.odyssey-shell input,
+.odyssey-shell select,
+.odyssey-shell textarea {
+  accent-color: var(--action);
+}
+.odyssey-shell .od-family {
+  background: var(--roadmaps-tint);
+  border-top: 3px solid var(--roadmaps-secondary);
+}
+.odyssey-shell .od-status-completed {
+  background: var(--selected);
+  border-color: var(--roadmaps-secondary);
+}
+.odyssey-shell .react-flow__controls-button {
+  background: var(--surface);
+  color: var(--action);
+  border-color: var(--line);
+  fill: currentColor;
+}
+.odyssey-shell .react-flow__controls-button:focus-visible {
+  outline: 3px solid var(--action);
+  outline-offset: 3px;
 }

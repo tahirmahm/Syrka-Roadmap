@@ -4,14 +4,28 @@
 @import "@fontsource/inter/600.css";
 @import "@fontsource/inter/700.css";
 :root {
-  --bg: #fafaf8;
+  /* Roadmaps identity. Periwinkle is an accent, not normal text on white. */
+  --roadmaps-primary: #253B75;
+  --roadmaps-secondary: #687FD0;
+  --roadmaps-accent: #DFE6FF;
+  --roadmaps-background: #F6F7FC;
+  --roadmaps-text: #20283D;
+  --roadmaps-muted: #68748A;
+  --roadmaps-muted-text: #5D687E;
+  --roadmaps-border: #DCE2EF;
+  --roadmaps-hover: #1C2E5E;
+  --roadmaps-tint: #EEF1FC;
+  --roadmaps-control-border: #8898BF;
+  --roadmaps-connector: #687FD0;
+  --roadmaps-canvas-dot: #BEC8E3;
+  --bg: var(--roadmaps-background);
   --surface: #fff;
-  --ink: #26282b;
-  --muted: #606974;
-  --action: #536d91;
-  --selected: #e8eff8;
-  --line: #e2e5e9;
-  --lavender: #eeeaf7;
+  --ink: var(--roadmaps-text);
+  --muted: var(--roadmaps-muted-text);
+  --action: var(--roadmaps-primary);
+  --selected: var(--roadmaps-accent);
+  --line: var(--roadmaps-border);
+  --lavender: var(--roadmaps-tint);
   --apricot: #f7e9de;
   color-scheme: light;
   font-synthesis: none;
@@ -87,8 +101,10 @@ p {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-summary:focus-visible {
-  outline: 3px solid #536d91;
+summary:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--action);
   outline-offset: 4px;
 }
 button:hover {
@@ -114,7 +130,7 @@ button:active {
   border: 1px solid var(--action);
 }
 .primary:hover {
-  background: #435c7c;
+  background: var(--roadmaps-hover);
 }
 .secondary {
   background: white;
@@ -218,7 +234,7 @@ button:active {
   font-size: 8px;
   font-weight: 600;
   letter-spacing: 1.6px;
-  color: #606974;
+  color: var(--muted);
   margin: 0 13px 12px;
 }
 .nav-item {
@@ -237,11 +253,11 @@ button:active {
 }
 .nav-item.active {
   background: var(--selected);
-  color: #3e587d;
+  color: var(--action);
   font-weight: 500;
 }
 .nav-item:hover {
-  background: #f1f3f5;
+  background: var(--roadmaps-tint);
   text-decoration: none;
 }
 .nav-dot {
@@ -261,8 +277,8 @@ button:active {
 }
 .sidebar-note {
   margin: 25px 0 20px;
-  background: #f4f5f8;
-  border: 1px solid #e9ebf0;
+  background: var(--roadmaps-tint);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 18px 14px;
   color: var(--action);
@@ -295,8 +311,8 @@ button:active {
   justify-content: center;
   width: 33px;
   height: 33px;
-  background: #eae6f2;
-  color: #62547a;
+  background: var(--selected);
+  color: var(--action);
   border-radius: 50%;
   font-size: 10px;
   flex-shrink: 0;
@@ -332,7 +348,7 @@ button:active {
   display: flex;
   align-items: center;
   gap: 14px;
-  color: #606974;
+  color: var(--muted);
   font-size: 10px;
 }
 .breadcrumb strong {
@@ -421,7 +437,7 @@ button:active {
   align-items: center;
   gap: 12px;
   background: #fff;
-  border: 1px solid #d8dee5;
+  border: 1px solid var(--line);
   border-radius: 9px;
   box-shadow: 0 4px 16px #26384c04;
   padding: 7px 8px 7px 17px;
@@ -502,7 +518,7 @@ button:active {
   font-size: 9px;
   color: var(--muted);
   padding: 3px 8px;
-  background: #f2f4f7;
+  background: var(--roadmaps-tint);
   border-radius: 4px;
   display: inline-block;
 }
@@ -516,7 +532,7 @@ button:active {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2px solid #c5ceda;
+  border: 2px solid var(--roadmaps-control-border);
   background: #fff;
   flex-shrink: 0;
   display: flex;
@@ -530,17 +546,17 @@ button:active {
 }
 .route-stop.current {
   border-color: var(--action);
-  outline: 4px solid #e8eff8;
+  outline: 4px solid var(--selected);
 }
 .route-stop.destination {
-  background: #eeeaf7;
+  background: var(--selected);
   border-color: #b8afc9;
   color: #776888;
 }
 .mini-route i {
   height: 2px;
   flex: 1;
-  background: #d4dce5;
+  background: var(--line);
 }
 .mini-route i:first-of-type {
   background: var(--action);
@@ -559,7 +575,7 @@ button:active {
 }
 .progress-line {
   height: 3px;
-  background: #edf0f3;
+  background: var(--roadmaps-tint);
   margin: 25px 0 11px;
   overflow: hidden;
   border-radius: 5px;
@@ -585,8 +601,8 @@ button:active {
   font-size: 10px;
 }
 .capability-summary {
-  background: #f0eef5;
-  border: 1px solid #e8e4ef;
+  background: var(--roadmaps-tint);
+  border: 1px solid var(--selected);
   border-radius: 10px;
   padding: 22px 24px;
   position: relative;
@@ -755,7 +771,7 @@ button:active {
   font-size: 9px;
   border-radius: 4px;
   padding: 4px 7px;
-  background: #f2f4f6;
+  background: var(--roadmaps-tint);
   color: var(--muted);
 }
 .match-explanation {
@@ -781,8 +797,8 @@ button:active {
   align-items: flex-start;
   gap: 17px;
   padding: 22px;
-  background: #f0f3f7;
-  border: 1px solid #e5eaf1;
+  background: var(--roadmaps-tint);
+  border: 1px solid var(--line);
   border-radius: 8px;
   margin: 30px 0;
 }
@@ -927,7 +943,7 @@ dd {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  border-bottom: 1px solid #f0f1f3;
+  border-bottom: 1px solid var(--roadmaps-tint);
   padding: 9px 0;
 }
 .compare-skills small {
@@ -1056,14 +1072,14 @@ dd {
   min-width: 0;
   flex: 1;
   position: relative;
-  background: #fafbfc;
+  background: var(--bg);
 }
 .react-flow__node {
   border-radius: 9px;
 }
 .road-card {
   width: 280px;
-  border: 1px solid #d9e0e9;
+  border: 1px solid var(--line);
   background: #fff;
   border-radius: 9px;
   box-shadow: 0 3px 7px #24354905;
@@ -1091,7 +1107,7 @@ dd {
   width: 33px;
   height: 33px;
   border-radius: 50%;
-  background: #f1f3f6;
+  background: var(--roadmaps-tint);
   color: var(--action);
   flex-shrink: 0;
 }
@@ -1122,7 +1138,7 @@ dd {
   align-items: center;
   justify-content: space-between;
   padding: 7px 12px;
-  border-top: 1px solid #eef1f4;
+  border-top: 1px solid var(--line);
   font-size: 8px;
   color: var(--muted);
 }
@@ -1141,23 +1157,23 @@ dd {
   padding: 3px 0;
 }
 .kind-position {
-  background: #eef3fa;
-  border-color: #c7d5e7;
+  background: var(--roadmaps-tint);
+  border-color: var(--line);
 }
 .kind-destination {
-  background: #eeeaf7;
-  border-color: #d5cce2;
+  background: var(--selected);
+  border-color: var(--line);
 }
 .kind-destination .node-icon {
-  background: #e3ddec;
-  color: #7a668c;
+  background: var(--selected);
+  color: var(--action);
 }
 .kind-milestone {
   border-style: dashed;
 }
 .status-completed .node-icon {
-  background: #e8eff8;
-  color: #3a5b82;
+  background: var(--selected);
+  color: var(--action);
 }
 .status-in-progress {
   border-color: #b6a17b;
@@ -1167,7 +1183,7 @@ dd {
   color: #8b6648;
 }
 .react-flow__handle {
-  background: #8da2bc !important;
+  background: var(--roadmaps-secondary) !important;
   width: 5px !important;
   height: 5px !important;
   border: 0 !important;
@@ -1208,7 +1224,7 @@ dd {
   font-size: 8px;
   color: var(--muted);
   white-space: nowrap;
-  background: #fafbfce6;
+  background: var(--bg);
   padding: 4px;
 }
 .graph-legend {
@@ -1233,13 +1249,13 @@ dd {
   height: 7px;
   border-radius: 50%;
   display: block;
-  background: #91a6bf;
+  background: var(--roadmaps-secondary);
 }
 .graph-legend .legend-progress {
   background: #c0a07a;
 }
 .graph-legend .legend-gap {
-  background: #d5cfdf;
+  background: var(--selected);
 }
 .detail-panel {
   width: 320px;
@@ -1268,7 +1284,7 @@ dd {
   font-size: 9px;
   line-height: 1.6;
   background: var(--selected);
-  color: #405878;
+  color: var(--action);
 }
 .detail-panel h2 {
   font-size: 22px;
@@ -1373,12 +1389,12 @@ dd {
   gap: 10px;
   max-width: calc(100vw - 32px);
   background: #fff;
-  border: 1px solid #c9d4e2;
+  border: 1px solid var(--line);
   box-shadow: 0 5px 30px #26384c15;
   border-radius: 8px;
   padding: 14px 16px;
   font-size: 11px;
-  color: #405878;
+  color: var(--action);
 }
 .toast > svg {
   flex-shrink: 0;
@@ -1438,8 +1454,8 @@ dd {
 }
 .file-input {
   display: block;
-  background: #f6f7fa;
-  border: 1px dashed #c8d1dc;
+  background: var(--roadmaps-tint);
+  border: 1px dashed var(--line);
   border-radius: 7px;
   padding: 20px;
   font-size: 12px;

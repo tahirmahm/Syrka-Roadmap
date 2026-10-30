@@ -282,7 +282,7 @@ function Tree({
       id: "spine:" + p.id,
       source: i ? "family:" + positions.groups[i - 1].id : "position",
       target: "family:" + p.id,
-      style: { stroke: "#536d91", strokeWidth: 2 },
+      style: { stroke: "var(--roadmaps-connector)", strokeWidth: 2 },
       type: "smoothstep",
     })),
     ...positions.nodes.map((p) => ({
@@ -290,7 +290,7 @@ function Tree({
       source: "family:" + graph.topics.find((t) => t.id === p.id)!.family,
       target: p.id,
       type: "smoothstep",
-      style: { stroke: "#b9c4d2", strokeDasharray: "4 4" },
+      style: { stroke: "var(--roadmaps-control-border)", strokeDasharray: "4 4" },
     })),
     ...graph.topics.flatMap((t) =>
       t.prerequisites
@@ -323,7 +323,7 @@ function Tree({
         }}
         proOptions={{ hideAttribution: true }}
       >
-        <Background gap={25} size={1} color="#dce2e9" />
+        <Background gap={25} size={1} color="var(--roadmaps-canvas-dot)" />
         <Controls showInteractive={false} />
       </ReactFlow>
       <div className="od-canvas-controls">
