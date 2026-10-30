@@ -1,3 +1,5 @@
+> Historical investigation from 2026-10-29. The latest directive replaces the Token Plan with the Singapore general-purpose endpoint and requires verified Free Quota Only protection. Current instructions: [qwen-free-quota.md](qwen-free-quota.md). No authenticated request is authorized before that verification.
+
 # Qwen connectivity investigation — 2026-10-29
 
 ## Observed failure boundary

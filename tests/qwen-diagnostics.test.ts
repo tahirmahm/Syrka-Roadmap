@@ -2,9 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { diagnoseQwen } from "../src/odyssey/server/qwen-diagnostics";
 const env = {
-  QWEN_BASE_URL: "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1",
+  QWEN_BASE_URL:
+    "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
   QWEN_API_KEY: "test-placeholder-never-log",
-  QWEN_MODEL: "fixture-only",
+  QWEN_MODEL: "qwen3.8-flash",
+  QWEN_FREE_QUOTA_ONLY_VERIFIED: "true",
+  QWEN_FREE_QUOTA_VERIFIED_UNTIL: "2030-01-01T00:00:00Z",
+  QWEN_FREE_QUOTA_VERIFICATION_REFERENCE: "fixture-only-confirmation",
 };
 test("diagnostics separate missing configuration, transport and upstream rejection without secrets", async () => {
   assert.equal((await diagnoseQwen({}, "models")).stage, "configuration");
@@ -32,7 +36,7 @@ test("diagnostics separate missing configuration, transport and upstream rejecti
   assert.equal(r.code, "AccessDenied");
   assert.ok(!JSON.stringify(r).includes(env.QWEN_API_KEY));
 });
-test("Vercel-compatible probe uses only Token Plan and verifies synthetic structured output", async () => {
+test("Vercel-compatible probe uses only the verified-free-quota endpoint and verifies synthetic structured output", async () => {
   const r = await diagnoseQwen(env, "json", async (url, init) => {
     assert.equal(url, env.QWEN_BASE_URL + "/chat/completions");
     assert.equal(init?.redirect, "error");
@@ -78,4 +82,48 @@ test("diagnostic route stays closed without the operator secret", async () => {
     if (prior === undefined) delete process.env.QWEN_DIAGNOSTICS_TOKEN;
     else process.env.QWEN_DIAGNOSTICS_TOKEN = prior;
   }
+});
+
+test("diagnostic makes no provider request before free-only verification", async () => {
+  let called = false;
+  const result = await diagnoseQwen(
+    { ...env, QWEN_FREE_QUOTA_ONLY_VERIFIED: "false" },
+    "json",
+    async () => {
+      called = true;
+      throw new Error("must not call");
+    },
+  );
+  assert.equal(result.stage, "configuration");
+  assert.equal(result.requestSent, false);
+  assert.equal(called, false);
+});
+
+test("structured probe distinguishes valid JSON from actual returned-model verification", async () => {
+  const valid = await diagnoseQwen(
+    env,
+    "json",
+    async () =>
+      new Response(
+        JSON.stringify({
+          model: "qwen3.8-flash",
+          choices: [{ message: { content: '{"ok":true}' } }],
+        }),
+      ),
+  );
+  assert.equal(valid.structuredOutputValid, true);
+  assert.equal(valid.modelMatchesRequest, true);
+  const wrong = await diagnoseQwen(
+    env,
+    "json",
+    async () =>
+      new Response(
+        JSON.stringify({
+          model: "qwen3.8-max",
+          choices: [{ message: { content: '{"ok":true}' } }],
+        }),
+      ),
+  );
+  assert.equal(wrong.structuredOutputValid, true);
+  assert.equal(wrong.modelMatchesRequest, false);
 });

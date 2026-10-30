@@ -134,6 +134,11 @@ export const workspaceSchema = z.object({
         working: strings,
         expanded: strings,
         routeChoices: z.record(z.string(), z.string()),
+        completedResources: strings.optional(),
+        evidenceNotes: z
+          .array(z.object({ id: str, topicId: str, note: str, createdAt: str }))
+          .max(200)
+          .optional(),
       }),
     )
     .max(100),

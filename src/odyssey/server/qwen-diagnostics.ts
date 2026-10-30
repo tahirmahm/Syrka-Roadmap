@@ -1,25 +1,22 @@
-import { QWEN_TOKEN_PLAN_URL } from "./ai-gateway";
+import { QWEN_API_URL, qwenReadiness } from "./ai-gateway";
+import { deploymentPolicy } from "./deployment-policy";
 export async function diagnoseQwen(
   env: Record<string, string | undefined>,
-  mode: "models" | "json",
+  mode: "configuration" | "models" | "json",
   transport: typeof fetch = fetch,
 ) {
-  const base = env.QWEN_BASE_URL?.replace(/\/$/, "");
-  const configuration = {
-    baseURLMatches: base === QWEN_TOKEN_PLAN_URL,
-    keyPresent: !!env.QWEN_API_KEY,
-    modelPresent: !!env.QWEN_MODEL,
-  };
+  env = deploymentPolicy(env);
+  const configuration = qwenReadiness(env);
   if (
+    mode === "configuration" ||
     !configuration.baseURLMatches ||
     !configuration.keyPresent ||
-    (mode === "json" && !configuration.modelPresent)
+    !configuration.freeQuotaVerificationRecorded
   )
     return { stage: "configuration", configuration, requestSent: false };
   try {
     const response = await transport(
-      QWEN_TOKEN_PLAN_URL +
-        (mode === "models" ? "/models" : "/chat/completions"),
+      QWEN_API_URL + (mode === "models" ? "/models" : "/chat/completions"),
       {
         method: mode === "models" ? "GET" : "POST",
         redirect: "error",
@@ -32,7 +29,7 @@ export async function diagnoseQwen(
           ? {}
           : {
               body: JSON.stringify({
-                model: env.QWEN_MODEL,
+                model: env.QWEN_MODEL || "qwen3.8-flash",
                 max_tokens: 128,
                 temperature: 0,
                 response_format: { type: "json_object" },
@@ -108,7 +105,7 @@ export async function diagnoseQwen(
               .map((m) => m.id)
           : [],
         notice:
-          "Listed models are not independent proof of purchased-plan entitlement.",
+          "Listed models are not independent proof of free-quota coverage.",
       };
     }
     let valid = false;
@@ -117,11 +114,24 @@ export async function diagnoseQwen(
       const parsed = JSON.parse(choices[0].message.content);
       valid = parsed.ok === true && Object.keys(parsed).length === 1;
     } catch {}
+    const requestedModel = env.QWEN_MODEL || "qwen3.8-flash";
+    const respondedModel =
+      typeof data.model === "string" &&
+      /^qwen3\.8-(?:flash|max)(?:[-.][A-Za-z0-9_.-]{1,60})?$/.test(data.model)
+        ? data.model
+        : null;
     return {
       stage: "provider-response",
       status: response.status,
       requestSent: true,
       structuredOutputValid: valid,
+      requestedModel,
+      respondedModel,
+      modelMatchesRequest:
+        respondedModel === null
+          ? null
+          : respondedModel === requestedModel ||
+            respondedModel.startsWith(requestedModel + "-"),
     };
   } catch {
     return {

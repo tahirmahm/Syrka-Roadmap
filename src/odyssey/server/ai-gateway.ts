@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { deploymentPolicy } from "./deployment-policy";
 export type AIConfig = {
   provider: string;
-  billingMode?: "metered" | "token-plan";
+  billingMode?: "metered" | "free-quota";
   dailyTokenLimit?: number;
   model: string;
   baseURL: string;
@@ -12,34 +13,63 @@ export type AIConfig = {
   inputRate: number;
   outputRate: number;
 };
-export const QWEN_TOKEN_PLAN_URL =
-  "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1";
+export const QWEN_API_URL =
+  "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1";
+export function qwenReadiness(
+  env: Record<string, string | undefined> = process.env,
+) {
+  env = deploymentPolicy(env);
+  return {
+    baseURLMatches: env.QWEN_BASE_URL?.replace(/\/$/, "") === QWEN_API_URL,
+    keyPresent: !!env.QWEN_API_KEY,
+    modelPresent: !!env.QWEN_MODEL,
+    freeQuotaVerificationRecorded:
+      env.QWEN_FREE_QUOTA_ONLY_VERIFIED === "true" &&
+      !!env.QWEN_FREE_QUOTA_VERIFICATION_REFERENCE?.trim() &&
+      Number.isFinite(Date.parse(env.QWEN_FREE_QUOTA_VERIFIED_UNTIL || "")) &&
+      Date.now() < Date.parse(env.QWEN_FREE_QUOTA_VERIFIED_UNTIL || ""),
+  };
+}
 export function aiConfig(
   env: Record<string, string | undefined> = process.env,
 ): AIConfig | null {
-  if (env.AI_PROVIDER === "qwen" || env.AI_PROVIDER === "qwen-token-plan") {
+  env = deploymentPolicy(env);
+  if (env.AI_PROVIDER === "qwen-token-plan")
+    throw new Error("The previous Token Plan is retired for this backend.");
+  const chosenProvider =
+    env.AI_PROVIDER || (env.QWEN_API_KEY ? "qwen" : "disabled");
+  if (chosenProvider === "qwen" || chosenProvider === "qwen-free-quota") {
     if (
       env.QWEN_BASE_URL &&
-      env.QWEN_BASE_URL.replace(/\/$/, "") !== QWEN_TOKEN_PLAN_URL
+      env.QWEN_BASE_URL.replace(/\/$/, "") !== QWEN_API_URL
     )
       throw new Error(
-        "Qwen requires the approved HTTPS Token Plan endpoint; Pay-As-You-Go endpoints are disabled.",
+        "Qwen requires the approved Singapore general-purpose endpoint; the old Token Plan is disabled.",
+      );
+    if (
+      !["qwen3.8-flash", "qwen3.8-max"].includes(
+        env.QWEN_MODEL || "qwen3.8-flash",
+      )
+    )
+      throw new Error(
+        "The configured language model has no recorded free-quota entitlement.",
       );
     const dailyTokenLimit = Number(env.QWEN_DAILY_TOKEN_LIMIT || 0);
+    const readiness = qwenReadiness(env);
     if (
-      !env.QWEN_API_KEY ||
-      !env.QWEN_MODEL ||
-      !env.QWEN_BASE_URL ||
+      !readiness.keyPresent ||
+      !readiness.baseURLMatches ||
+      !readiness.freeQuotaVerificationRecorded ||
       !Number.isSafeInteger(dailyTokenLimit) ||
       dailyTokenLimit <= 0
     )
       return null;
     return {
-      provider: "qwen-token-plan",
-      billingMode: "token-plan",
-      baseURL: QWEN_TOKEN_PLAN_URL,
-      apiKey: env.QWEN_API_KEY,
-      model: env.QWEN_MODEL,
+      provider: "qwen-free-quota",
+      billingMode: "free-quota",
+      baseURL: QWEN_API_URL,
+      apiKey: env.QWEN_API_KEY!,
+      model: env.QWEN_MODEL || "qwen3.8-flash",
       dailyTokenLimit,
       dailyBudget: 0,
       inputRate: 0,
@@ -130,6 +160,7 @@ const envelope = z.object({
     })
     .optional(),
 });
+class SafeProviderError extends Error {}
 export async function aiJSON<T>(
   config: AIConfig,
   budget: Budget,
@@ -145,7 +176,7 @@ export async function aiJSON<T>(
   if (inputEstimate > 18000)
     throw new Error("AI input exceeds the conservative token budget.");
   const maxCost =
-    config.billingMode === "token-plan"
+    config.billingMode === "free-quota"
       ? 2 * (inputEstimate + config.maxOutputTokens)
       : Math.max(
           1,
@@ -156,7 +187,7 @@ export async function aiJSON<T>(
           ),
         );
   const reservationLimit =
-    config.billingMode === "token-plan"
+    config.billingMode === "free-quota"
       ? config.dailyTokenLimit || 0
       : config.dailyBudget * 1e6;
   if (maxCost > reservationLimit)
@@ -190,7 +221,13 @@ export async function aiJSON<T>(
       });
       if (response.ok) break;
       if (![429, 502, 503, 504].includes(response.status) || attempt === 1)
-        throw new Error("AI provider unavailable.");
+        throw new SafeProviderError(
+          response.status === 429
+            ? "AI quota or rate limit reached. Your profile is preserved; local guidance remains available."
+            : [401, 403].includes(response.status)
+              ? "AI access was rejected. Check authentication, model access and account policy; local guidance remains available."
+              : "AI provider is temporarily unavailable; local guidance remains available.",
+        );
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
     if (!response?.ok) throw new Error("AI provider unavailable.");
@@ -217,7 +254,11 @@ export async function aiJSON<T>(
       )
       .catch(() => {});
     throw new Error(
-      "AI could not produce a valid response; deterministic guidance is still available.",
+      e instanceof SafeProviderError
+        ? e.message
+        : e instanceof Error && e.name === "TimeoutError"
+          ? "AI request timed out; deterministic guidance is still available."
+          : "AI could not produce a valid response; deterministic guidance is still available.",
     );
   }
 }

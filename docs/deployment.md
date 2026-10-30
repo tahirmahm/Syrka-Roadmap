@@ -71,3 +71,16 @@ The prefixed build and local browser smoke checks now pass, including document/O
 ## Operator Qwen investigation
 
 The protected Node.js endpoint `/api/diagnostics/qwen` and `scripts/probe-vercel-qwen.ts` allow testing from the Vercel server, separate from a Codex-to-Qwen request. Configure a separate server-only `QWEN_DIAGNOSTICS_TOKEN` (32+ characters), the Qwen key/base URL and a confirmed included model. The route stays closed by default. See `qwen-connectivity.md` for exact modes, safe output fields and the confirmed CONNECT-layer blocker. No new project, subscription, DNS or canonical rewrite is introduced.
+
+
+## Current Qwen production configuration — 2026-10-30
+
+The user reports saving the new general-purpose QWEN_API_KEY, Singapore QWEN_BASE_URL and qwen3.8-flash model for Production. This has not been independently checked through Vercel because runtime network policy still blocks its API and production hostname. The retired Token Plan must not be used.
+
+Follow qwen-free-quota.md: verify the provider account's actual Free Quota Only switch before authenticated calls, record the verification server-side, then redeploy the latest pushed commit in this same project. Configuration-only diagnostic mode makes no provider request. No successful live call, actual returned model, Ready deployment SHA or completed login/logout test is claimed without observing it.
+
+## Owner-confirmed Benefits activation
+
+The latest owner confirmation records active free quotas and Free Quota Only protection through 29 January 2027. The scoped production policy now uses that confirmation with the existing three Qwen variables; no key is copied from Vercel. Explicit disabled/false/zero settings still win. See qwen-free-quota.md for scope, cutoff and guest-limit boundaries.
+
+The connected production build runs a bounded, synthetic Qwen probe and may publish `/build-status/qwen.json`. Its commit/timestamp distinguish an actual deployment-build result from local fixtures. Runtime operation and current deployment Ready state still require observation. The protected runtime diagnostic is separate; no new Vercel project or canonical routing changes are introduced.

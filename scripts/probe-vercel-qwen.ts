@@ -4,7 +4,11 @@ async function main() {
     throw new Error(
       "Set the server-configured QWEN_DIAGNOSTICS_TOKEN securely before probing.",
     );
-  const mode = process.argv.includes("--json") ? "json" : "models";
+  const mode = process.argv.includes("--configuration")
+    ? "configuration"
+    : process.argv.includes("--json")
+      ? "json"
+      : "models";
   const r = await fetch(
     "https://syrkaroadmap.vercel.app/api/diagnostics/qwen?mode=" + mode,
     {
@@ -34,6 +38,9 @@ async function main() {
     "models",
     "notice",
     "structuredOutputValid",
+    "requestedModel",
+    "respondedModel",
+    "modelMatchesRequest",
     "result",
   ];
   console.log(

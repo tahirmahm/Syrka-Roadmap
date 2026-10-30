@@ -35,6 +35,7 @@ export function TopicPanel({
   onTopic,
   onProgress,
   onRoute,
+  onPath,
   onDiscover,
   plan,
 }: {
@@ -47,6 +48,7 @@ export function TopicPanel({
   onTopic: (id: string) => void;
   onProgress: (id: string, status: "completed" | "working" | "reset") => void;
   onRoute: (topic: string, route: string) => void;
+  onPath: (patch: Partial<PathRecord>) => void;
   onDiscover: (query: string) => void;
   plan: {
     topicIds: string[];
@@ -57,9 +59,11 @@ export function TopicPanel({
   const [tab, setTab] = useState<(typeof tabs)[number]>("Overview"),
     [lesson, setLesson] = useState<Lesson | null>(null),
     [consent, setConsent] = useState(false),
+    [evidenceNote, setEvidenceNote] = useState(""),
     [busy, setBusy] = useState(false),
     [answers, setAnswers] = useState<Record<number, number>>({});
   const panel = useRef<HTMLElement>(null);
+  const lessonCache = useRef(new Map<string, Lesson>());
   const assertions = person.assertions.filter(
     (a) =>
       a.consent && a.selected !== false && topic.skillIds.includes(a.skillId),
@@ -82,21 +86,31 @@ export function TopicPanel({
     setLesson(fallback);
     setAnswers({});
     if (!consent) return;
+    const cacheKey = action + ":" + assertions.length;
+    const cached = lessonCache.current.get(cacheKey);
+    if (cached) {
+      setLesson(cached);
+      return;
+    }
     setBusy(true);
     try {
-      setLesson(
-        await jsonRequest<Lesson>("/api/learning", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            occupationId: occupation.id,
-            topicId: topic.id,
-            action,
-            consent: true,
-            evidenceCount: assertions.length,
-          }),
+      const result = await jsonRequest<Lesson>("/api/learning", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          occupationId: occupation.id,
+          topicId: topic.id,
+          action,
+          consent: true,
+          evidenceCount: assertions.length,
         }),
-      );
+      });
+      setLesson(result);
+      if (result.provider === "ai") {
+        if (lessonCache.current.size >= 12)
+          lessonCache.current.delete(lessonCache.current.keys().next().value!);
+        lessonCache.current.set(cacheKey, result);
+      }
     } catch (e) {
       setLesson({
         ...fallback,
@@ -239,6 +253,26 @@ export function TopicPanel({
                   <ExternalLink size={14} />
                 </a>
                 <p>{r.note}</p>
+                <label className="inline-check">
+                  <input
+                    type="checkbox"
+                    aria-label={`Mark resource completed: ${r.title}`}
+                    checked={(path.completedResources || []).includes(
+                      topic.id + ":" + r.url,
+                    )}
+                    onChange={(e) => {
+                      const key = topic.id + ":" + r.url;
+                      onPath({
+                        completedResources: e.target.checked
+                          ? [...(path.completedResources || []), key]
+                          : (path.completedResources || []).filter(
+                              (x) => x !== key,
+                            ),
+                      });
+                    }}
+                  />
+                  Completed resource · self-reported learning
+                </label>
               </article>
             ))}
             <h3>Choose your learning route</h3>
@@ -340,6 +374,62 @@ export function TopicPanel({
         )}
         {tab === "My Evidence" && (
           <>
+            <label>
+              Evidence note or project reference
+              <textarea
+                aria-label="Evidence note or project reference"
+                maxLength={4000}
+                rows={3}
+                value={evidenceNote}
+                onChange={(e) => setEvidenceNote(e.target.value)}
+              />
+            </label>
+            <button
+              className="secondary"
+              disabled={
+                !evidenceNote.trim() || (path.evidenceNotes || []).length >= 200
+              }
+              onClick={() => {
+                onPath({
+                  evidenceNotes: [
+                    ...(path.evidenceNotes || []),
+                    {
+                      id: crypto.randomUUID(),
+                      topicId: topic.id,
+                      note: evidenceNote.trim(),
+                      createdAt: new Date().toISOString(),
+                    },
+                  ],
+                });
+                setEvidenceNote("");
+              }}
+            >
+              Attach evidence note
+            </button>
+            <p className="small">
+              Notes are private, self-reported references. They do not verify a
+              skill or credential.
+            </p>
+            {(path.evidenceNotes || [])
+              .filter((n) => n.topicId === topic.id)
+              .map((n) => (
+                <article className="evidence-row" key={n.id}>
+                  <span className="status-chip">self-reported reference</span>
+                  <p>{n.note}</p>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      onPath({
+                        evidenceNotes: (path.evidenceNotes || []).filter(
+                          (x) => x.id !== n.id,
+                        ),
+                      })
+                    }
+                  >
+                    Remove evidence note
+                  </button>
+                </article>
+              ))}
             {assertions.length ? (
               assertions.map((a) => (
                 <article className="evidence-row" key={a.id}>

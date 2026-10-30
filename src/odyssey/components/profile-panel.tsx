@@ -15,6 +15,10 @@ import type { Person, Workspace, Assertion } from "../types";
 import { jsonRequest, downloadJSON } from "../client";
 import { getSupabase } from "@/lib/supabase";
 import { importWorkspace } from "../profile";
+import {
+  capabilityCategory,
+  capabilityCategories,
+} from "../capability-categories";
 export function ProfilePanel({
   person,
   workspace,
@@ -32,7 +36,9 @@ export function ProfilePanel({
   onReset: () => void;
   onRestore: (w: Workspace) => void;
 }) {
-  const [query, setQuery] = useState(""),
+  const [capabilityQuery, setCapabilityQuery] = useState(""),
+    [category, setCategory] = useState(""),
+    [query, setQuery] = useState(""),
     [results, setResults] = useState<{ id: string; label: string }[]>([]),
     [claimText, setClaimText] = useState(""),
     [claimKind, setClaimKind] = useState<
@@ -384,49 +390,92 @@ export function ProfilePanel({
           </button>
         ))}
       </div>
+      <div className="review-actions">
+        <label>
+          Search my capabilities
+          <input
+            aria-label="Search my capabilities"
+            value={capabilityQuery}
+            onChange={(e) => setCapabilityQuery(e.target.value)}
+          />
+        </label>
+        <label>
+          Capability category
+          <select
+            aria-label="Filter my capabilities by category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="">All categories</option>
+            {capabilityCategories.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <p className="small">
+        Categories are navigation aids, not formal ontology classifications.
+        Select All and Deselect All apply to the entire profile, including
+        filtered capabilities.
+      </p>
       <div className="assertion-table">
-        {person.assertions.map((a) => (
-          <article key={a.id}>
-            <div>
-              <label className="inline-check">
-                <input
-                  type="checkbox"
-                  aria-label={`Use ${a.label} for career discovery`}
-                  checked={a.selected !== false}
-                  onChange={(e) =>
-                    onChange({
-                      ...person,
-                      assertions: person.assertions.map((x) =>
-                        x.id === a.id
-                          ? { ...x, selected: e.target.checked }
-                          : x,
-                      ),
-                    })
-                  }
-                />
-                <strong>{a.label}</strong>
-              </label>
-              <span className="status-chip">{a.verification}</span>
-              <p>{a.quote}</p>
-              <small>
-                {a.sourceSystem} / {a.sourceRecordId}
-                {a.page ? ` · page ${a.page}` : ""}
-              </small>
-            </div>
-            <button
-              className="icon-button"
-              aria-label={`Remove ${a.label} assertion`}
-              onClick={() =>
-                onChange({
-                  ...person,
-                  assertions: person.assertions.filter((x) => x.id !== a.id),
-                })
-              }
-            >
-              <Trash2 size={15} />
-            </button>
-          </article>
-        ))}
+        {person.assertions
+          .filter(
+            (a) =>
+              (!category || capabilityCategory(a) === category) &&
+              (!capabilityQuery ||
+                (a.label + " " + a.quote)
+                  .toLowerCase()
+                  .includes(capabilityQuery.toLowerCase())),
+          )
+          .sort(
+            (a, b) =>
+              capabilityCategories.indexOf(capabilityCategory(a)) -
+              capabilityCategories.indexOf(capabilityCategory(b)),
+          )
+          .map((a) => (
+            <article key={a.id}>
+              <div>
+                <label className="inline-check">
+                  <input
+                    type="checkbox"
+                    aria-label={`Use ${a.label} for career discovery`}
+                    checked={a.selected !== false}
+                    onChange={(e) =>
+                      onChange({
+                        ...person,
+                        assertions: person.assertions.map((x) =>
+                          x.id === a.id
+                            ? { ...x, selected: e.target.checked }
+                            : x,
+                        ),
+                      })
+                    }
+                  />
+                  <strong>{a.label}</strong>
+                </label>
+                <span className="subtle-tag">{capabilityCategory(a)}</span>
+                <span className="status-chip">{a.verification}</span>
+                <p>{a.quote}</p>
+                <small>
+                  {a.sourceSystem} / {a.sourceRecordId}
+                  {a.page ? ` · page ${a.page}` : ""}
+                </small>
+              </div>
+              <button
+                className="icon-button"
+                aria-label={`Remove ${a.label} assertion`}
+                onClick={() =>
+                  onChange({
+                    ...person,
+                    assertions: person.assertions.filter((x) => x.id !== a.id),
+                  })
+                }
+              >
+                <Trash2 size={15} />
+              </button>
+            </article>
+          ))}
       </div>
       {!!person.imports?.length && (
         <section>

@@ -51,6 +51,22 @@ export function Discovery({
     ),
     [category, setCategory] = useState(""),
     [error, setError] = useState(""),
+    [aiConsent, setAIConsent] = useState(false),
+    [aiBusy, setAIBusy] = useState<string | null>(null),
+    [guidance, setGuidance] = useState<
+      Record<
+        string,
+        {
+          summary: string;
+          actions: string[];
+          uncertainties: string[];
+          provider: string;
+          model?: string | null;
+          notice?: string;
+          profileKey?: string;
+        }
+      >
+    >({}),
     [loading, setLoading] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
@@ -107,6 +123,55 @@ export function Discovery({
       });
     return () => controller.abort();
   }, [personalized, person]);
+  const profileKey = JSON.stringify({
+    skills: person.assertions
+      .filter((a) => a.consent && a.selected !== false)
+      .map((a) => a.skillId),
+    interests: person.interests,
+  });
+  const explain = async (id: string, depth: "quick" | "deep") => {
+    if (
+      guidance[id]?.profileKey === profileKey &&
+      guidance[id]?.provider === "ai" &&
+      guidance[id]?.model ===
+        (depth === "deep" ? "qwen3.8-max" : "qwen3.8-flash")
+    )
+      return;
+    setAIBusy(id);
+    try {
+      const r = await jsonRequest<{
+        summary: string;
+        actions: string[];
+        uncertainties: string[];
+        provider: string;
+        model?: string | null;
+        notice?: string;
+      }>("/api/career-guidance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          occupationId: id,
+          skillIds: [
+            ...new Set(
+              person.assertions
+                .filter((a) => a.consent && a.selected !== false)
+                .map((a) => a.skillId),
+            ),
+          ].slice(0, 100),
+          interests: person.interests,
+          depth,
+          consent: true,
+        }),
+      });
+      setGuidance((g) => ({ ...g, [id]: { ...r, profileKey } }));
+    } catch {
+      setError(
+        "Career guidance is unavailable. Your saved profile and source-backed results are intact.",
+      );
+    } finally {
+      setAIBusy(null);
+    }
+  };
   const visible = personalized
     ? matches
         .filter(
@@ -180,6 +245,15 @@ export function Discovery({
             document text is sent to this matching endpoint. Location and formal
             eligibility are not inferred.
           </p>
+          <label className="consent-check">
+            <input
+              type="checkbox"
+              checked={aiConsent}
+              onChange={(e) => setAIConsent(e.target.checked)}
+            />
+            Allow Qwen career guidance using selected capability identifiers and
+            interests. No CV document text is sent.
+          </label>
           <div className="filter-chips">
             <button
               className={!category ? "selected" : ""}
@@ -277,6 +351,49 @@ export function Discovery({
                       learning routes for each requirement.
                     </p>
                   </details>
+                )}
+                {match && (
+                  <div className="review-actions">
+                    <button
+                      className="secondary"
+                      disabled={!aiConsent || aiBusy === o.id}
+                      onClick={() => void explain(o.id, "quick")}
+                    >
+                      Explain with Flash
+                    </button>
+                    {match.shared.length >= 3 &&
+                      (match.category === "Interdisciplinary opportunities" ||
+                        match.effort.band === "substantial") && (
+                        <button
+                          className="secondary"
+                          disabled={!aiConsent || aiBusy === o.id}
+                          onClick={() => void explain(o.id, "deep")}
+                        >
+                          Complex transition · Max
+                        </button>
+                      )}
+                  </div>
+                )}
+                {guidance[o.id] && guidance[o.id].profileKey === profileKey && (
+                  <section className="career-guidance" role="status">
+                    <span className="subtle-tag">
+                      {guidance[o.id].provider === "ai"
+                        ? `AI candidate guidance · requested ${guidance[o.id].model}`
+                        : "Deterministic career guidance"}
+                    </span>
+                    <p>{guidance[o.id].summary}</p>
+                    <ul>
+                      {guidance[o.id].actions.map((a, i) => (
+                        <li key={i}>{a}</li>
+                      ))}
+                    </ul>
+                    {guidance[o.id].uncertainties.map((a, i) => (
+                      <p className="small" key={i}>
+                        {a}
+                      </p>
+                    ))}
+                    <p className="small">{guidance[o.id].notice}</p>
+                  </section>
                 )}
                 {match && (
                   <div className="match-dimensions">

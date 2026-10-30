@@ -9,3 +9,5 @@ test-results/
 
 .cache/
 public/document/
+
+public/build-status/

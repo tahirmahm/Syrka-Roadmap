@@ -1,13 +1,27 @@
-import { cookies } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { AIConfig, Budget } from "./ai-gateway";
+import { deploymentPolicy } from "./deployment-policy";
+import { freeQuotaLimiter } from "./free-quota-budget";
 export async function authenticatedBudget(config?: AIConfig): Promise<Budget> {
+  const policy = deploymentPolicy(process.env);
+  const guest = async () => {
+    if (
+      config?.billingMode !== "free-quota" ||
+      policy.QWEN_ALLOW_ANONYMOUS_FREE_ONLY !== "true"
+    )
+      throw new Error(
+        "Sign in or configure the verified-free guest adapter before external AI.",
+      );
+    const h = await headers();
+    return freeQuotaLimiter(
+      h.get("x-real-ip") || h.get("x-forwarded-for") || "anonymous",
+      config.dailyTokenLimit || 0,
+    );
+  };
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
     key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key)
-    throw new Error(
-      "External AI requires a configured Roadmaps account and durable budget store.",
-    );
+  if (!url || !key) return guest();
   const jar = await cookies();
   const db = createServerClient(url, key, {
     cookies: {
@@ -21,18 +35,18 @@ export async function authenticatedBudget(config?: AIConfig): Promise<Budget> {
     data: { user },
     error,
   } = await db.auth.getUser();
-  if (error || !user) throw new Error("Sign in before using external AI.");
-  const tokenPlan = config?.billingMode === "token-plan";
+  if (error || !user) return guest();
+  const tokenQuota = config?.billingMode === "free-quota";
   return {
     reserve: async (action, model, cost) => {
       const r = await db.rpc(
-        tokenPlan
+        tokenQuota
           ? "reserve_roadmaps_qwen_tokens"
           : "reserve_roadmaps_ai_budget",
         {
           p_action: action,
           p_model: model,
-          [tokenPlan ? "p_reserved_tokens" : "p_max_cost_micro_usd"]: cost,
+          [tokenQuota ? "p_reserved_tokens" : "p_max_cost_micro_usd"]: cost,
         },
       );
       if (r.error || !r.data)
@@ -41,7 +55,7 @@ export async function authenticatedBudget(config?: AIConfig): Promise<Budget> {
     },
     record: async (id, input, output, status) => {
       const r = await db.rpc(
-        tokenPlan ? "record_roadmaps_qwen_usage" : "record_roadmaps_ai_usage",
+        tokenQuota ? "record_roadmaps_qwen_usage" : "record_roadmaps_ai_usage",
         {
           p_id: id,
           p_input_tokens: input,

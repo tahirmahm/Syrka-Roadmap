@@ -123,37 +123,57 @@ test("budget denial prevents any provider call; invalid schemas fail closed", as
   assert.equal(status, "invalid-output");
 });
 
-const planEnv = {
-  AI_PROVIDER: "qwen-token-plan",
-  QWEN_BASE_URL: "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1",
+const qwenEnv = {
+  AI_PROVIDER: "qwen-free-quota",
+  QWEN_BASE_URL:
+    "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
   QWEN_API_KEY: "unit-test-placeholder",
-  QWEN_MODEL: "test-only-not-a-real-model",
+  QWEN_MODEL: "qwen3.8-flash",
   QWEN_DAILY_TOKEN_LIMIT: "100000",
+  QWEN_FREE_QUOTA_ONLY_VERIFIED: "true",
+  QWEN_FREE_QUOTA_VERIFIED_UNTIL: "2030-01-01T00:00:00Z",
+  QWEN_FREE_QUOTA_VERIFICATION_REFERENCE: "fixture-only-console-verification",
 };
-test("Qwen Token Plan configuration never falls back to metered endpoints or generic keys", () => {
-  const plan = aiConfig(planEnv)!;
-  assert.equal(plan.billingMode, "token-plan");
+test("Qwen general-purpose free-quota configuration never falls back to metered endpoints or generic keys", () => {
+  const plan = aiConfig(qwenEnv)!;
+  assert.equal(plan.billingMode, "free-quota");
   assert.equal(plan.dailyBudget, 0);
   assert.equal(
-    aiConfig({ ...planEnv, QWEN_API_KEY: "", AI_API_KEY: "ignored" }),
+    aiConfig({ ...qwenEnv, QWEN_FREE_QUOTA_ONLY_VERIFIED: "false" }),
     null,
   );
-  assert.equal(aiConfig({ ...planEnv, QWEN_MODEL: "" }), null);
-  assert.equal(aiConfig({ ...planEnv, QWEN_DAILY_TOKEN_LIMIT: "0" }), null);
-  assert.equal(aiConfig({ ...planEnv, QWEN_BASE_URL: "" }), null);
+  assert.equal(
+    aiConfig({ ...qwenEnv, QWEN_FREE_QUOTA_VERIFICATION_REFERENCE: "" }),
+    null,
+  );
+  assert.throws(
+    () => aiConfig({ ...qwenEnv, AI_PROVIDER: "qwen-token-plan" }),
+    /retired/,
+  );
+  assert.equal(
+    aiConfig({ ...qwenEnv, QWEN_API_KEY: "", AI_API_KEY: "ignored" }),
+    null,
+  );
+  assert.equal(
+    aiConfig({ ...qwenEnv, QWEN_MODEL: "" })?.model,
+    "qwen3.8-flash",
+  );
+  assert.equal(aiConfig({ ...qwenEnv, QWEN_DAILY_TOKEN_LIMIT: "0" }), null);
+  assert.equal(aiConfig({ ...qwenEnv, QWEN_BASE_URL: "" }), null);
   for (const url of [
     "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1",
     "https://token-plan.maas.qwencloudapi.com.evil.example/compatible-mode/v1",
     "https://token-plan.maas.qwencloudapi.com/other",
     "http://token-plan.maas.qwencloudapi.com/compatible-mode/v1",
   ])
     assert.throws(
-      () => aiConfig({ ...planEnv, QWEN_BASE_URL: url }),
-      /Token Plan/,
+      () => aiConfig({ ...qwenEnv, QWEN_BASE_URL: url }),
+      /Singapore/,
     );
 });
-test("prepaid requests reserve token units and send structured output only to the approved endpoint", async () => {
-  const plan = aiConfig(planEnv)!;
+test("verified-free-quota requests reserve token units and send structured output only to the approved endpoint", async () => {
+  const plan = aiConfig(qwenEnv)!;
   let tokens = 0;
   const response = await aiJSON(
     plan,
@@ -168,10 +188,10 @@ test("prepaid requests reserve token units and send structured output only to th
     { topic: "Statistics" },
     z.object({ ok: z.literal(true) }),
     async (url, init) => {
-      assert.equal(url, planEnv.QWEN_BASE_URL + "/chat/completions");
+      assert.equal(url, qwenEnv.QWEN_BASE_URL + "/chat/completions");
       assert.equal(init?.redirect, "error");
       const body = JSON.parse(String(init?.body));
-      assert.equal(body.model, planEnv.QWEN_MODEL);
+      assert.equal(body.model, qwenEnv.QWEN_MODEL);
       assert.deepEqual(body.response_format, { type: "json_object" });
       assert.ok(tokens > 2 * plan.maxOutputTokens);
       return new Response(

@@ -635,3 +635,282 @@ test("fictional multidisciplinary CV flows directly to personalized careers with
     "mechanical engineer",
   );
 });
+
+test("pasted fictional CVs produce different recommendations and global selection survives filtering", async ({
+  page,
+  browser,
+  request,
+}) => {
+  const titles: string[][] = [];
+  for (const [i, career] of [
+    "software developer",
+    "nurse responsible for general care",
+  ].entries()) {
+    const ctx = i === 0 ? null : await browser.newContext();
+    const p = ctx ? await ctx.newPage() : page;
+    try {
+      const search = await (
+        await request.get("/api/catalogue?q=" + encodeURIComponent(career))
+      ).json();
+      expect(search.occupations.length).toBeGreaterThan(0);
+      const bundle = await (
+        await request.get(
+          "/api/catalogue?id=" + encodeURIComponent(search.occupations[0].id),
+        )
+      ).json();
+      const labels = bundle.skills
+        .filter((s: { id: string }) =>
+          bundle.occupation.essential.includes(s.id),
+        )
+        .slice(0, 8)
+        .map((s: { label: string }) => s.label);
+      expect(labels.length).toBeGreaterThan(2);
+      await p.goto("/");
+      await p.getByRole("button", { name: "Add your CV", exact: true }).click();
+      await p.getByRole("dialog").getByRole("checkbox").first().check();
+      await p.getByText("Paste résumé text instead", { exact: true }).click();
+      await p
+        .getByLabel("Paste résumé text", { exact: true })
+        .fill(
+          [
+            `Fictional Candidate ${i + 1}`,
+            "EDUCATION",
+            `Fictional University ${i === 0 ? "Computer Science" : "Nursing"} 2021 - 2024`,
+            "WORK EXPERIENCE",
+            `Fictional ${i === 0 ? "software team" : "clinical practice"} internship`,
+            "SKILLS",
+            ...labels,
+          ].join("\n"),
+        );
+      await p
+        .getByRole("button", { name: "Build profile from text", exact: true })
+        .click();
+      await expect(
+        p.getByRole("textbox", { name: "Your display name", exact: true }),
+      ).toHaveValue(`Fictional Candidate ${i + 1}`);
+      await p
+        .getByRole("button", {
+          name: "Continue to career discovery",
+          exact: true,
+        })
+        .click();
+      await expect(p.locator(".career-row").first()).toBeVisible();
+      titles.push(await p.locator(".career-title").allTextContents());
+      await nav(p, "My profile");
+      await p
+        .getByLabel("Search my capabilities", { exact: true })
+        .fill(labels[0]);
+      await expect(p.locator(".assertion-table article").first()).toBeVisible();
+      await p
+        .getByRole("button", { name: "Deselect All capabilities", exact: true })
+        .click();
+      const state = await p.evaluate(() =>
+        JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!),
+      );
+      expect(
+        state.person.assertions.every(
+          (a: { selected: boolean }) => a.selected === false,
+        ),
+      ).toBe(true);
+      await p.getByLabel("Search my capabilities", { exact: true }).fill("");
+      await p
+        .getByRole("button", { name: "Select All capabilities", exact: true })
+        .click();
+      await p
+        .getByLabel("Filter my capabilities by category")
+        .selectOption("Technical");
+      await p.getByLabel("Filter my capabilities by category").selectOption("");
+    } finally {
+      await ctx?.close();
+    }
+  }
+  expect(titles[0].slice(0, 8)).not.toEqual(titles[1].slice(0, 8));
+});
+
+test("resource completion and self-reported evidence notes persist without issuing capabilities", async ({
+  page,
+}) => {
+  await choose(page, "economist");
+  await page.getByRole("button", { name: "Reading", exact: true }).click();
+  await page.locator(".reading-topic").first().click();
+  await page.getByRole("tab", { name: "Learn", exact: true }).click();
+  await page
+    .getByRole("checkbox", { name: /^Mark resource completed:/ })
+    .first()
+    .check();
+  await page.getByRole("tab", { name: "My Evidence", exact: true }).click();
+  await page
+    .getByLabel("Evidence note or project reference")
+    .fill(
+      "Fictional practice project: compared two economic policy arguments. Self-reported reference only.",
+    );
+  await page
+    .getByRole("button", { name: "Attach evidence note", exact: true })
+    .click();
+  const state = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!),
+  );
+  expect(state.paths[0].completedResources.length).toBe(1);
+  expect(state.paths[0].evidenceNotes.length).toBe(1);
+  expect(state.person.assertions.length).toBe(0);
+  expect(state.paths[0].completed.length).toBe(0);
+  await page.reload();
+  await page.getByRole("button", { name: "Reading", exact: true }).click();
+  await page.locator(".reading-topic").first().click();
+  await page.getByRole("tab", { name: "Learn", exact: true }).click();
+  await expect(
+    page.getByRole("checkbox", { name: /^Mark resource completed:/ }).first(),
+  ).toBeChecked();
+  await page.getByRole("tab", { name: "My Evidence", exact: true }).click();
+  await expect(page.locator(".evidence-row").first()).toContainText(
+    "Fictional practice project",
+  );
+});
+
+test("labelled simulated AI outage preserves profile and progress and supplies deterministic guidance", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Load fictional demonstration", exact: true })
+    .click();
+  await choose(page, "economist");
+  const before = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!),
+  );
+  await page.route("**/api/learning", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: "Fixture: AI quota exhausted or service unavailable",
+      }),
+    }),
+  );
+  await page.getByRole("button", { name: "Reading", exact: true }).click();
+  await page.locator(".reading-topic").first().click();
+  await page
+    .getByRole("checkbox", { name: /Use the configured external AI provider/ })
+    .check();
+  await page
+    .getByRole("button", { name: "Quick Explain", exact: true })
+    .click();
+  await expect(page.locator(".lesson")).toContainText(
+    "Fixture: AI quota exhausted",
+  );
+  await expect(page.locator(".lesson")).toContainText(
+    "Deterministic learning guide",
+  );
+  const after = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!),
+  );
+  expect(after.person).toEqual(before.person);
+  expect(after.paths).toEqual(before.paths);
+});
+
+test("explicit CV AI consent invokes the isolated adapter while retaining local claims (fixture)", async ({
+  page,
+}) => {
+  let calls = 0;
+  await page.route("**/api/cv/interpret", (route) => {
+    calls++;
+    const body = route.request().postDataJSON();
+    expect(body.consent).toBe(true);
+    expect(body.pages[0].text).toContain("SQL");
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        claims: [],
+        notice: "Fixture: no extra claims; original extraction retained",
+      }),
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add your CV", exact: true }).click();
+  await page.getByRole("dialog").getByRole("checkbox").first().check();
+  await page
+    .getByRole("checkbox", {
+      name: /Use Qwen to interpret this CV after text extraction/,
+    })
+    .check();
+  await page.getByLabel("Select CV or academic document").setInputFiles({
+    name: "fictional-ai-consent.pdf",
+    mimeType: "application/pdf",
+    buffer: await textPDF(["Fictional AI Candidate", "SKILLS", "SQL"]),
+  });
+  await expect(
+    page.getByRole("textbox", { name: "Your display name", exact: true }),
+  ).toHaveValue("Fictional AI Candidate");
+  expect(calls).toBe(1);
+  await expect(
+    page.getByRole("checkbox", { name: /^Confirm SQL mapping/ }).first(),
+  ).toBeChecked();
+  await page
+    .getByRole("button", { name: "Continue to career discovery", exact: true })
+    .click();
+  await expect(page.locator(".career-row").first()).toBeVisible();
+});
+
+test("career guidance uses deterministic evidence when AI is unavailable (fixture)", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Load fictional demonstration", exact: true })
+    .click();
+  await expect(page.getByText("Fictional demo", { exact: true })).toBeVisible();
+  await nav(page, "Career discovery");
+  await expect(page.locator(".career-row").first()).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: /Allow Qwen career guidance/ })
+    .check();
+  await page
+    .locator(".career-row")
+    .first()
+    .getByRole("button", { name: "Explain with Flash", exact: true })
+    .click();
+  await expect(page.locator(".career-guidance").first()).toContainText(
+    "Deterministic career guidance",
+  );
+  await expect(page.locator(".career-guidance").first()).toContainText(
+    "Formal qualifications",
+  );
+});
+
+test("cancelling document processing returns to upload without changing the saved profile", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add your CV", exact: true }).click();
+  await page.getByRole("dialog").getByRole("checkbox").first().check();
+  await page.route("**/api/catalogue?mode=skills", async (route) => {
+    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      await route.continue();
+    } catch {}
+  });
+  await page
+    .getByLabel("Select CV or academic document")
+    .setInputFiles({
+      name: "fictional-cancel.pdf",
+      mimeType: "application/pdf",
+      buffer: await textPDF([
+        "Fictional Cancellation Candidate",
+        "SKILLS",
+        "SQL",
+        "Python (computer programming)",
+      ]),
+    });
+  await page
+    .getByRole("button", { name: "Cancel processing", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Choose file", exact: true }),
+  ).toBeVisible();
+  const state = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!),
+  );
+  expect(state.person.assertions).toEqual([]);
+  expect(state.person.claims).toEqual([]);
+});

@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   )
     return new NextResponse(null, { status: 404 });
   const mode = req.nextUrl.searchParams.get("mode");
-  if (mode !== "models" && mode !== "json")
+  if (mode !== "configuration" && mode !== "models" && mode !== "json")
     return NextResponse.json(
       { error: "Unknown diagnostic mode" },
       { status: 400 },

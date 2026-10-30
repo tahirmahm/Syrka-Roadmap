@@ -588,6 +588,7 @@ export function Explorer({
             onClose={close}
             onTopic={choose}
             onProgress={onProgress}
+            onPath={onPath}
             onRoute={(id, route) =>
               onPath({ routeChoices: { ...path.routeChoices, [id]: route } })
             }

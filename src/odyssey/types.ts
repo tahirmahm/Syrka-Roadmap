@@ -136,6 +136,13 @@ export type PathRecord = {
   working: string[];
   expanded: string[];
   routeChoices: Record<string, string>;
+  completedResources?: string[];
+  evidenceNotes?: {
+    id: string;
+    topicId: string;
+    note: string;
+    createdAt: string;
+  }[];
 };
 export type Workspace = {
   version: 2;

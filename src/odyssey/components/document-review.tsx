@@ -16,7 +16,12 @@ import type {
   ExtractedDocument,
   Course,
 } from "../types";
-import { extractDocument, extractClaims, approveClaims } from "../documents";
+import {
+  extractDocument,
+  extractClaims,
+  approveClaims,
+  mergeCandidateClaims,
+} from "../documents";
 import { getVocabulary, jsonRequest } from "../client";
 const kinds: ClaimKind[] = [
   "education",
@@ -59,6 +64,7 @@ export function DocumentReview({
     ),
     [visible, setVisible] = useState(12),
     [external, setExternal] = useState(false),
+    [pastedText, setPastedText] = useState(""),
     [aiBusy, setAiBusy] = useState(false),
     [academicFields, setAcademicFields] = useState({
       institution: "",
@@ -103,6 +109,96 @@ export function DocumentReview({
   }, [mappingQuery, mappingTarget]);
   const patch = (id: string, p: Partial<Claim>) =>
     setClaims((cs) => cs.map((c) => (c.id === id ? { ...c, ...p } : c)));
+  const reviewDocument = async (
+    document: ExtractedDocument,
+    signal: AbortSignal,
+  ) => {
+    setMessage("Matching candidate skills against the source vocabulary");
+    const vocab = await getVocabulary();
+    const parsed = await extractClaims(document, vocab, (n) =>
+      setMessage(`Reviewing ${n} extracted lines locally`),
+    );
+    if (signal.aborted) return;
+    setDoc(document);
+    setClaims(parsed);
+    setName(
+      (current) =>
+        current ||
+        parsed.find((c) => c.section === "Profile")?.text.slice(0, 100) ||
+        "",
+    );
+    if (external) {
+      setMessage(
+        "Qwen is interpreting the extracted text; local claims are retained.",
+      );
+      try {
+        const result = await jsonRequest<{ claims?: Claim[]; notice?: string }>(
+          "/api/cv/interpret",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              consent: true,
+              pages: document.pages.map((p) => ({
+                number: p.number,
+                text: p.text.slice(0, 15000),
+              })),
+            }),
+            signal,
+          },
+        );
+        if (signal.aborted) return;
+        if (result.claims)
+          setClaims(mergeCandidateClaims(parsed, result.claims));
+        setMessage(
+          result.notice ||
+            "Qwen candidate interpretations added; review source quotations.",
+        );
+      } catch {
+        if (signal.aborted) return;
+        setMessage(
+          "Qwen is unavailable. Your local extraction is intact and ready for review.",
+        );
+      }
+    }
+    setStage("review-required");
+    if (!external)
+      setMessage(
+        "Capabilities are selected automatically. Continue to discover careers, or refine any claim first. Nothing is institutionally verified.",
+      );
+    setProgress(1);
+  };
+  const startText = async () => {
+    if (!consent || pastedText.trim().length < 30) return;
+    controller.current?.abort();
+    const abort = new AbortController();
+    controller.current = abort;
+    setStage("processing");
+    setMessage("Reading pasted résumé text");
+    setProgress(0);
+    try {
+      if (pastedText.length > 60000)
+        throw new Error("Pasted résumé exceeds 60,000 characters.");
+      await reviewDocument(
+        {
+          id: crypto.randomUUID(),
+          name: "Pasted résumé.txt",
+          mime: "text/plain",
+          pages: [{ number: 1, text: pastedText.trim(), method: "text" }],
+          status: "review-required",
+          createdAt: new Date().toISOString(),
+        },
+        abort.signal,
+      );
+    } catch {
+      if (!abort.signal.aborted) {
+        setStage("failed");
+        setMessage(
+          "Could not process pasted text. Try a shorter extract or a document upload.",
+        );
+      }
+    }
+  };
   const start = async (file: File) => {
     if (!consent) return;
     controller.current?.abort();
@@ -121,25 +217,7 @@ export function DocumentReview({
         abort.signal,
       );
       if (abort.signal.aborted) return;
-      setMessage("Matching candidate skills against the source vocabulary");
-      const vocab = await getVocabulary();
-      const parsed = await extractClaims(document, vocab, (n) =>
-        setMessage(`Reviewing ${n} extracted lines locally`),
-      );
-      if (abort.signal.aborted) return;
-      setDoc(document);
-      setClaims(parsed);
-      setName(
-        (current) =>
-          current ||
-          parsed.find((c) => c.section === "Profile")?.text.slice(0, 100) ||
-          "",
-      );
-      setStage("review-required");
-      setMessage(
-        "Capabilities are selected automatically. Continue to discover careers, or refine any claim first. Nothing is institutionally verified.",
-      );
-      setProgress(1);
+      await reviewDocument(document, abort.signal);
     } catch (e) {
       if (abort.signal.aborted) {
         setStage("queued");
@@ -235,6 +313,18 @@ export function DocumentReview({
               I’m authorized to process these records and consent to storing
               only the claims I confirm in this browser.
             </label>
+            {!academic && (
+              <label className="consent-check">
+                <input
+                  type="checkbox"
+                  checked={external}
+                  onChange={(e) => setExternal(e.target.checked)}
+                />
+                Use Qwen to interpret this CV after text extraction. I consent
+                to sending extracted text for this request; local extraction
+                remains available.
+              </label>
+            )}
             <div
               className={`drop-zone ${!consent ? "disabled" : ""}`}
               onDragOver={(e) => e.preventDefault()}
@@ -267,6 +357,33 @@ export function DocumentReview({
                 }}
               />
             </div>
+            {!academic && (
+              <details>
+                <summary>Paste résumé text instead</summary>
+                <label>
+                  Paste résumé text
+                  <textarea
+                    aria-label="Paste résumé text"
+                    maxLength={60000}
+                    rows={8}
+                    disabled={!consent}
+                    value={pastedText}
+                    onChange={(e) => setPastedText(e.target.value)}
+                  />
+                </label>
+                <p className="small">
+                  Up to 60,000 characters. Text uses the same local extraction,
+                  review and source-provenance pipeline.
+                </p>
+                <button
+                  className="secondary"
+                  disabled={!consent || pastedText.trim().length < 30}
+                  onClick={() => void startText()}
+                >
+                  Build profile from text
+                </button>
+              </details>
+            )}
             <div className="privacy-note">
               <ShieldCheck size={18} />
               <p>
@@ -286,7 +403,13 @@ export function DocumentReview({
             <progress max="1" value={progress} />
             <button
               className="secondary"
-              onClick={() => controller.current?.abort()}
+              onClick={() => {
+                controller.current?.abort();
+                setStage("queued");
+                setMessage(
+                  "Processing cancelled. Your saved profile is unchanged.",
+                );
+              }}
             >
               Cancel processing
             </button>
@@ -393,6 +516,17 @@ export function DocumentReview({
               interpretation is optional; inferred mappings remain suggestions.
               All detected capabilities are selected initially and can be
               deselected below.
+            </p>
+            <p aria-live="polite">
+              {claims.reduce(
+                (n, c) =>
+                  n +
+                  (c.approved
+                    ? c.mappings.filter((m) => m.selected ?? m.confirmed).length
+                    : 0),
+                0,
+              )}{" "}
+              selected capabilities across the complete document.
             </p>
             <div className="review-actions">
               <button
@@ -678,15 +812,8 @@ export function DocumentReview({
                       }),
                     });
                     if (r.claims)
-                      setClaims(
-                        r.claims.map((c) => ({
-                          ...c,
-                          approved: true,
-                          mappings: c.mappings.map((m) => ({
-                            ...m,
-                            selected: true,
-                          })),
-                        })),
+                      setClaims((current) =>
+                        mergeCandidateClaims(current, r.claims!),
                       );
                     setMessage(
                       r.notice || "AI candidates require your review.",

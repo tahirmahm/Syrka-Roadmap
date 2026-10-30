@@ -6,6 +6,7 @@ import {
   extractDocx,
   extractClaims,
   approveClaims,
+  mergeCandidateClaims,
 } from "../src/odyssey/documents";
 import type { Person } from "../src/odyssey/types";
 const p: Person = {
@@ -168,4 +169,42 @@ test("new CV imports reconcile exact duplicates without overwriting edited recor
   assert.equal(next.claims.length, first.claims.length);
   assert.equal(next.assertions.length, first.assertions.length);
   assert.equal(next.imports?.length, 2);
+});
+
+test("AI enhancement preserves edited claims and deselected mappings", async () => {
+  const doc = {
+    id: "d",
+    name: "cv.txt",
+    mime: "text/plain",
+    pages: [
+      { number: 1, text: "SKILLS\nData analysis", method: "text" as const },
+    ],
+    status: "review-required" as const,
+    createdAt: new Date().toISOString(),
+  };
+  const claims = await extractClaims(doc, [
+    { id: "s1", label: "Data analysis", aliases: [] },
+  ]);
+  claims[0].text = "My edited description";
+  claims[0].mappings[0].selected = false;
+  const output = mergeCandidateClaims(claims, [
+    {
+      ...claims[0],
+      text: "AI replacement",
+      mappings: [
+        { ...claims[0].mappings[0], selected: true },
+        {
+          ...claims[0].mappings[0],
+          skillId: "s2",
+          label: "Candidate",
+          method: "ai-candidate",
+          confidence: "low",
+        },
+      ],
+    },
+  ]);
+  assert.equal(output[0].text, "My edited description");
+  assert.equal(output[0].mappings[0].selected, false);
+  assert.equal(output[0].mappings[1].selected, true);
+  assert.equal(output[0].mappings[1].confirmed, false);
 });

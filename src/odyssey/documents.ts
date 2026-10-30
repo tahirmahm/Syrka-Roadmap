@@ -218,7 +218,17 @@ export async function extractDocument(
             y = iy;
           }
           let method: "text" | "ocr" = "text";
-          if (text.replace(/\s/g, "").length < 40) {
+          const nativeLength = text.replace(/\s/g, "").length;
+          const imageOps = new Set<number>([
+            pdfjs.OPS.paintImageXObject,
+            pdfjs.OPS.paintInlineImageXObject,
+            pdfjs.OPS.paintImageMaskXObject,
+          ]);
+          const operators =
+            nativeLength < 40 ? await page.getOperatorList() : null;
+          const containsImage =
+            operators?.fnArray.some((op) => imageOps.has(op)) || false;
+          if (nativeLength === 0 || (nativeLength < 40 && containsImage)) {
             const first = page.getViewport({ scale: 1 });
             const scale = Math.min(
               1.8,
@@ -475,4 +485,36 @@ export function approveClaims(
       },
     ],
   };
+}
+
+/** AI may add candidates; it must not replace prior local extraction or user edits. */
+export function mergeCandidateClaims(
+  existing: Claim[],
+  candidates: Claim[],
+): Claim[] {
+  const merged = existing.map((c) => ({ ...c, mappings: [...c.mappings] }));
+  for (const candidate of candidates) {
+    const found = merged.find(
+      (c) => c.quote === candidate.quote && c.page === candidate.page,
+    );
+    if (found) {
+      const ids = new Set(found.mappings.map((m) => m.skillId));
+      found.mappings.push(
+        ...candidate.mappings
+          .filter((m) => !ids.has(m.skillId))
+          .map((m) => ({ ...m, confirmed: false, selected: true })),
+      );
+    } else
+      merged.push({
+        ...candidate,
+        id: crypto.randomUUID(),
+        approved: true,
+        mappings: candidate.mappings.map((m) => ({
+          ...m,
+          confirmed: false,
+          selected: true,
+        })),
+      });
+  }
+  return merged;
 }

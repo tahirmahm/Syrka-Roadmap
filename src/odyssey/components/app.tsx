@@ -818,7 +818,11 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
           )}
           {view === "discover" && (
             <Discovery
-              key={query}
+              key={
+                query +
+                ":" +
+                (workspace.person.imports?.at(-1)?.id || workspace.person.id)
+              }
               initialQuery={query}
               person={workspace.person}
               saved={workspace.savedOccupations}

@@ -20,7 +20,7 @@ const inputSchema = z
       .max(20),
   })
   .strict();
-const outputSchema = z.object({ claims: z.array(claimSchema).max(100) });
+const outputSchema = z.object({ claims: z.array(claimSchema).max(12) });
 export async function POST(req: NextRequest) {
   try {
     const input = inputSchema.parse(await boundedJSON(req, 65000)),
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     if (!config)
       return NextResponse.json({
         notice:
-          "External AI is not configured. The local extraction and review workflow remains available.",
+          "External AI is disabled or its configuration/free-quota verification is incomplete. Local extraction and review remain available.",
       });
     const candidates = mapText(
       input.pages.map((p) => p.text).join("\n"),
@@ -38,11 +38,14 @@ export async function POST(req: NextRequest) {
     const allowed = new Set(candidates.map((c) => c.skillId));
     const budget = await authenticatedBudget(config);
     const output = await aiJSON(
-      config,
+      {
+        ...config,
+        maxOutputTokens: Math.min(2500, Math.max(config.maxOutputTokens, 1800)),
+      },
       budget,
       "cv-interpret",
       {
-        task: "Extract candidate CV claims. Do not infer unmentioned facts. Use only verbatim quotes from the supplied page. For ontology mappings, select only supplied candidate identifiers if the source quote supports them. All mappings remain unconfirmed.",
+        task: "Extract at most 12 high-signal candidate CV claims. The local parser retains the complete document; do not attempt to replace every local claim. Do not infer unmentioned facts. Use only verbatim quotes from the supplied page. For ontology mappings, select only supplied candidate identifiers if the source quote supports them. All mappings remain unconfirmed.",
         pages: input.pages,
         candidates: candidates.map((c) => ({
           skillId: c.skillId,
@@ -81,7 +84,8 @@ export async function POST(req: NextRequest) {
         !page.text.includes(c.quote) ||
         c.mappings.some((m) => !allowed.has(m.skillId)) ||
         (c.institution && !c.quote.includes(c.institution)) ||
-        (c.dates && !c.quote.includes(c.dates))
+        (c.dates && !c.quote.includes(c.dates)) ||
+        (c.grade && !c.quote.includes(c.grade))
       )
         throw new Error("AI returned an unsupported source reference.");
     }
@@ -98,7 +102,7 @@ export async function POST(req: NextRequest) {
         })),
       })),
       notice:
-        "AI candidate claims are unchecked. Review source quotations and approve each claim before adding it.",
+        "AI candidate interpretations were added. Existing edits and selections are retained. Review quotations; uncertain mappings remain inferred.",
     });
   } catch (e) {
     return NextResponse.json(
