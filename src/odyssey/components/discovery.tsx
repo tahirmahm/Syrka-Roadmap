@@ -9,6 +9,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import type { Occupation, Person, Match, Workspace } from "../types";
+import { discoveryBands, discoveryBand } from "../catalogue";
+import { discoveryProjection } from "../capability-model";
 import { jsonRequest } from "../client";
 type SearchResult = {
   occupations: Occupation[];
@@ -99,22 +101,7 @@ export function Discovery({
     jsonRequest<{ matches: Match[] }>("/api/discovery", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        interests: person.interests,
-        assertions: person.assertions
-          .filter((a) => a.selected !== false)
-          .slice(0, 500)
-          .map((a) => ({
-            skillId: a.skillId,
-            verification: [
-              "institution-verified",
-              "employer-verified",
-            ].includes(a.verification)
-              ? "document-supported"
-              : a.verification,
-            consent: a.consent,
-          })),
-      }),
+      body: JSON.stringify(discoveryProjection(person)),
       signal: controller.signal,
     })
       .then((x) => setMatches(x.matches))
@@ -176,7 +163,7 @@ export function Discovery({
     ? matches
         .filter(
           (m) =>
-            (!category || m.category === category) &&
+            (!category || discoveryBand(m) === category) &&
             (!domain || m.occupation.domain === domain) &&
             (!query ||
               (m.occupation.label + " " + m.occupation.aliases.join(" "))
@@ -189,7 +176,7 @@ export function Discovery({
     <>
       <div className="page-heading">
         <span className="eyebrow">AN OPEN WORLD OF POSSIBILITIES</span>
-        <h1>Career discovery</h1>
+        <h1>Explore careers</h1>
         <p>
           Explore {data?.total.toLocaleString() || "the"} source-defined
           occupations across disciplines.
@@ -261,13 +248,7 @@ export function Discovery({
             >
               All possibilities
             </button>
-            {[
-              "Strong existing alignment",
-              "Adjacent possibilities",
-              "Interdisciplinary opportunities",
-              "Emerging interests",
-              "Longer-term ambitions",
-            ].map((c) => (
+            {discoveryBands.map((c) => (
               <button
                 key={c}
                 className={category === c ? "selected" : ""}
@@ -345,6 +326,34 @@ export function Discovery({
                       {match.explanation?.missing.join(", ") ||
                         "No additional essential skill gaps identified; formal requirements remain unknown."}
                     </p>
+                    <div className="supporting-evidence">
+                      <strong>Evidence behind this recommendation</strong>
+                      {person.assertions
+                        .filter(
+                          (a) =>
+                            a.consent &&
+                            a.selected !== false &&
+                            match.shared.includes(a.skillId),
+                        )
+                        .slice(0, 3)
+                        .map((a) => (
+                          <blockquote key={a.id}>
+                            <span>
+                              {a.label} · {a.verification}
+                            </span>
+                            <p>
+                              {a.quote ||
+                                "Self-declared capability; supporting evidence needed."}
+                            </p>
+                          </blockquote>
+                        ))}
+                    </div>
+                    <p>
+                      Typical occupational expectations: {o.essential.length}{" "}
+                      essential skills in ESCO. Qualifications, licensing and
+                      local entry routes must be checked with the relevant
+                      employer or regulator.
+                    </p>
                     <p>{match.requirements.reason}</p>
                     <p>
                       Next action: explore the roadmap to inspect evidence and
@@ -397,7 +406,7 @@ export function Discovery({
                 )}
                 {match && (
                   <div className="match-dimensions">
-                    <span>{match.category}</span>
+                    <span>{discoveryBand(match)}</span>
                     <span>Transition: {match.effort.band}</span>
                     <span>Interest links: {match.interest.matched.length}</span>
                     <span>Formal eligibility: not assessed</span>

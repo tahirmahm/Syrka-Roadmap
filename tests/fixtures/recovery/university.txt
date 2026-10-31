@@ -1,0 +1,12 @@
+Sam Fictional
+EDUCATION
+Fictional University, Economics, 2022 - 2026
+PROJECTS
+Statistical analysis of economic data using Python and SQL
+SKILLS
+economics
+statistics
+econometrics
+data analysis
+INTERESTS
+economic research

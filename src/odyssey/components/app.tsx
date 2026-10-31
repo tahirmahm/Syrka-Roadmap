@@ -52,6 +52,8 @@ import { Explorer } from "./explorer";
 const DocumentReview = dynamic(() =>
   import("./document-review").then((m) => m.DocumentReview),
 );
+import { AccountWorkspace } from "./account-workspace";
+import { Overview } from "./overview";
 import { ProfilePanel } from "./profile-panel";
 import { Compare } from "./compare";
 export type OdysseyView =
@@ -65,22 +67,22 @@ export type OdysseyView =
   | "opportunities";
 const nav = [
   { id: "home", label: "Overview", Icon: Home },
-  { id: "discover", label: "Career discovery", Icon: Compass },
-  { id: "profile", label: "My profile", Icon: Layers3 },
-  { id: "roadmaps", label: "My roadmaps", Icon: GitBranch },
-  { id: "compare", label: "Compare paths", Icon: GitCompareArrows },
-  { id: "progress", label: "My progress", Icon: Milestone },
-  { id: "opportunities", label: "Opportunities", Icon: GraduationCap },
+  { id: "profile", label: "My Capabilities", Icon: Layers3 },
+  { id: "discover", label: "Explore Careers", Icon: Compass },
+  { id: "roadmaps", label: "My Roadmaps", Icon: GitBranch },
+  { id: "progress", label: "Progress", Icon: Milestone },
 ] as const;
 const routeView = (view: string): OdysseyView =>
   view === "capabilities"
     ? "profile"
-    : nav.some((n) => n.id === view) || view === "roadmap"
+    : nav.some((n) => n.id === view) ||
+        ["roadmap", "compare", "opportunities"].includes(view)
       ? (view as OdysseyView)
       : "home";
 export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
   const mobile = useMobile();
 
+  const [storageKey, setStorageKey] = useState(STORAGE_KEY);
   const [workspace, setWorkspace] = useState<Workspace>(() => emptyWorkspace()),
     [ready, setReady] = useState(false),
     [blocked, setBlocked] = useState(false),
@@ -152,7 +154,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
   useEffect(() => {
     if (!ready || blocked) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+      localStorage.setItem(storageKey, JSON.stringify(workspace));
     } catch {
       queueMicrotask(() => {
         setBlocked(true);
@@ -161,7 +163,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
         );
       });
     }
-  }, [workspace, ready, blocked]);
+  }, [workspace, ready, blocked, storageKey]);
   useEffect(() => {
     void jsonRequest<{ total: number; skillCount: number; coverage: string }>(
       "/api/catalogue?limit=1",
@@ -365,7 +367,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
   };
   const saveNow = () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+      localStorage.setItem(storageKey, JSON.stringify(workspace));
       setNotice("Saved in this browser. Export a backup for portable storage.");
     } catch {
       setNotice("Cannot save in this browser. Use Export to retain your work.");
@@ -427,13 +429,21 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
             >
               <Icon size={18} />
               {label}
-              {id === "compare" && workspace.compare.length > 0 && (
-                <span className="nav-count">{workspace.compare.length}</span>
-              )}
             </button>
           ))}
         </nav>
         <div className="sidebar-lower">
+          <button className="nav-item" onClick={() => navigate("compare")}>
+            <GitCompareArrows size={18} />
+            Compare paths
+          </button>
+          <button
+            className="nav-item"
+            onClick={() => navigate("opportunities")}
+          >
+            <GraduationCap size={18} />
+            Opportunities
+          </button>
           <div className="nav-heading">SYRKA APPS</div>
           <a
             className="nav-item"
@@ -494,7 +504,8 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
             <strong>
               {view === "roadmap"
                 ? "Roadmap explorer"
-                : nav.find((n) => n.id === view)?.label}
+                : nav.find((n) => n.id === view)?.label ||
+                  (view === "compare" ? "Compare paths" : "Opportunities")}
             </strong>
           </div>
           <div className="topbar-right">
@@ -533,6 +544,29 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               <Upload size={13} />
             </button>
           </div>
+          <AccountWorkspace
+            workspace={workspace}
+            onOpen={(ownerId, remote) => {
+              const key = "syrka-roadmaps:account:" + ownerId;
+              const cached = localStorage.getItem(key);
+              setStorageKey(key);
+              setWorkspace(
+                remote ||
+                  (cached && parseWorkspace(cached)) ||
+                  emptyWorkspace(),
+              );
+              setBlocked(false);
+            }}
+            onLeave={() => {
+              setStorageKey(STORAGE_KEY);
+              const guest = localStorage.getItem(STORAGE_KEY);
+              setWorkspace(
+                (guest && parseWorkspace(guest)) || emptyWorkspace(),
+              );
+              setBundle(null);
+              navigate("home");
+            }}
+          />
           {loading && (
             <p className="inline-loading" role="status">
               Preparing your occupational context…
@@ -584,238 +618,261 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               </button>
             </div>
           )}
-          {view === "home" && (
-            <>
-              {!!workspace.person.assertions.length && (
-                <section
-                  className="cv-invitation"
-                  aria-label="Saved capability profile"
-                >
-                  <div>
-                    <span className="eyebrow">WELCOME BACK</span>
-                    <h2>{workspace.person.name}</h2>
-                    <p>
-                      {
-                        workspace.person.assertions.filter(
-                          (a) => a.selected !== false,
-                        ).length
-                      }{" "}
-                      selected capabilities · {workspace.paths.length} saved
-                      roadmaps. Your profile and progress are saved in this
-                      browser.
-                    </p>
-                  </div>
-                  <button className="primary" onClick={() => discover("")}>
-                    Discover careers from my profile
-                  </button>
-                  <button
-                    className="secondary"
-                    onClick={() => navigate("profile")}
+          {view === "home" &&
+            (workspace.person.claims.length > 0 ||
+              workspace.person.assertions.length > 0 ||
+              workspace.person.interests.length > 0 ||
+              workspace.paths.length > 0) && (
+              <Overview
+                workspace={workspace}
+                onExplore={(query = "") => discover(query)}
+                onProfile={() => navigate("profile")}
+                onSelect={(o) => void selectOccupation(o)}
+                onResume={() => navigate("roadmap")}
+                onUpload={() => setDocumentMode("cv")}
+              />
+            )}
+          {view === "home" &&
+            !workspace.person.claims.length &&
+            !workspace.person.assertions.length &&
+            !workspace.person.interests.length &&
+            !workspace.paths.length && (
+              <>
+                {!!workspace.person.assertions.length && (
+                  <section
+                    className="cv-invitation"
+                    aria-label="Saved capability profile"
                   >
-                    Refine my profile
-                  </button>
-                </section>
-              )}
-              <div className="welcome od-welcome">
-                <span className="eyebrow">
-                  FROM WHAT YOU KNOW TO WHAT COULD BE
-                </span>
-                <h1>Where would you like to go?</h1>
-                <p>
-                  Explore your educational and professional possibilities —
-                  grounded in evidence.
-                </p>
-                <form
-                  className="destination-search"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    discover(search);
-                  }}
-                >
-                  <Search size={21} />
-                  <input
-                    aria-label="Search career destinations"
-                    placeholder="Economist, AI engineer, teacher, policy analyst…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <button className="primary" aria-label="Explore destinations">
-                    <ArrowRight size={18} />
-                  </button>
-                </form>
-                <div className="search-suggestions">
-                  <span>Start anywhere</span>
-                  {[
-                    "Economist",
-                    "AI engineer",
-                    "Product manager",
-                    "Teacher",
-                    "Diplomat",
-                  ].map((q) => (
-                    <button key={q} onClick={() => discover(q)}>
-                      {q}
-                      <ArrowUpRight size={12} />
+                    <div>
+                      <span className="eyebrow">WELCOME BACK</span>
+                      <h2>{workspace.person.name}</h2>
+                      <p>
+                        {
+                          workspace.person.assertions.filter(
+                            (a) => a.selected !== false,
+                          ).length
+                        }{" "}
+                        selected capabilities · {workspace.paths.length} saved
+                        roadmaps. Your profile and progress are saved in this
+                        browser.
+                      </p>
+                    </div>
+                    <button className="primary" onClick={() => discover("")}>
+                      Discover careers from my profile
                     </button>
-                  ))}
-                </div>
-              </div>
-              <section className="cv-invitation">
-                <div className="cv-invitation-icon">
-                  <Upload size={29} />
-                </div>
-                <div>
+                    <button
+                      className="secondary"
+                      onClick={() => navigate("profile")}
+                    >
+                      Refine my profile
+                    </button>
+                  </section>
+                )}
+                <div className="welcome od-welcome">
                   <span className="eyebrow">
-                    YOUR EXPERIENCE IS A STARTING POINT
+                    FROM WHAT YOU KNOW TO WHAT COULD BE
                   </span>
-                  <h2>
-                    {workspace.person.imports?.length
-                      ? "Update your CV as your experience grows."
-                      : "Add your CV to discover your possibilities."}
-                  </h2>
+                  <h1>Where would you like to go?</h1>
                   <p>
-                    Extract your education, experience and skills. Review the
-                    claims, then explore the occupational landscape.
+                    Explore your educational and professional possibilities —
+                    grounded in evidence.
                   </p>
-                  <div className="cv-meta">
-                    <span>PDF & DOCX text extraction</span>
-                    <span>Scans & images with local OCR</span>
-                    <span>Capabilities selected automatically</span>
-                  </div>
-                </div>
-                <button
-                  className="primary"
-                  aria-label="Add your CV"
-                  onClick={() => setDocumentMode("cv")}
-                >
-                  <Upload size={17} />
-                  {workspace.person.imports?.length
-                    ? "Update CV"
-                    : "Add your CV"}
-                </button>
-              </section>
-              <div className="home-entry-grid">
-                <button
-                  className="feature-card"
-                  onClick={() => setJsonOpen(true)}
-                >
-                  <ShieldCheck size={22} />
-                  <h3>Bring your Career Passport</h3>
-                  <p>
-                    Import an authorized versioned capability export. No private
-                    portfolio scraping.
-                  </p>
-                  <span>
-                    Connect your records
-                    <ArrowRight size={14} />
-                  </span>
-                </button>
-                <button
-                  className="feature-card"
-                  onClick={() => navigate("profile")}
-                >
-                  <Compass size={22} />
-                  <h3>Explore manually</h3>
-                  <p>
-                    Add interests, education and self-reported skills. No CV
-                    required.
-                  </p>
-                  <span>
-                    Start with your profile
-                    <ArrowRight size={14} />
-                  </span>
-                </button>
-                <button
-                  className="feature-card"
-                  aria-label="Load fictional demonstration"
-                  disabled={loading}
-                  onClick={() => void loadDemo()}
-                >
-                  <BookOpen size={22} />
-                  <h3>Explore a meaningful demo</h3>
-                  <p>
-                    A fictional PPE student, eight courses, assessments,
-                    research and internship evidence.
-                  </p>
-                  <span>
-                    Load fictional demonstration
-                    <ArrowRight size={14} />
-                  </span>
-                </button>
-              </div>
-              <div className="section-title">
-                <h2>Your next chapter</h2>
-                <button
-                  className="text-button"
-                  onClick={() => navigate("roadmaps")}
-                >
-                  All saved roadmaps
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-              {workspace.paths.length ? (
-                <div className="recent-paths">
-                  {workspace.paths
-                    .slice(-3)
-                    .reverse()
-                    .map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => {
-                          commit(
-                            (w) => ({ ...w, activePathId: p.id }),
-                            "roadmap.resumed",
-                            p.id,
-                          );
-                          navigate("roadmap");
-                        }}
-                      >
-                        <span className="eyebrow">CONTINUE YOUR DIRECTION</span>
-                        <strong>{p.title}</strong>
-                        <span>
-                          {p.completed.length} self-reported milestones
-                          <ArrowRight size={16} />
-                        </span>
+                  <form
+                    className="destination-search"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      discover(search);
+                    }}
+                  >
+                    <Search size={21} />
+                    <input
+                      aria-label="Search career destinations"
+                      placeholder="Economist, AI engineer, teacher, policy analyst…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <button
+                      className="primary"
+                      aria-label="Explore destinations"
+                    >
+                      <ArrowRight size={18} />
+                    </button>
+                  </form>
+                  <div className="search-suggestions">
+                    <span>Start anywhere</span>
+                    {[
+                      "Economist",
+                      "AI engineer",
+                      "Product manager",
+                      "Teacher",
+                      "Diplomat",
+                    ].map((q) => (
+                      <button key={q} onClick={() => discover(q)}>
+                        {q}
+                        <ArrowUpRight size={12} />
                       </button>
                     ))}
-                </div>
-              ) : (
-                <div className="empty-path">
-                  <GitBranch size={22} />
-                  <div>
-                    <h3>Your roadmap starts with a destination.</h3>
-                    <p>
-                      Browse the complete catalogue, or use your profile to
-                      discover dozens of related directions.
-                    </p>
                   </div>
-                  <button className="secondary" onClick={() => discover("")}>
-                    Explore occupations
+                </div>
+                <section className="cv-invitation">
+                  <div className="cv-invitation-icon">
+                    <Upload size={29} />
+                  </div>
+                  <div>
+                    <span className="eyebrow">
+                      YOUR EXPERIENCE IS A STARTING POINT
+                    </span>
+                    <h2>
+                      {workspace.person.imports?.length
+                        ? "Update your CV as your experience grows."
+                        : "Add your CV to discover your possibilities."}
+                    </h2>
+                    <p>
+                      Extract your education, experience and skills. Review the
+                      claims, then explore the occupational landscape.
+                    </p>
+                    <div className="cv-meta">
+                      <span>PDF & DOCX text extraction</span>
+                      <span>Scans & images with local OCR</span>
+                      <span>Capabilities selected automatically</span>
+                    </div>
+                  </div>
+                  <button
+                    className="primary"
+                    aria-label="Add your CV"
+                    onClick={() => setDocumentMode("cv")}
+                  >
+                    <Upload size={17} />
+                    {workspace.person.imports?.length
+                      ? "Update CV"
+                      : "Add your CV"}
+                  </button>
+                </section>
+                <div className="home-entry-grid">
+                  <button
+                    className="feature-card"
+                    onClick={() => setJsonOpen(true)}
+                  >
+                    <ShieldCheck size={22} />
+                    <h3>Bring your Career Passport</h3>
+                    <p>
+                      Import an authorized versioned capability export. No
+                      private portfolio scraping.
+                    </p>
+                    <span>
+                      Connect your records
+                      <ArrowRight size={14} />
+                    </span>
+                  </button>
+                  <button
+                    className="feature-card"
+                    onClick={() => navigate("profile")}
+                  >
+                    <Compass size={22} />
+                    <h3>Explore manually</h3>
+                    <p>
+                      Add interests, education and self-reported skills. No CV
+                      required.
+                    </p>
+                    <span>
+                      Start with your profile
+                      <ArrowRight size={14} />
+                    </span>
+                  </button>
+                  <button
+                    className="feature-card"
+                    aria-label="Load fictional demonstration"
+                    disabled={loading}
+                    onClick={() => void loadDemo()}
+                  >
+                    <BookOpen size={22} />
+                    <h3>Explore a meaningful demo</h3>
+                    <p>
+                      A fictional PPE student, eight courses, assessments,
+                      research and internship evidence.
+                    </p>
+                    <span>
+                      Load fictional demonstration
+                      <ArrowRight size={14} />
+                    </span>
                   </button>
                 </div>
-              )}
-              <div className="catalogue-summary">
-                <span>
-                  <strong>{stats?.total.toLocaleString() || "3,039"}</strong>
-                  source-defined occupations
-                </span>
-                <span>
-                  <strong>
-                    {stats?.skillCount.toLocaleString() || "13,939"}
-                  </strong>
-                  skill concepts
-                </span>
-                <span>
-                  <strong>Evidence first</strong>no hiring-probability scores
-                </span>
-              </div>
-              <p className="catalogue-note">
-                European Commission ESCO · English mirrored snapshot with
-                preserved source identifiers. Not asserted to be the latest
-                official release. Academic, credential and legal eligibility
-                remain separate from capability similarity.
-              </p>
-            </>
-          )}
+                <div className="section-title">
+                  <h2>Your next chapter</h2>
+                  <button
+                    className="text-button"
+                    onClick={() => navigate("roadmaps")}
+                  >
+                    All saved roadmaps
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+                {workspace.paths.length ? (
+                  <div className="recent-paths">
+                    {workspace.paths
+                      .slice(-3)
+                      .reverse()
+                      .map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            commit(
+                              (w) => ({ ...w, activePathId: p.id }),
+                              "roadmap.resumed",
+                              p.id,
+                            );
+                            navigate("roadmap");
+                          }}
+                        >
+                          <span className="eyebrow">
+                            CONTINUE YOUR DIRECTION
+                          </span>
+                          <strong>{p.title}</strong>
+                          <span>
+                            {p.completed.length} self-reported milestones
+                            <ArrowRight size={16} />
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="empty-path">
+                    <GitBranch size={22} />
+                    <div>
+                      <h3>Your roadmap starts with a destination.</h3>
+                      <p>
+                        Browse the complete catalogue, or use your profile to
+                        discover dozens of related directions.
+                      </p>
+                    </div>
+                    <button className="secondary" onClick={() => discover("")}>
+                      Explore occupations
+                    </button>
+                  </div>
+                )}
+                <div className="catalogue-summary">
+                  <span>
+                    <strong>{stats?.total.toLocaleString() || "3,039"}</strong>
+                    source-defined occupations
+                  </span>
+                  <span>
+                    <strong>
+                      {stats?.skillCount.toLocaleString() || "13,939"}
+                    </strong>
+                    skill concepts
+                  </span>
+                  <span>
+                    <strong>Evidence first</strong>no hiring-probability scores
+                  </span>
+                </div>
+                <p className="catalogue-note">
+                  European Commission ESCO · English mirrored snapshot with
+                  preserved source identifiers. Not asserted to be the latest
+                  official release. Academic, credential and legal eligibility
+                  remain separate from capability similarity.
+                </p>
+              </>
+            )}
           {view === "discover" && (
             <Discovery
               key={

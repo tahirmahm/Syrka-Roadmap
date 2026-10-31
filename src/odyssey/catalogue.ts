@@ -174,21 +174,69 @@ export function matchOccupation(person: Person, o: Occupation): Match {
     shared,
   };
 }
+export const discoveryBands = [
+  "Realistic opportunities",
+  "Adjacent opportunities",
+  "Aspirational opportunities",
+] as const;
+export function discoveryBand(m: Match): (typeof discoveryBands)[number] {
+  const coverage = m.shared.length / Math.max(m.alignment.total, 1);
+  // Exploration bands describe evidence coverage, never hiring or legal eligibility.
+  return coverage >= 0.45 && m.alignment.supported > 0
+    ? discoveryBands[0]
+    : coverage >= 0.15
+      ? discoveryBands[1]
+      : discoveryBands[2];
+}
+const specificityCache = new WeakMap<Catalogue, Map<string, number>>();
 export function discover(data: Catalogue, person: Person, limit = 60) {
+  let frequencies = specificityCache.get(data);
+  if (!frequencies) {
+    frequencies = new Map();
+    for (const o of data.occupations)
+      for (const id of new Set(o.essential))
+        frequencies.set(id, (frequencies.get(id) || 0) + 1);
+    specificityCache.set(data, frequencies);
+  }
+  const specificity = (id: string) =>
+    1 +
+    Math.log(1 + data.occupations.length / (1 + (frequencies!.get(id) || 0)));
+  const weights = new Map<string, number>();
+  for (const a of person.assertions) {
+    if (!a.consent || a.selected === false) continue;
+    const weight =
+      a.verification === "inferred"
+        ? 0.25
+        : a.verification === "self-reported"
+          ? 0.55
+          : 1;
+    weights.set(a.skillId, Math.max(weights.get(a.skillId) || 0, weight));
+  }
   return data.occupations
-    .map((o) => matchOccupation(person, o))
+    .map((o) => {
+      const match = matchOccupation(person, o);
+      const denominator = o.essential.reduce((n, id) => n + specificity(id), 0);
+      const overlap = match.shared.reduce(
+        (n, id) => n + specificity(id) * (weights.get(id) || 0),
+        0,
+      );
+      // Coverage normalisation prevents occupations with huge lists winning solely by count.
+      const score = denominator ? overlap / Math.sqrt(denominator) : 0;
+      const interest = Math.min(match.interest.matched.length, 3) * 0.35;
+      return { match, score: score + interest };
+    })
+    .filter(
+      (x) => x.match.shared.length > 0 || x.match.interest.matched.length > 0,
+    )
     .sort(
       (a, b) =>
-        b.alignment.supported * 3 +
-          b.alignment.partial +
-          b.interest.matched.length * 2 -
-          (a.alignment.supported * 3 +
-            a.alignment.partial +
-            a.interest.matched.length * 2) ||
-        a.occupation.label.localeCompare(b.occupation.label),
+        b.score - a.score ||
+        a.match.occupation.label.localeCompare(b.match.occupation.label),
     )
-    .slice(0, limit);
+    .slice(0, limit)
+    .map((x) => x.match);
 }
+
 type PhraseEntry = {
   id: string;
   label: string;

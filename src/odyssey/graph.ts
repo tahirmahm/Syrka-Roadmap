@@ -234,3 +234,25 @@ export function shortestRoute<T>(
   }
   return { cost: dist.get(goal)!, edges: path };
 }
+
+/** A concrete next task in prerequisite order; self-completion never verifies a skill. */
+export function nextRoadmapTopic(
+  graph: RoadmapGraph,
+  person: Person,
+  completed: string[],
+  working: string[] = [],
+) {
+  const plan = feasiblePlan(graph, person, completed);
+  const candidates = plan.topicIds
+    .map((id) => graph.topics.find((t) => t.id === id)!)
+    .filter(Boolean);
+  const ready = candidates.filter((t) =>
+    t.prerequisites.every((id) => !plan.topicIds.includes(id)),
+  );
+  return (
+    ready.find((t) => working.includes(t.id)) ||
+    ready[0] ||
+    candidates[0] ||
+    null
+  );
+}

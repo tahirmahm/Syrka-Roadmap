@@ -14,7 +14,6 @@ import {
 import type { Person, Workspace, Assertion } from "../types";
 import { jsonRequest, downloadJSON } from "../client";
 import { getSupabase } from "@/lib/supabase";
-import { importWorkspace } from "../profile";
 import {
   capabilityCategory,
   capabilityCategories,
@@ -26,7 +25,6 @@ export function ProfilePanel({
   onDocument,
   onJSONImport,
   onReset,
-  onRestore,
 }: {
   person: Person;
   workspace: Workspace;
@@ -64,71 +62,29 @@ export function ProfilePanel({
     setQuery("");
     setResults([]);
   };
-  const cloudAction = async (action: "save" | "load" | "delete") => {
-    const db = getSupabase();
-    if (!db) return;
+  const cloudAction = async () => {
     setCloudBusy(true);
     try {
-      const {
-        data: { user },
-        error,
-      } = await db.auth.getUser();
-      if (error || !user)
-        throw new Error("Sign in to your Roadmaps account first.");
-      if (action === "save") {
-        const profile = await db
-          .from("profiles")
-          .upsert({ id: user.id, display_name: person.name });
-        if (profile.error)
-          throw new Error(
-            "Profile backup failed. Check the dedicated Roadmaps database configuration.",
-          );
-        const r = await db.from("workspace_snapshots").upsert({
-          owner_id: user.id,
-          schema_version: 2,
-          state: workspace,
-          updated_at: new Date().toISOString(),
-        });
-        if (r.error)
-          throw new Error(
-            "Cloud backup is unavailable. Apply the Roadmaps 2.0 migration to the dedicated database.",
-          );
-        setNotice(
-          "Saved a private account backup. The original CV file was not uploaded.",
-        );
-      } else if (action === "load") {
-        const r = await db
-          .from("workspace_snapshots")
-          .select("state")
-          .eq("owner_id", user.id)
-          .maybeSingle();
-        if (r.error || !r.data)
-          throw new Error("No accessible cloud backup was found.");
-        onRestore(importWorkspace(JSON.stringify(r.data.state)));
-        setNotice(
-          "Private backup restored. Issuer claims still require trusted verification.",
-        );
-      } else {
-        const r = await db
-          .from("workspace_snapshots")
-          .delete()
-          .eq("owner_id", user.id);
-        if (r.error) throw new Error("Could not delete the cloud backup.");
-        setNotice(
-          "Private cloud backup deleted. This does not delete your account.",
-        );
-      }
+      const r = await jsonRequest<{ deleted: boolean }>("/api/workspace", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (r.deleted) window.dispatchEvent(new Event("syrka-account-deleted"));
+      setNotice(
+        "Private cloud backup deleted. Local work and your account are retained.",
+      );
     } catch (e) {
       setNotice((e as Error).message);
     } finally {
       setCloudBusy(false);
     }
   };
+
   return (
     <>
       <div className="page-heading">
         <span className="eyebrow">YOUR CAPABILITY IDENTITY</span>
-        <h1>My profile</h1>
+        <h1>My Capabilities</h1>
         <p>
           Your learning, experience and evidence — with their limits made
           visible.
@@ -142,7 +98,7 @@ export function ProfilePanel({
           <span className="subtle-tag">
             {person.fictional
               ? "Fictional demonstration profile"
-              : "User-controlled local profile"}
+              : "User-controlled capability profile"}
           </span>
         </div>
         <button className="primary" onClick={() => onDocument(false)}>
@@ -611,9 +567,10 @@ export function ProfilePanel({
           <ShieldCheck size={18} />
           <p>
             Original documents are not retained. Accepted source quotes and
-            claims remain in this browser until you delete them. Export files
-            may contain personal information. A shared browser is not isolated
-            multi-user storage.
+            claims remain in your workspace until you delete them. With explicit
+            consent, reviewed records also sync to your private account. Export
+            files may contain personal information. A shared browser is not
+            isolated multi-user storage.
           </p>
         </div>
         {getSupabase() ? (
@@ -632,20 +589,11 @@ export function ProfilePanel({
               state in my Roadmaps account. Source files are not uploaded.
             </label>
             <div className="data-actions">
-              <button
-                className="secondary"
-                disabled={!cloudConsent || cloudBusy}
-                onClick={() => void cloudAction("save")}
-              >
-                Save private backup
-              </button>
-              <button
-                className="secondary"
-                disabled={!cloudConsent || cloudBusy}
-                onClick={() => void cloudAction("load")}
-              >
-                Restore private backup
-              </button>
+              <p className="small">
+                Open the account workspace panel above to resume and
+                continuously save your private records. Guest data is never
+                uploaded automatically.
+              </p>
               <button
                 className="text-button"
                 disabled={!cloudConsent || cloudBusy}
@@ -655,7 +603,7 @@ export function ProfilePanel({
                       "Delete only your private cloud backup? This cannot be undone.",
                     )
                   )
-                    void cloudAction("delete");
+                    void cloudAction();
                 }}
               >
                 Delete cloud backup

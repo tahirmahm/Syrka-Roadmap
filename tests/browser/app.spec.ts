@@ -8,7 +8,7 @@ async function nav(page: Page, label: string) {
       .getByRole("button", { name: "Open navigation", exact: true })
       .click();
   await page
-    .getByRole("navigation", { name: "Main navigation" })
+    .locator(".sidebar")
     .getByRole("button", { name: new RegExp("^" + label) })
     .click();
 }
@@ -563,7 +563,7 @@ test("fictional multidisciplinary CV flows directly to personalized careers with
     .getByRole("button", { name: "Continue to career discovery", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Career discovery", exact: true }),
+    page.getByRole("heading", { name: "Explore careers", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("tab", { name: "My possibilities" }),
@@ -592,7 +592,7 @@ test("fictional multidisciplinary CV flows directly to personalized careers with
   expect(state.person.imports[0].name).toBe(
     "fictional-multidisciplinary-cv.pdf",
   );
-  await nav(page, "My profile");
+  await nav(page, "My Capabilities");
   await page
     .getByRole("button", { name: "Deselect All capabilities", exact: true })
     .click();
@@ -605,7 +605,7 @@ test("fictional multidisciplinary CV flows directly to personalized careers with
   await page
     .getByRole("button", { name: "Select All capabilities", exact: true })
     .click();
-  await nav(page, "Career discovery");
+  await nav(page, "Explore Careers");
   await expect(page.locator(".career-row").first()).toBeVisible();
   await page
     .locator(".career-row")
@@ -628,7 +628,7 @@ test("fictional multidisciplinary CV flows directly to personalized careers with
   await expect(page.locator(".od-roadmap-heading")).toContainText(
     "1 self-reported",
   );
-  await nav(page, "Career discovery");
+  await nav(page, "Explore Careers");
   await page.getByRole("tab", { name: "Full catalogue", exact: true }).click();
   await page.getByLabel("Search occupations").fill("mechanical engineer");
   await expect(page.locator(".career-row").first()).toContainText(
@@ -696,7 +696,7 @@ test("pasted fictional CVs produce different recommendations and global selectio
         .click();
       await expect(p.locator(".career-row").first()).toBeVisible();
       titles.push(await p.locator(".career-title").allTextContents());
-      await nav(p, "My profile");
+      await nav(p, "My Capabilities");
       await p
         .getByLabel("Search my capabilities", { exact: true })
         .fill(labels[0]);
@@ -860,7 +860,7 @@ test("career guidance uses deterministic evidence when AI is unavailable (fixtur
     .getByRole("button", { name: "Load fictional demonstration", exact: true })
     .click();
   await expect(page.getByText("Fictional demo", { exact: true })).toBeVisible();
-  await nav(page, "Career discovery");
+  await nav(page, "Explore Careers");
   await expect(page.locator(".career-row").first()).toBeVisible();
   await page
     .getByRole("checkbox", { name: /Allow Qwen career guidance/ })
@@ -890,18 +890,16 @@ test("cancelling document processing returns to upload without changing the save
       await route.continue();
     } catch {}
   });
-  await page
-    .getByLabel("Select CV or academic document")
-    .setInputFiles({
-      name: "fictional-cancel.pdf",
-      mimeType: "application/pdf",
-      buffer: await textPDF([
-        "Fictional Cancellation Candidate",
-        "SKILLS",
-        "SQL",
-        "Python (computer programming)",
-      ]),
-    });
+  await page.getByLabel("Select CV or academic document").setInputFiles({
+    name: "fictional-cancel.pdf",
+    mimeType: "application/pdf",
+    buffer: await textPDF([
+      "Fictional Cancellation Candidate",
+      "SKILLS",
+      "SQL",
+      "Python (computer programming)",
+    ]),
+  });
   await page
     .getByRole("button", { name: "Cancel processing", exact: true })
     .click();

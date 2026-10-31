@@ -196,6 +196,47 @@ export function TopicPanel({
                   : "This is a curated learning topic for a related occupational pathway. The suggested learning order is distinct from formal entry requirements."}
               </p>
             </section>
+            <section className="topic-action-summary">
+              <h3>What you already bring</h3>
+              {assertions.length ? (
+                assertions.slice(0, 3).map((a) => (
+                  <blockquote key={a.id}>
+                    <strong>
+                      {a.label} · {a.verification}
+                    </strong>
+                    <p>{a.quote || "Self-declared; evidence needed."}</p>
+                  </blockquote>
+                ))
+              ) : (
+                <p>
+                  No selected evidence currently supports this topic. That is a
+                  gap in the record, not a claim that you lack the ability.
+                </p>
+              )}
+              <h3>Your next step</h3>
+              <p>
+                {topic.prerequisites.some((id) => !path.completed.includes(id))
+                  ? "Review the prerequisites below, then work through a linked resource."
+                  : `Use the Learn tab to study ${topic.label}, then apply it to a small example relevant to ${occupation.label}.`}
+              </p>
+              <h3>How to demonstrate it</h3>
+              <p>
+                Create an artifact that applies {topic.label}: record the
+                problem, your approach, the result and its limits. Ask for
+                feedback and add the evidence reference in My Evidence.
+                Completing a checkbox is self-reported progress only.
+              </p>
+              <button
+                className="secondary"
+                onClick={() =>
+                  setTab(assertions.length ? "My Evidence" : "Learn")
+                }
+              >
+                {assertions.length
+                  ? "Review my evidence"
+                  : "Open learning resources"}
+              </button>
+            </section>
             <section>
               <h3>Connected prerequisites</h3>
               {topic.prerequisites.length ? (

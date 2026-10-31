@@ -33,8 +33,12 @@ export function SignIn() {
                 setMessage(
                   error
                     ? "Sign-in failed. Check your credentials and try again."
-                    : "Signed in. Cloud roadmap sync is not yet enabled; use the local demo and export backups.",
+                    : "Signed in. Opening your private Roadmaps workspace…",
                 );
+                if (!error)
+                  window.location.assign(
+                    (process.env.NEXT_PUBLIC_BASE_PATH || "") + "/",
+                  );
               } catch {
                 setMessage(
                   "Authentication is unavailable. Please try again later.",

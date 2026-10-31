@@ -113,6 +113,38 @@ test("Odyssey private imports, assertions, cloud snapshots and conservative AI q
       ).rows[0].n,
       60,
     );
+    // Simulate two authenticated devices loading the same revision.
+    await db.exec(`set role authenticated;set request.jwt.claim.sub='${a}';`);
+    const revision = (
+      await db.query<{ revision: string }>(
+        "select updated_at::text as revision from workspace_snapshots",
+      )
+    ).rows[0].revision;
+    const saved = await db.query(
+      `update workspace_snapshots set state='{"version":2,"device":"first"}',updated_at='2026-10-31T12:00:00Z' where owner_id='${a}' and updated_at='${revision}' returning owner_id`,
+    );
+    assert.equal(saved.rows.length, 1);
+    const stale = await db.query(
+      `update workspace_snapshots set state='{"version":2,"device":"stale"}' where owner_id='${a}' and updated_at='${revision}' returning owner_id`,
+    );
+    assert.equal(stale.rows.length, 0);
+    await db.exec(`set request.jwt.claim.sub='${b}';`);
+    assert.equal(
+      (
+        await db.query(
+          `select * from workspace_snapshots where owner_id='${a}'`,
+        )
+      ).rows.length,
+      0,
+    );
+    assert.equal(
+      (
+        await db.query(
+          `update workspace_snapshots set state='{"version":2}' where owner_id='${a}' returning owner_id`,
+        )
+      ).rows.length,
+      0,
+    );
     await db.exec("set role anon;");
     await assert.rejects(
       db.query("select reserve_roadmaps_qwen_tokens('explain','test',1)"),

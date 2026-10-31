@@ -1,0 +1,10 @@
+Alex Fictional
+EDUCATION
+Secondary school, 2024 - 2026
+PROJECTS
+Built a school website with HTML, CSS and JavaScript
+SKILLS
+Python
+web programming
+INTERESTS
+software development

@@ -29,7 +29,7 @@ import dynamic from "next/dynamic";
 const TopicPanel = dynamic(() =>
   import("./topic-panel").then((m) => m.TopicPanel),
 );
-import { feasiblePlan } from "../graph";
+import { nextRoadmapTopic, feasiblePlan } from "../graph";
 import "@xyflow/react/dist/style.css";
 const subscribe = (cb: () => void) => {
   const m = window.matchMedia("(max-width:767px)");
@@ -290,7 +290,10 @@ function Tree({
       source: "family:" + graph.topics.find((t) => t.id === p.id)!.family,
       target: p.id,
       type: "smoothstep",
-      style: { stroke: "var(--roadmaps-control-border)", strokeDasharray: "4 4" },
+      style: {
+        stroke: "var(--roadmaps-control-border)",
+        strokeDasharray: "4 4",
+      },
     })),
     ...graph.topics.flatMap((t) =>
       t.prerequisites
@@ -414,6 +417,13 @@ export function Explorer({
       return null;
     }
   }, [graph, person, path.completed]);
+  const nextTask = useMemo(() => {
+    try {
+      return nextRoadmapTopic(graph, person, path.completed, path.working);
+    } catch {
+      return null;
+    }
+  }, [graph, person, path.completed, path.working]);
   return (
     <>
       <div className="roadmap-heading od-roadmap-heading">
@@ -431,6 +441,30 @@ export function Explorer({
           {path.completed.length} self-reported completions
         </span>
       </div>
+      {nextTask && (
+        <section
+          className="roadmap-next-action"
+          aria-label="Next recommended action"
+        >
+          <div>
+            <span className="eyebrow">YOUR NEXT ACTION</span>
+            <strong>{nextTask.label}</strong>
+            <p>
+              {person.assertions.some(
+                (a) =>
+                  a.consent &&
+                  a.selected !== false &&
+                  nextTask.skillIds.includes(a.skillId),
+              )
+                ? "You have a related claim. Inspect its evidence and decide what still needs demonstration."
+                : "Start with the reference, complete a small practical example, then save evidence of your work."}
+            </p>
+          </div>
+          <button className="primary" onClick={() => choose(nextTask.id)}>
+            Open next task
+          </button>
+        </section>
+      )}
       <div className="explorer-toolbar">
         <label className="search-control">
           <Search size={17} />
