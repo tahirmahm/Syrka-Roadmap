@@ -99,6 +99,10 @@ test("claims default to selected, respect deselection and preserve source withou
   assert.equal(claims[0].mappings[0].confirmed, false);
   assert.equal(claims[0].mappings[0].selected, true);
   assert.equal(approveClaims(doc, claims, p).assertions.length, 1);
+  assert.equal(
+    approveClaims(doc, claims, p).assertions[0].verification,
+    "document-supported",
+  );
   claims[0].mappings[0].selected = false;
   assert.equal(approveClaims(doc, claims, p).assertions.length, 0);
   claims[0].mappings[0].selected = true;
@@ -106,7 +110,7 @@ test("claims default to selected, respect deselection and preserve source withou
   claims[0].text = "Corrected data analysis";
   const reviewed = approveClaims(doc, claims, p);
   assert.equal(reviewed.assertions[0].quote, "Data analysis");
-  assert.equal(reviewed.assertions[0].verification, "document-supported");
+  assert.equal(reviewed.assertions[0].verification, "self-reported");
 });
 test("coursework mapping comes from explicit reviewed outcomes, not course titles", () => {
   const claims = [

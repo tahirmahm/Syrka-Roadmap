@@ -88,7 +88,11 @@ test("three fictional life stages retain literal evidence and produce distinct p
     );
     const labels = matches.map((m) => m.occupation.label);
     top.push(labels);
-    if (name === "professional") assert.match(labels[0], /software developer/);
+    if (name === "professional") {
+      assert.match(labels[0], /software developer/);
+      assert.equal(discoveryBand(matches[0]), "Realistic opportunities");
+      assert.equal(matches[0].requirements.status, "not-assessed");
+    }
     assert.match(
       labels.join(" "),
       name === "school"
@@ -152,6 +156,10 @@ test("broad data analysis cannot assert an absent specialist domain through alia
     "Statistical analysis of economic data using Python and SQL",
     catalogue.skills,
   );
-  assert.ok(!mappings.some((m) => /genetic|biomedical|battery/.test(m.label)));
+  assert.ok(
+    !mappings.some((m) =>
+      /genetic|biomedical|battery|gambling|online/.test(m.label),
+    ),
+  );
   assert.ok(mappings.some((m) => /statistic|SQL|Python/.test(m.label)));
 });

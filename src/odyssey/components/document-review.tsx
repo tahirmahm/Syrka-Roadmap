@@ -22,6 +22,7 @@ import {
   approveClaims,
   mergeCandidateClaims,
 } from "../documents";
+import { mapText } from "../catalogue";
 import { getVocabulary, jsonRequest } from "../client";
 const kinds: ClaimKind[] = [
   "education",
@@ -66,6 +67,7 @@ export function DocumentReview({
     [external, setExternal] = useState(false),
     [pastedText, setPastedText] = useState(""),
     [aiBusy, setAiBusy] = useState(false),
+    [mappingBusy, setMappingBusy] = useState<string | null>(null),
     [academicFields, setAcademicFields] = useState({
       institution: "",
       programme: "",
@@ -645,8 +647,47 @@ export function DocumentReview({
                     id={"claim-" + c.id}
                     value={c.text}
                     maxLength={3500}
-                    onChange={(e) => patch(c.id, { text: e.target.value })}
+                    onChange={(e) =>
+                      patch(c.id, { text: e.target.value, mappings: [] })
+                    }
                   />
+                  {c.text !== c.quote && (
+                    <div className="review-actions">
+                      <p className="small">
+                        Corrected text is self-reported. Refresh suggestions for
+                        the new wording; the original source quote is retained.
+                      </p>
+                      <button
+                        className="secondary"
+                        disabled={mappingBusy !== null}
+                        aria-label={`Refresh capability suggestions for claim ${index + 1}`}
+                        onClick={async () => {
+                          setMappingBusy(c.id);
+                          try {
+                            const skills = await getVocabulary();
+                            const suggestions = mapText(c.text, skills).map(
+                              (m) => ({ ...m, selected: true }),
+                            );
+                            setClaims((current) =>
+                              current.map((x) =>
+                                x.id === c.id && x.text === c.text
+                                  ? { ...x, mappings: suggestions }
+                                  : x,
+                              ),
+                            );
+                          } catch {
+                            setMessage(
+                              "Capability lookup is unavailable. Keep the corrected claim and add mappings manually when available.",
+                            );
+                          } finally {
+                            setMappingBusy(null);
+                          }
+                        }}
+                      >
+                        Refresh capability suggestions
+                      </button>
+                    </div>
+                  )}
                   {["education", "qualification", "course"].includes(
                     c.kind,
                   ) && (
@@ -840,6 +881,7 @@ export function DocumentReview({
               <button
                 className="primary"
                 disabled={
+                  mappingBusy !== null ||
                   !name.trim() ||
                   (academic &&
                     (!academicFields.institution.trim() ||
@@ -862,7 +904,7 @@ export function DocumentReview({
               {!academic && (
                 <button
                   className="primary"
-                  disabled={!name.trim()}
+                  disabled={!name.trim() || mappingBusy !== null}
                   onClick={() => {
                     setStage("completed");
                     onApprove(

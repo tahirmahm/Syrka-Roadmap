@@ -8,6 +8,7 @@ const schema = z
   .object({
     interests: z.array(z.string().max(100)).max(30),
     background: z.array(z.string().max(300)).max(30).optional(),
+    reportedRoles: z.array(z.string().max(300)).max(20).optional(),
     assertions: z
       .array(
         z.object({
@@ -41,20 +42,24 @@ export async function POST(req: NextRequest) {
     };
     return NextResponse.json(
       {
-        matches: discover(catalogue, person, 60, x.background || []).map(
-          (m) => ({
-            ...m,
-            explanation: {
-              shared: m.shared.map(
-                (id) => ontologySkillById.get(id)?.label || id,
-              ),
-              missing: m.occupation.essential
-                .filter((id) => !m.shared.includes(id))
-                .slice(0, 5)
-                .map((id) => ontologySkillById.get(id)?.label || id),
-            },
-          }),
-        ),
+        matches: discover(
+          catalogue,
+          person,
+          60,
+          x.background || [],
+          x.reportedRoles || [],
+        ).map((m) => ({
+          ...m,
+          explanation: {
+            shared: m.shared.map(
+              (id) => ontologySkillById.get(id)?.label || id,
+            ),
+            missing: m.occupation.essential
+              .filter((id) => !m.shared.includes(id))
+              .slice(0, 5)
+              .map((id) => ontologySkillById.get(id)?.label || id),
+          },
+        })),
         version: catalogue.version,
       },
       { headers: { "Cache-Control": "no-store" } },

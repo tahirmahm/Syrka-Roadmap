@@ -318,6 +318,14 @@ export function Discovery({
                 {match && (
                   <details className="match-explanation">
                     <summary>Why this career?</summary>
+                    {match.reportedRoleMatch && (
+                      <p>
+                        This occupation matches a role explicitly stated in your
+                        reviewed employment history. That is a user-submitted
+                        record, not independently verified experience or
+                        confirmation of eligibility.
+                      </p>
+                    )}
                     <p>
                       Capabilities from your profile:{" "}
                       {match.explanation?.shared.join(", ") ||

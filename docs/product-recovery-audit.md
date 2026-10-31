@@ -46,3 +46,16 @@ three-category exploration, an evidence-led overview, five primary destinations,
 reviewable multilingual section extraction and authenticated opt-in snapshots
 with conflict protection. Add three fictional acceptance profiles and keep live,
 fixture, local and blocked results separate. No production promotion.
+
+## Additional root cause reproduced during recovery
+
+The lexical candidate matcher pooled all aliases into one token set. Economic
+statistical data analysis could therefore match `evaluate genetic data` through
+its statistical-analysis aliases despite no genetic context. The new regression
+case reproduces the old behaviour and requires sufficient actual-label support.
+The mapping remains a candidate, not proof of proficiency.
+
+Claim review had a separate consistency issue: editing text did not invalidate
+its attached mappings. The recovery clears those stale mappings, allows a local
+refresh and retains the original quote. A real browser case changes Python to SQL
+and verifies the saved profile has SQL, not Python, with self-reported provenance.

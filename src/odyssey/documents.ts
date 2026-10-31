@@ -438,9 +438,11 @@ export function approveClaims(
           sourceRecordId: doc.id,
           quote: c.quote,
           page: c.page,
-          verification: (m.confirmed || ["exact", "alias"].includes(m.method)
-            ? "document-supported"
-            : "inferred") as Assertion["verification"],
+          verification: (c.text !== c.quote
+            ? "self-reported"
+            : m.confirmed || ["exact", "alias"].includes(m.method)
+              ? "document-supported"
+              : "inferred") as Assertion["verification"],
           selected: true,
           consent: true,
         })),

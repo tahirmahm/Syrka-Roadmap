@@ -200,6 +200,7 @@ export type RoadmapGraph = {
   cycles: string[][];
 };
 export type Match = {
+  reportedRoleMatch?: boolean;
   occupation: Occupation;
   alignment: { supported: number; partial: number; total: number };
   requirements: { status: "not-assessed"; reason: string };

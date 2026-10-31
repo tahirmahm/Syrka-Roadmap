@@ -45,27 +45,23 @@ for (const width of [390, 1440]) {
           .forEach((line, i) =>
             p.drawText(line, { x: 40, y: 750 - i * 25, size: 12, font }),
           );
-        await page
-          .getByLabel("Select CV or academic document")
-          .setInputFiles({
-            name: "fictional-university.pdf",
-            mimeType: "application/pdf",
-            buffer: Buffer.from(await doc.save()),
-          });
+        await page.getByLabel("Select CV or academic document").setInputFiles({
+          name: "fictional-university.pdf",
+          mimeType: "application/pdf",
+          buffer: Buffer.from(await doc.save()),
+        });
       } else {
         const xml = `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">${text
           .trim()
           .split("\n")
           .map((line) => `<w:p><w:r><w:t>${line}</w:t></w:r></w:p>`)
           .join("")}</w:document>`;
-        await page
-          .getByLabel("Select CV or academic document")
-          .setInputFiles({
-            name: "fictional-professional.docx",
-            mimeType:
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            buffer: Buffer.from(zipSync({ "word/document.xml": strToU8(xml) })),
-          });
+        await page.getByLabel("Select CV or academic document").setInputFiles({
+          name: "fictional-professional.docx",
+          mimeType:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          buffer: Buffer.from(zipSync({ "word/document.xml": strToU8(xml) })),
+        });
       }
       await page
         .getByRole("textbox", { name: "Your display name", exact: true })
@@ -136,6 +132,9 @@ for (const width of [390, 1440]) {
       await expect(
         page.getByRole("button", { name: "Resume my roadmap" }),
       ).toBeVisible();
+      await expect(
+        page.locator(".possibility-grid .position-card").first(),
+      ).toBeVisible();
       await page.screenshot({
         path: info.outputPath("overview.png"),
         fullPage: true,
@@ -176,4 +175,50 @@ test("account snapshot endpoint requires auth and rejects cross-origin mutation"
       })
     ).status(),
   ).toBe(403);
+});
+
+test("correcting an extracted skill clears stale mappings and preserves the original quote", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add your CV", exact: true }).click();
+  await page.getByRole("dialog").getByRole("checkbox").first().check();
+  await page.getByText("Paste résumé text instead", { exact: true }).click();
+  await page
+    .getByLabel("Paste résumé text", { exact: true })
+    .fill("Correction Fictional\nSKILLS\nPython\nINTERESTS\ndata analysis");
+  await page.getByRole("button", { name: "Build profile from text" }).click();
+  await page
+    .getByRole("textbox", { name: "Your display name", exact: true })
+    .fill("Correction Fictional");
+  await page
+    .getByRole("textbox", { name: "Claim 2 text", exact: true })
+    .fill("SQL");
+  const claim = page.locator(".claim-card").nth(1);
+  await expect(
+    claim.getByRole("checkbox", { name: /Confirm .*Python/ }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Refresh capability suggestions for claim 2" })
+    .click();
+  await expect(
+    claim.getByRole("checkbox", { name: /Confirm SQL mapping/ }),
+  ).toBeChecked();
+  await page
+    .getByRole("button", { name: "Continue to career discovery", exact: true })
+    .click();
+  await expect(page.locator(".career-row").first()).toBeVisible();
+  const state = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!),
+  );
+  expect(
+    state.person.assertions.some((a: { label: string }) =>
+      a.label.includes("Python"),
+    ),
+  ).toBe(false);
+  const sql = state.person.assertions.find(
+    (a: { label: string }) => a.label === "SQL",
+  );
+  expect(sql.quote).toBe("Python");
+  expect(sql.verification).toBe("self-reported");
 });

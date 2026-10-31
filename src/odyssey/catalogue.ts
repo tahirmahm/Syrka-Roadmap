@@ -182,7 +182,7 @@ export const discoveryBands = [
 export function discoveryBand(m: Match): (typeof discoveryBands)[number] {
   const coverage = m.shared.length / Math.max(m.alignment.total, 1);
   // Exploration bands describe evidence coverage, never hiring or legal eligibility.
-  return coverage >= 0.45 && m.alignment.supported > 0
+  return m.reportedRoleMatch || (coverage >= 0.45 && m.alignment.supported > 0)
     ? discoveryBands[0]
     : coverage >= 0.15
       ? discoveryBands[1]
@@ -205,6 +205,9 @@ export function discover(
           "qualification",
         ].includes(c.kind),
     )
+    .map((c) => c.text),
+  reportedRoles = person.claims
+    .filter((c) => c.approved && c.kind === "employment")
     .map((c) => c.text),
 ) {
   let frequencies = specificityCache.get(data);
@@ -262,6 +265,13 @@ export function discover(
       const score = denominator ? overlap / Math.sqrt(denominator) : 0;
       const interest = Math.min(match.interest.matched.length, 3) * 0.35;
       const titles = [o.label, ...o.aliases].map(normalize);
+      match.reportedRoleMatch = reportedRoles.some((role) =>
+        titles.some(
+          (t) =>
+            t.length > 8 &&
+            (" " + normalize(role) + " ").includes(" " + t + " "),
+        ),
+      );
       const titleTokens = new Set(
         titles.flatMap((t) => t.split(" ")).filter((t) => t.length > 3),
       );
@@ -353,7 +363,11 @@ export function mapText(
         labelTokens: new Set(
           normalize(s.label)
             .split(" ")
-            .filter((x) => !stop.has(x))
+            .filter(
+              (x) =>
+                !stop.has(x) &&
+                !["techniques", "methods", "skills"].includes(x),
+            )
             .map(token),
         ),
         tokens: new Set(
@@ -402,7 +416,7 @@ export function mapText(
         Math.max(s.labelTokens.size, 1),
     }))
     // Alias unions must not introduce an absent specialist qualifier (e.g. genetics).
-    .filter((x) => x.overlap >= 2 && x.labelCoverage >= 2 / 3)
+    .filter((x) => x.overlap >= 2 && x.labelCoverage === 1)
     .sort(
       (a, b) =>
         b.overlap / (b.s.tokens.size + query.size - b.overlap) -

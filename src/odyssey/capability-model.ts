@@ -42,6 +42,10 @@ export function capabilityBrain(person: Person) {
 export function discoveryProjection(person: Person) {
   return {
     interests: person.interests,
+    reportedRoles: person.claims
+      .filter((c) => c.approved && c.kind === "employment")
+      .slice(0, 20)
+      .map((c) => c.text.slice(0, 300)),
     background: person.claims
       .filter(
         (c) =>
