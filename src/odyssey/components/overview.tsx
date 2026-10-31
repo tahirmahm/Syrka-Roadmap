@@ -27,9 +27,15 @@ export function Overview({
   );
   const { person } = workspace;
   const brain = capabilityBrain(person);
+  const weight = (status: string) =>
+    status === "inferred" ? 0 : status === "self-reported" ? 1 : 2;
   const selected = [
-    ...new Map(brain.capabilities.map((a) => [a.capabilityId, a])).values(),
-  ];
+    ...new Map(
+      [...brain.capabilities]
+        .sort((a, b) => weight(a.status) - weight(b.status))
+        .map((a) => [a.capabilityId, a]),
+    ).values(),
+  ].sort((a, b) => weight(b.status) - weight(a.status));
   const active = workspace.paths.find((p) => p.id === workspace.activePathId);
   useEffect(() => {
     const controller = new AbortController();

@@ -49,7 +49,8 @@ export function Discovery({
     [matches, setMatches] = useState<Match[]>([]),
     [personalized, setPersonalized] = useState(
       !initialQuery &&
-        person.assertions.some((a) => a.consent && a.selected !== false),
+        (person.interests.length > 0 ||
+          person.assertions.some((a) => a.consent && a.selected !== false)),
     ),
     [category, setCategory] = useState(""),
     [error, setError] = useState(""),
@@ -228,9 +229,10 @@ export function Discovery({
       {personalized && (
         <>
           <p className="small">
-            Computed from consented skill identifiers and stated interests. No
-            document text is sent to this matching endpoint. Location and formal
-            eligibility are not inferred.
+            Computed from selected capabilities, stated interests and short
+            reviewed education, role and project descriptions. Matching runs
+            inside Roadmaps; no profile text is sent to Qwen by this search.
+            Location and formal eligibility are not inferred.
           </p>
           <label className="consent-check">
             <input
@@ -328,6 +330,11 @@ export function Discovery({
                     </p>
                     <div className="supporting-evidence">
                       <strong>Evidence behind this recommendation</strong>
+                      <p className="small">
+                        Ranking weighs capability specificity, evidence
+                        confidence, requirement coverage, interests and reviewed
+                        background. It does not estimate hiring probability.
+                      </p>
                       {person.assertions
                         .filter(
                           (a) =>

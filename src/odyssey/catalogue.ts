@@ -189,7 +189,24 @@ export function discoveryBand(m: Match): (typeof discoveryBands)[number] {
       : discoveryBands[2];
 }
 const specificityCache = new WeakMap<Catalogue, Map<string, number>>();
-export function discover(data: Catalogue, person: Person, limit = 60) {
+export function discover(
+  data: Catalogue,
+  person: Person,
+  limit = 60,
+  background = person.claims
+    .filter(
+      (c) =>
+        c.approved &&
+        [
+          "education",
+          "employment",
+          "internship",
+          "project",
+          "qualification",
+        ].includes(c.kind),
+    )
+    .map((c) => c.text),
+) {
   let frequencies = specificityCache.get(data);
   if (!frequencies) {
     frequencies = new Map();
@@ -212,6 +229,27 @@ export function discover(data: Catalogue, person: Person, limit = 60) {
           : 1;
     weights.set(a.skillId, Math.max(weights.get(a.skillId) || 0, weight));
   }
+  const context = " " + normalize(background.join(" ")) + " ";
+  const contextTokens = new Set(
+    context
+      .trim()
+      .split(" ")
+      .filter(
+        (t) =>
+          t.length > 3 &&
+          ![
+            "fictional",
+            "university",
+            "experience",
+            "developed",
+            "built",
+            "using",
+            "skills",
+            "project",
+            "projects",
+          ].includes(t),
+      ),
+  );
   return data.occupations
     .map((o) => {
       const match = matchOccupation(person, o);
@@ -223,7 +261,20 @@ export function discover(data: Catalogue, person: Person, limit = 60) {
       // Coverage normalisation prevents occupations with huge lists winning solely by count.
       const score = denominator ? overlap / Math.sqrt(denominator) : 0;
       const interest = Math.min(match.interest.matched.length, 3) * 0.35;
-      return { match, score: score + interest };
+      const titles = [o.label, ...o.aliases].map(normalize);
+      const titleTokens = new Set(
+        titles.flatMap((t) => t.split(" ")).filter((t) => t.length > 3),
+      );
+      const contextOverlap = [...titleTokens].filter((t) =>
+        contextTokens.has(t),
+      ).length;
+      const exactBackground = titles.some(
+        (t) => t.length > 8 && context.includes(" " + t + " "),
+      );
+      // Reviewed roles/education/projects provide context, not implied qualifications.
+      const backgroundScore =
+        Math.min(1.2, contextOverlap * 0.3) + (exactBackground ? 1.2 : 0);
+      return { match, score: score + interest + backgroundScore };
     })
     .filter(
       (x) => x.match.shared.length > 0 || x.match.interest.matched.length > 0,
@@ -242,6 +293,7 @@ type PhraseEntry = {
   label: string;
   names: { text: string; method: "exact" | "alias" }[];
   tokens: Set<string>;
+  labelTokens: Set<string>;
 };
 const phraseCache = new WeakMap<object, PhraseEntry[]>();
 const stop = new Set([
@@ -298,6 +350,12 @@ export function mapText(
         id: s.id,
         label: s.label,
         names,
+        labelTokens: new Set(
+          normalize(s.label)
+            .split(" ")
+            .filter((x) => !stop.has(x))
+            .map(token),
+        ),
         tokens: new Set(
           names.flatMap((n) =>
             n.text
@@ -339,8 +397,12 @@ export function mapText(
     .map((s) => ({
       s,
       overlap: [...query].filter((t) => s.tokens.has(t)).length,
+      labelCoverage:
+        [...s.labelTokens].filter((t) => query.has(t)).length /
+        Math.max(s.labelTokens.size, 1),
     }))
-    .filter((x) => x.overlap >= 2)
+    // Alias unions must not introduce an absent specialist qualifier (e.g. genetics).
+    .filter((x) => x.overlap >= 2 && x.labelCoverage >= 2 / 3)
     .sort(
       (a, b) =>
         b.overlap / (b.s.tokens.size + query.size - b.overlap) -

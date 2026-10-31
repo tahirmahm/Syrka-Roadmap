@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { catalogue } from "../src/odyssey/server/data";
-import { discover, discoveryBand } from "../src/odyssey/catalogue";
+import { discover, discoveryBand, mapText } from "../src/odyssey/catalogue";
 import { extractClaims, approveClaims } from "../src/odyssey/documents";
 import {
   emptyPerson,
@@ -88,6 +88,7 @@ test("three fictional life stages retain literal evidence and produce distinct p
     );
     const labels = matches.map((m) => m.occupation.label);
     top.push(labels);
+    if (name === "professional") assert.match(labels[0], /software developer/);
     assert.match(
       labels.join(" "),
       name === "school"
@@ -144,4 +145,13 @@ test("non-English section headings preserve original facts without inventing tra
   assert.equal(claims[1].kind, "skill");
   assert.equal(claims[2].kind, "project");
   assert.ok(claims.every((c) => text.includes(c.quote)));
+});
+
+test("broad data analysis cannot assert an absent specialist domain through alias-token unions", () => {
+  const mappings = mapText(
+    "Statistical analysis of economic data using Python and SQL",
+    catalogue.skills,
+  );
+  assert.ok(!mappings.some((m) => /genetic|biomedical|battery/.test(m.label)));
+  assert.ok(mappings.some((m) => /statistic|SQL|Python/.test(m.label)));
 });

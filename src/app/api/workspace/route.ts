@@ -98,7 +98,9 @@ export async function PUT(req: NextRequest) {
       );
     if (profile.error)
       return reply({ error: "The account profile could not be saved." }, 503);
-    const updated = new Date(Math.max(Date.now(), x.revision ? Date.parse(x.revision) + 1 : 0)).toISOString();
+    const updated = new Date(
+      Math.max(Date.now(), x.revision ? Date.parse(x.revision) + 1 : 0),
+    ).toISOString();
     const row = {
       owner_id: s.user.id,
       schema_version: 2,
