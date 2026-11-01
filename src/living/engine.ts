@@ -1360,7 +1360,11 @@ export function planSemester(
   const closure = new Set(reversePlan(graph, goalIds).order),
     completed = new Set(
       graph.nodes
-        .filter((n) => ["reported", "verified"].includes(n.status))
+        .filter(
+          (n) =>
+            ["reported", "verified"].includes(n.status) &&
+            (n.kind !== "UniversityCourse" || hasEvidenceSupport(n)),
+        )
         .map((n) => n.id),
     );
   const candidates = courses
