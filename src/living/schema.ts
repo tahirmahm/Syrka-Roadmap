@@ -107,6 +107,25 @@ export const livingStateSchema = z.object({
     )
     .optional(),
   applicationNotes: z.record(z.string(), text).optional(),
+  advisoryRelationships: z
+    .array(
+      z.object({
+        from: z.string().max(250),
+        to: z.string().max(250),
+        relation: z.enum([
+          "RECOMMENDED_PREPARATION",
+          "CONTRIBUTES_TO",
+          "TRANSFERABLE_TO",
+          "COMPLEMENTS",
+        ]),
+        rationale: z.string().max(700),
+        claimId: z.string().max(250),
+        quote: z.string().max(1200),
+        acceptedAt: z.string().datetime(),
+      }),
+    )
+    .max(100)
+    .optional(),
 });
 export type LivingState = z.infer<typeof livingStateSchema>;
 export type CourseRecord = z.infer<typeof catalogueCourseSchema>;
@@ -168,6 +187,7 @@ export type WorldNode = {
   credits?: number | null;
   prerequisites: string[];
   occupationId?: string;
+  discoveryRank?: number;
 };
 export type Relation =
   | "REQUIRES"

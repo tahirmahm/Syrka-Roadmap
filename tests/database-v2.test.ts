@@ -113,6 +113,40 @@ test("Odyssey private imports, assertions, cloud snapshots and conservative AI q
       ).rows[0].n,
       60,
     );
+    await db.exec(
+      await readFile(
+        "supabase/migrations/202611010001_living_ai_actions.sql",
+        "utf8",
+      ),
+    );
+    await db.exec(`set role authenticated;set request.jwt.claim.sub='${a}';`);
+    for (const action of [
+      "living-guide",
+      "living-embedding",
+      "relationship-inference",
+    ]) {
+      assert.equal(
+        (
+          await db.query(
+            `select reserve_roadmaps_qwen_tokens('${action}','test',1) as id`,
+          )
+        ).rows.length,
+        1,
+      );
+    }
+    await assert.rejects(
+      db.query("select reserve_roadmaps_qwen_tokens('invented','test',1)"),
+      /Invalid request/,
+    );
+    await db.exec("reset role;");
+    assert.equal(
+      (
+        await db.query<{ n: number }>(
+          "select reserved_tokens as n from roadmaps_private.qwen_daily_tokens",
+        )
+      ).rows[0].n,
+      63,
+    );
     // Simulate two authenticated devices loading the same revision.
     await db.exec(`set role authenticated;set request.jwt.claim.sub='${a}';`);
     const revision = (

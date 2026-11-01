@@ -427,7 +427,10 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
     }
   };
   return (
-    <div className="app-shell odyssey-shell">
+    <div
+      data-workspace-ready={ready}
+      className={`app-shell odyssey-shell ${["tree", "home"].includes(view) ? "immersive-shell" : ""}`}
+    >
       <a className="skip-link" href="#main">
         Skip to content
       </a>
@@ -443,7 +446,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
         aria-label="Syrka navigation"
         role={mobile && drawer ? "dialog" : undefined}
         aria-modal={mobile && drawer ? true : undefined}
-        inert={mobile && !drawer}
+        inert={(mobile || ["tree", "home"].includes(view)) && !drawer}
         onKeyDown={(e) => {
           if (mobile && drawer) {
             trapFocus(e);
@@ -597,6 +600,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
         </header>
         <main
           id="main"
+          inert={!ready}
           className={
             view === "roadmap" || view === "tree" || view === "home"
               ? "roadmap-main"

@@ -1,0 +1,705 @@
+/* Scene presentation. The graph's meaning remains in the versioned evidence engine. */
+.immersive-shell {
+  display: block;
+}
+.immersive-shell .sidebar {
+  transform: translateX(-100%);
+  position: fixed;
+  z-index: 70;
+  transition: transform 0.2s;
+}
+.immersive-shell .sidebar.is-open {
+  transform: translateX(0);
+}
+.immersive-shell .main-shell {
+  margin-left: 0;
+  width: 100%;
+}
+.immersive-shell .topbar {
+  height: 52px;
+  min-height: 52px;
+  padding: 0 20px;
+}
+.immersive-shell .mobile-menu {
+  display: flex;
+}
+.immersive-shell .roadmap-main {
+  padding: 0;
+}
+.immersive-shell .workspace-notice {
+  position: absolute;
+  bottom: 10px;
+  left: 20px;
+  z-index: 11;
+  font-size: 9px;
+  background: var(--tree-panel);
+  border-radius: 6px;
+  padding: 6px;
+  max-width: calc(100% - 40px);
+}
+.immersive-shell .workspace-notice button {
+  display: none;
+}
+.immersive-tree {
+  padding: 0;
+  height: calc(100dvh - 52px);
+  min-height: 600px;
+  position: relative;
+  overflow: hidden;
+  background: var(--tree-stage);
+}
+.immersive-tree .tree-stage {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.immersive-tree .tree-canvas {
+  height: 100%;
+  min-height: 0;
+}
+.immersive-tree .tree-next-strip,
+.immersive-tree .tree-footnote {
+  position: absolute;
+  bottom: 42px;
+  left: 20px;
+  z-index: 7;
+  max-width: 340px;
+  font-size: 10px;
+}
+.immersive-tree .tree-next-strip {
+  display: none;
+}
+.immersive-tree .tree-footnote {
+  pointer-events: none;
+  max-width: 540px;
+  font-size: 8px;
+  opacity: 0.8;
+}
+.scene-hud {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  z-index: 20;
+  padding: 7px;
+  background: color-mix(in srgb, var(--tree-panel) 96%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px #0002;
+}
+.scene-hud > span {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 0 12px;
+}
+.scene-hud > span b {
+  font-weight: 500;
+  color: var(--tree-muted);
+  font-size: 9px;
+}
+.scene-hud button {
+  min-height: 40px;
+}
+.tree-tools-overlay {
+  display: none;
+  position: absolute;
+  top: 86px;
+  left: 20px;
+  z-index: 19;
+  width: 440px;
+  max-width: calc(100% - 40px);
+  max-height: calc(100% - 190px);
+  overflow: auto;
+  padding: 20px;
+  background: var(--tree-panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 15px 50px #0003;
+}
+.tools-open .tree-tools-overlay {
+  display: block;
+}
+.immersive-tree .tree-masthead {
+  display: block;
+}
+.immersive-tree .tree-masthead h1 {
+  font-size: 22px;
+}
+.immersive-tree .tree-entry-actions {
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.immersive-tree .tree-player {
+  display: block;
+  padding: 12px;
+  margin: 12px 0;
+}
+.immersive-tree .tree-objective {
+  max-width: none;
+  margin-top: 10px;
+}
+.immersive-tree .tree-toolbar {
+  flex-wrap: wrap;
+}
+.immersive-tree .tree-toolbar .search-control {
+  min-width: 100%;
+  order: -1;
+}
+.immersive-tree .tree-filters {
+  gap: 5px;
+}
+.immersive-tree .tree-filters select {
+  max-width: 100%;
+  width: 100%;
+}
+.immersive-tree .tree-universe-search {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  z-index: 18;
+  margin: 0;
+  background: var(--tree-panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  width: 340px;
+  max-height: calc(100% - 100px);
+  overflow: auto;
+}
+.immersive-tree .tree-universe-search:not([open]) {
+  width: auto;
+  padding: 13px;
+}
+.immersive-tree .tree-demo-routes {
+  display: grid;
+  gap: 7px;
+}
+.immersive-tree .tree-demo-routes button {
+  font-size: 11px;
+  min-height: 40px;
+}
+.immersive-tree .tree-notice,
+.immersive-tree > .error {
+  position: absolute;
+  top: 95px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 10px;
+  background: var(--tree-panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.immersive-tree .simulation-banner {
+  position: absolute;
+  bottom: 85px;
+  left: 20px;
+  z-index: 21;
+  max-width: 600px;
+  font-size: 11px;
+}
+.immersive-tree .tree-inspector {
+  position: absolute;
+  right: 16px;
+  top: 86px;
+  bottom: 44px;
+  width: 390px;
+  max-width: calc(100% - 32px);
+  height: auto;
+  max-height: none;
+  z-index: 22;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 15px 55px #0004;
+  background: var(--tree-panel);
+}
+.tree-sheet-handle {
+  display: none;
+}
+.immersive-tree .tree-reading {
+  height: 100%;
+  width: 100%;
+  padding: 90px 20px 60px;
+  overflow: auto;
+}
+.immersive-tree .tree-reading-node {
+  max-width: 680px;
+}
+.immersive-tree .react-flow__controls {
+  bottom: 65px;
+  left: 20px;
+}
+.immersive-tree .react-flow__minimap {
+  bottom: 36px;
+  width: 140px;
+  height: 90px;
+  opacity: 0.7;
+}
+.immersive-tree .react-flow__node-living {
+  transition: opacity 0.22s;
+  outline: none;
+}
+.immersive-tree .react-flow__handle {
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.orbit-node.living-node {
+  position: relative;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--region) 65%, var(--tree-edge));
+  background: var(--tree-surface);
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--region) 5%, transparent),
+    0 0 18px color-mix(in srgb, var(--region) 10%, transparent);
+  transition:
+    opacity 0.25s,
+    box-shadow 0.25s,
+    transform 0.25s;
+  animation: orbit-arrive 0.4s both;
+}
+.orbit-node.living-node button {
+  position: relative;
+  padding: 0;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: var(--tree-text);
+  overflow: visible;
+  gap: 0;
+}
+.orbit-node button > svg {
+  color: color-mix(in srgb, var(--region) 70%, var(--tree-text));
+  filter: drop-shadow(
+    0 0 6px color-mix(in srgb, var(--region) 20%, transparent)
+  );
+}
+.orbit-node .orbit-label {
+  position: absolute;
+  top: calc(100% + 11px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 500;
+  color: var(--tree-text);
+  text-shadow: 0 1px 5px var(--tree-stage);
+}
+.orbit-node.tier-52 .orbit-label {
+  width: 125px;
+  font-size: 10px;
+}
+.orbit-node.tier-94 .orbit-label,
+.orbit-node.tier-116 .orbit-label {
+  font-size: 12px;
+  max-width: 170px;
+  width: 170px;
+}
+.orbit-ring {
+  position: absolute;
+  inset: -9px;
+  border: 1px solid color-mix(in srgb, var(--region) 35%, transparent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.orbit-node.tier-70 {
+  border-radius: 24px;
+  transform: rotate(0deg);
+}
+.orbit-node.kind-Project {
+  border-style: dashed;
+  border-radius: 18px 4px 18px 4px;
+}
+.orbit-node.kind-Credential {
+  border-width: 3px;
+}
+.orbit-node.kind-UniversityCourse {
+  border-width: 1px;
+  border-radius: 21px;
+}
+.orbit-node.kind-EmployerRole {
+  border-radius: 30px;
+}
+.orbit-node.kind-GraduateProgramme .orbit-ring {
+  inset: -13px;
+  border-width: 2px;
+}
+.orbit-node.kind-PersonProfile {
+  border-width: 2px;
+  background: var(--roadmaps-tint);
+}
+.orbit-state {
+  position: absolute;
+  right: -4px;
+  bottom: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--region);
+  border-radius: 50%;
+  background: var(--tree-panel);
+  color: var(--tree-text);
+  font-size: 14px;
+}
+.orbit-node.state-historical,
+.orbit-node.state-reported {
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--region) 14%, transparent),
+    0 0 30px color-mix(in srgb, var(--region) 20%, transparent);
+}
+.orbit-node.state-historical .orbit-ring,
+.orbit-node.state-reported .orbit-ring {
+  border-color: var(--region);
+  border-width: 2px;
+}
+.orbit-node.state-inferred {
+  border-style: dashed;
+  opacity: 0.8;
+}
+.orbit-node.state-working .orbit-ring {
+  border-style: dashed;
+  animation: orbit-rotate 16s linear infinite;
+}
+.orbit-node.state-prerequisites {
+  border-style: dotted;
+  opacity: 0.65;
+}
+.orbit-node.is-goal:after {
+  content: "";
+  position: absolute;
+  inset: -20px;
+  border: 1px dashed var(--region);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.orbit-node.state-hypothetical {
+  border: 2px dashed var(--tree-luminous);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--tree-luminous) 25%, transparent);
+}
+.orbit-node.is-selected {
+  border-color: var(--tree-text);
+  box-shadow:
+    0 0 0 7px color-mix(in srgb, var(--region) 20%, transparent),
+    0 0 55px color-mix(in srgb, var(--region) 35%, transparent);
+}
+.orbit-node.is-faded {
+  opacity: 0.28;
+}
+.orbit-node:hover {
+  box-shadow: 0 0 30px color-mix(in srgb, var(--region) 35%, transparent);
+}
+.constellation-edge {
+  transition:
+    stroke 0.3s,
+    opacity 0.3s;
+  stroke-linecap: round;
+}
+.constellation-edge.is-earned {
+  stroke: var(--tree-luminous) !important;
+  stroke-width: 2 !important;
+  filter: drop-shadow(
+    0 0 4px color-mix(in srgb, var(--tree-luminous) 35%, transparent)
+  );
+}
+.constellation-edge.is-simulated {
+  stroke-dasharray: 6 5;
+  animation: orbit-dash 3s linear infinite;
+}
+.constellation-regions {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.region-label {
+  position: absolute;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-size: 9px;
+  opacity: 0.7;
+}
+.region-label-0 {
+  left: 15%;
+  top: 23%;
+}
+.region-label-1 {
+  left: 43%;
+  top: 13%;
+}
+.region-label-2 {
+  right: 10%;
+  top: 30%;
+}
+.region-label-3 {
+  right: 15%;
+  bottom: 23%;
+}
+.region-label-4 {
+  left: 42%;
+  bottom: 11%;
+}
+.region-label-5 {
+  left: 8%;
+  bottom: 31%;
+}
+.immersive-tree .tree-canvas-caption {
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 70%;
+  font-size: 9px;
+}
+.distraction-free {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  height: 100dvh;
+}
+.distraction-free .scene-hud {
+  opacity: 0.75;
+}
+.distraction-free .tree-footnote {
+  display: none;
+}
+[data-theme="dark"] .immersive-tree {
+  --tree-stage: #0b0d12;
+  --tree-surface: #171b25;
+  --tree-panel: #141821;
+  --tree-edge: #53617e;
+  --tree-luminous: #a1b3ed;
+  background: #0b0d12;
+}
+[data-theme="dark"] .immersive-tree .tree-canvas {
+  background: radial-gradient(ellipse at 48% 48%, #1b213130, #0b0d12 75%);
+}
+[data-theme="dark"] .immersive-tree .react-flow__background {
+  opacity: 0.25;
+}
+.immersive-tree .tree-canvas {
+  background: radial-gradient(ellipse at center, #ffffff50, #e8ecf580 90%);
+}
+[data-theme="dark"] .orbit-node {
+  background: radial-gradient(circle at 30% 20%, #252c3b, #141821);
+}
+@keyframes orbit-arrive {
+  from {
+    opacity: 0;
+    scale: 0.7;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes orbit-rotate {
+  to {
+    rotate: 360deg;
+  }
+}
+@keyframes orbit-dash {
+  to {
+    stroke-dashoffset: -44;
+  }
+}
+@media (max-width: 760px) {
+  .immersive-shell .topbar {
+    padding: 0 10px;
+    height: 50px;
+  }
+  .immersive-shell .topbar .demo-pill,
+  .immersive-shell .topbar .breadcrumb {
+    display: none;
+  }
+  .immersive-tree {
+    height: calc(100dvh - 50px);
+    min-height: 500px;
+  }
+  .scene-hud {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    gap: 4px;
+    padding: 5px;
+  }
+  .scene-hud > span {
+    font-size: 9px;
+    padding: 0 4px;
+    letter-spacing: 1px;
+    flex: 1;
+  }
+  .scene-hud > span b {
+    display: none;
+  }
+  .scene-hud > button:first-child {
+    font-size: 10px;
+    padding: 0 8px;
+  }
+  .scene-hud .icon-button {
+    width: 35px;
+    min-width: 35px;
+    min-height: 40px;
+  }
+  .tree-tools-overlay {
+    top: 70px;
+    left: 10px;
+    max-width: calc(100% - 20px);
+    padding: 14px;
+  }
+  .immersive-tree .tree-universe-search {
+    top: auto;
+    bottom: 46px;
+    right: 10px;
+    max-width: calc(100% - 20px);
+    max-height: 65%;
+    font-size: 10px;
+  }
+  .immersive-tree .tree-universe-search:not([open]) {
+    padding: 10px;
+  }
+  .immersive-tree .tree-inspector {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 64%;
+    max-height: 82%;
+    border-radius: 20px 20px 0 0;
+    padding: 14px 20px 30px;
+  }
+  .tree-sheet-handle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 26px;
+    touch-action: none;
+    cursor: grab;
+  }
+  .tree-sheet-handle span {
+    width: 45px;
+    height: 4px;
+    border-radius: 5px;
+    background: var(--tree-muted);
+  }
+  .region-label {
+    font-size: 7px;
+    letter-spacing: 1px;
+  }
+  .immersive-tree .tree-footnote {
+    display: none;
+  }
+  .immersive-shell .workspace-notice {
+    font-size: 8px;
+    bottom: 4px;
+    left: 8px;
+    max-width: calc(100% - 16px);
+    margin: 0;
+  }
+  .immersive-tree .tree-canvas-caption {
+    max-width: 65%;
+    font-size: 8px;
+    bottom: 80px;
+    left: 10px;
+    transform: none;
+  }
+  .immersive-tree .simulation-banner {
+    left: 10px;
+    bottom: 92px;
+    max-width: calc(100% - 20px);
+    font-size: 9px;
+  }
+  .immersive-tree .react-flow__controls {
+    left: 0;
+    bottom: 70px;
+  }
+  .immersive-tree .tree-reading {
+    padding-top: 75px;
+  }
+  .immersive-tree .tree-toast {
+    bottom: 15px;
+    max-width: 90%;
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .immersive-tree *,
+  .immersive-tree *:before,
+  .immersive-tree *:after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* Labels stay readable while exploring; nodes still express spatial hierarchy. */
+.orbit-node .orbit-label {
+  font-size: calc(11px / max(0.6, var(--scene-zoom, 1)));
+  width: calc(140px / max(0.7, var(--scene-zoom, 1)));
+}
+.orbit-node.tier-52 .orbit-label {
+  font-size: calc(10px / max(0.6, var(--scene-zoom, 1)));
+}
+.orbit-node.tier-94 .orbit-label,
+.orbit-node.tier-116 .orbit-label {
+  font-size: calc(12px / max(0.6, var(--scene-zoom, 1)));
+  max-width: 210px;
+  width: calc(170px / max(0.7, var(--scene-zoom, 1)));
+}
+.react-flow__edge.constellation-edge.is-earned .react-flow__edge-path {
+  stroke: var(--tree-luminous) !important;
+  stroke-width: 2 !important;
+  filter: drop-shadow(
+    0 0 3px color-mix(in srgb, var(--tree-luminous) 30%, transparent)
+  );
+}
+.react-flow__edge.constellation-edge.is-simulated .react-flow__edge-path {
+  stroke-dasharray: 6 5;
+  animation: orbit-dash 3s linear infinite;
+}
+@media (max-width: 760px) {
+  .orbit-node.tier-52 button:after {
+    content: "";
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+  }
+  .immersive-shell .sidebar.is-open .mobile-close {
+    display: flex;
+  }
+}
+/* Status messages must never cover an actionable inspector control. */
+.immersive-shell .toast,
+.immersive-tree .tree-toast {
+  pointer-events: none;
+}
+.immersive-shell .toast button,
+.immersive-tree .tree-toast button {
+  pointer-events: auto;
+}
+.immersive-shell .sidebar .mobile-close {
+  display: flex;
+}
+.immersive-tree .tree-inspector {
+  padding-bottom: 85px;
+}

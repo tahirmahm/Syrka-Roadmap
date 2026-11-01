@@ -60,7 +60,17 @@ export type Mapping = {
   confirmed: boolean;
   selected?: boolean;
 };
+export type EducationState =
+  | "attended"
+  | "current"
+  | "completed"
+  | "withdrawn"
+  | "transferred"
+  | "incomplete"
+  | "unknown";
 export type Claim = {
+  educationState?: EducationState;
+  interpretation?: "local" | "ai-candidate" | "user-reviewed";
   id: string;
   kind: ClaimKind;
   text: string;

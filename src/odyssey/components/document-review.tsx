@@ -15,6 +15,7 @@ import type {
   ClaimKind,
   ExtractedDocument,
   Course,
+  EducationState,
 } from "../types";
 import {
   extractDocument,
@@ -724,6 +725,36 @@ export function DocumentReview({
                     c.kind,
                   ) && (
                     <div className="form-grid">
+                      <label>
+                        Education status for claim {index + 1}
+                        <select
+                          value={c.educationState || "unknown"}
+                          onChange={(e) =>
+                            patch(c.id, {
+                              educationState: e.target.value as EducationState,
+                              interpretation: "user-reviewed",
+                            })
+                          }
+                        >
+                          {[
+                            "unknown",
+                            "attended",
+                            "current",
+                            "completed",
+                            "withdrawn",
+                            "transferred",
+                            "incomplete",
+                          ].map((v) => (
+                            <option key={v} value={v}>
+                              {v}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <p className="small">
+                        Attendance is not a degree. Completion remains a
+                        user-reviewed claim, not institutional verification.
+                      </p>
                       <label>
                         Institution (confirm or correct)
                         <input

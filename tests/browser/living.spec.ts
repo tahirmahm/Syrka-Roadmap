@@ -2,7 +2,13 @@ import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 async function load(page: Page, label: string) {
   await page.goto("/tree");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page.locator(".tree-universe-search summary").click();
   await page.getByRole("button", { name: label, exact: true }).click();
+  await expect(page.locator(".tree-player")).toContainText("fictional");
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
   await expect(page.locator(".tree-player")).toContainText("fictional");
   await expect(page.locator(".tree-footnote")).toContainText(
     "Fictional personal records",
@@ -10,11 +16,23 @@ async function load(page: Page, label: string) {
   await expect(page.locator(".tree-notice")).toHaveCount(0);
 }
 async function inspect(page: Page, label: string) {
+  if (!(await page.getByLabel("Search the living tree").isVisible()))
+    await page
+      .getByRole("button", { name: "Explore & tools", exact: true })
+      .click();
   await page.getByLabel("Search the living tree").fill(label);
   await page
     .getByRole("button", { name: "Open search result " + label, exact: true })
     .click();
   await expect(page.getByLabel("Living node inspector")).toContainText(label);
+  if (
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .click();
 }
 async function close(page: Page) {
   await page
@@ -27,7 +45,40 @@ for (const width of [390, 1440]) {
   }, info) => {
     await page.setViewportSize({ width, height: 1000 });
     await load(page, "PPE → Consulting → MBA");
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .click();
+    await expect(
+      page.getByLabel("Progression universe", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Living tree reading mode")).toHaveCount(0);
+    await page.screenshot({
+      path: info.outputPath("constellation-before.png"),
+      fullPage: true,
+    });
+    const scene = await page
+      .getByLabel("Progression universe", { exact: true })
+      .boundingBox();
+    expect(scene!.width).toBeGreaterThan(width * 0.85);
+    expect(scene!.height).toBeGreaterThan(1000 * 0.85);
+    const beforeNodes = Number(
+      await page.locator(".tree-canvas").getAttribute("data-disclosed-count"),
+    );
     await inspect(page, "McKinsey · Business Analyst");
+    await expect(page.locator(".orbit-node.is-selected")).toBeAttached();
+    await expect
+      .poll(async () =>
+        Number(
+          await page
+            .locator(".tree-canvas")
+            .getAttribute("data-disclosed-count"),
+        ),
+      )
+      .toBeGreaterThan(beforeNodes);
+    await page.screenshot({
+      path: info.outputPath("constellation-expanded.png"),
+      fullPage: true,
+    });
     await expect(page.getByLabel("Living node inspector")).toContainText(
       "NOT been verified",
     );
@@ -81,6 +132,9 @@ for (const width of [390, 1440]) {
       .analyze();
     expect(axe.violations).toEqual([]);
     await page
+      .getByRole("button", { name: "Explore & tools", exact: true })
+      .click();
+    await page
       .getByRole("button", { name: "Compare routes", exact: true })
       .click();
     await expect(page.getByLabel("Route comparison")).toContainText(
@@ -127,6 +181,14 @@ for (const width of [390, 1440]) {
     await page
       .getByRole("button", { name: "Exit simulation", exact: true })
       .click();
+    if (
+      !(await page
+        .getByRole("button", { name: "Semester lab", exact: true })
+        .isVisible())
+    )
+      await page
+        .getByRole("button", { name: "Explore & tools", exact: true })
+        .click();
     await page
       .getByRole("button", { name: "Semester lab", exact: true })
       .click();
@@ -144,6 +206,14 @@ for (const width of [390, 1440]) {
       .first()
       .click();
     await page.reload();
+    if (
+      !(await page
+        .getByRole("button", { name: "Semester lab", exact: true })
+        .isVisible())
+    )
+      await page
+        .getByRole("button", { name: "Explore & tools", exact: true })
+        .click();
     await page
       .getByRole("button", { name: "Semester lab", exact: true })
       .click();
@@ -173,12 +243,33 @@ for (const width of [390, 1440]) {
       .click();
     await expect(page.locator(".tree-toast")).toContainText("self-reported");
     await close(page);
+    await page
+      .getByRole("button", { name: "Explore & tools", exact: true })
+      .click();
     await page.getByRole("tab", { name: "History", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .click();
+    await expect(
+      page.getByLabel("Progression universe", { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Explore & tools", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Show reading tree", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .click();
     await expect(page.locator(".tree-stage")).toContainText("tax advisor");
     await page.screenshot({
       path: info.outputPath("history.png"),
       fullPage: true,
     });
+    await page
+      .getByRole("button", { name: "Explore & tools", exact: true })
+      .click();
     await page
       .getByRole("button", { name: "Syrka Guide", exact: true })
       .click();
@@ -247,3 +338,77 @@ for (const width of [390, 1440]) {
     ).toEqual([]);
   });
 }
+
+test("reviewed education chronology survives CV import without converting attendance into a degree (fictional text)", async ({
+  page,
+}) => {
+  await page.goto("/tree");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Add your CV", exact: true }).click();
+  await page.getByRole("dialog").getByRole("checkbox").first().check();
+  await page.getByText("Paste résumé text instead", { exact: true }).click();
+  await page
+    .getByLabel("Paste résumé text", { exact: true })
+    .fill(
+      "Fictional Lifecycle Candidate\nEDUCATION\nAttended Example University 2017–2019, degree incomplete\nCurrently enrolled at Example Institute, expected 2028\nPROJECTS\nReviewed public budget data using statistical methods and wrote a sourced research report.",
+    );
+  await page
+    .getByRole("button", { name: "Build profile from text", exact: true })
+    .click();
+  const states = page.getByRole("combobox", {
+    name: /Education status for claim/,
+  });
+  await expect(states).toHaveCount(2);
+  await expect(states.nth(0)).toHaveValue("incomplete");
+  await expect(states.nth(1)).toHaveValue("current");
+  await page
+    .getByRole("button", { name: "Continue to career discovery", exact: true })
+    .click();
+  const person = await page.evaluate(
+    () => JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!).person,
+  );
+  expect(
+    person.claims
+      .filter((c: { kind: string }) => c.kind === "education")
+      .map((c: { educationState: string }) => c.educationState),
+  ).toEqual(["incomplete", "current"]);
+  await page.goto("/tree");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Open evidence inventory", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Suggest evidence connections",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  // Explicit fixture tests the review UI, never claims live Qwen access.
+  await page.route("**/api/relationships", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        relationships: [],
+        uncertainties: [
+          "Fixture: insufficient evidence for a formal requirement.",
+        ],
+        notice: "Fixture: model transport not used.",
+      }),
+    }),
+  );
+  await page
+    .getByRole("checkbox", { name: /I consent to sending these up to eight/ })
+    .check();
+  await page
+    .getByRole("button", { name: "Suggest evidence connections", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Evidence inventory", { exact: true }),
+  ).toContainText("Fixture: model transport not used.");
+});

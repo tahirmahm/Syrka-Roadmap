@@ -209,6 +209,6 @@ test("AI enhancement preserves edited claims and deselected mappings", async () 
   ]);
   assert.equal(output[0].text, "My edited description");
   assert.equal(output[0].mappings[0].selected, false);
-  assert.equal(output[0].mappings[1].selected, true);
+  assert.equal(output[0].mappings[1].selected, false);
   assert.equal(output[0].mappings[1].confirmed, false);
 });

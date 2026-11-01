@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import "./globals.css";
 import "@/odyssey/styles.css";
 import "@/living/styles.css";
+import "@/living/constellation.css";
 export const metadata: Metadata = {
   title: "Syrka Roadmaps · The Living Career Tree",
   description:

@@ -11,6 +11,8 @@ import {
   useReactFlow,
   type Node,
   type NodeProps,
+  BaseEdge,
+  type EdgeProps,
 } from "@xyflow/react";
 import {
   ArrowRight,
@@ -56,6 +58,14 @@ import {
   type CourseRecord,
 } from "./schema";
 import { visibleWorld, reversePlan, simulate, planSemester } from "./engine";
+import {
+  constellationLayout,
+  nodeSize,
+  regionOf,
+  regions,
+  focusNetwork,
+} from "./spatial";
+import { RelationshipReview } from "./relationship-review";
 import { importCourseCatalogue } from "./catalogue";
 import type { GuideAnswer } from "./guide";
 import type { DemoScenario } from "./demos";
@@ -97,6 +107,8 @@ type TreeNode = Node<
     selected: boolean;
     expanded: boolean;
     hypothetical: boolean;
+    faded: boolean;
+    goal: boolean;
     onSelect: (id: string) => void;
     onFocus: (id: string) => void;
   },
@@ -104,39 +116,74 @@ type TreeNode = Node<
 >;
 function LivingNode({ data }: NodeProps<TreeNode>) {
   const n = data.record,
-    Icon = icons[n.kind];
+    Icon = icons[n.kind],
+    size = nodeSize(n);
   return (
     <div
-      className={`living-node kind-${n.kind} state-${data.hypothetical ? "hypothetical" : n.status} ${data.selected ? "is-selected" : ""}`}
+      className={`living-node orbit-node tier-${size} region-${regionOf(n)} kind-${n.kind} state-${data.hypothetical ? "hypothetical" : n.status} ${data.selected ? "is-selected" : ""} ${data.faded ? "is-faded" : ""} ${data.goal ? "is-goal" : ""}`}
+      style={
+        {
+          width: size,
+          height: size,
+          "--region": regions[regionOf(n)].color,
+        } as React.CSSProperties
+      }
     >
-      <Handle type="target" position={Position.Left} />
+      <Handle type="target" position={Position.Top} />
       <button
         aria-label={`Inspect ${n.label}`}
         aria-expanded={data.expanded}
         onClick={() => data.onSelect(n.id)}
         onDoubleClick={() => data.onFocus(n.id)}
+        title={`${n.label} · ${statusLabel[n.status]}`}
       >
-        <span className="living-node-icon">
-          <Icon size={20} />
+        <span className="orbit-ring" aria-hidden="true" />
+        <Icon size={size > 90 ? 32 : size > 60 ? 25 : 21} strokeWidth={1.4} />
+        <span className="orbit-state" aria-hidden="true">
+          {data.hypothetical ? (
+            <FlaskConical size={12} />
+          ) : n.status === "verified" ? (
+            <Check size={12} />
+          ) : n.status === "working" ? (
+            <Play size={12} />
+          ) : data.goal ? (
+            <Target size={12} />
+          ) : data.expanded ? (
+            <span>−</span>
+          ) : (
+            <Plus size={11} />
+          )}
         </span>
-        <span>
-          <small>{categoryLabel(n.kind)}</small>
-          <strong>{n.label}</strong>
-          <em>
-            {data.hypothetical
-              ? "Hypothetical"
-              : n.source.kind === "fixture"
-                ? "Fictional catalogue fixture"
-                : n.date || statusLabel[n.status]}
-          </em>
+        <strong className="orbit-label">{n.label}</strong>
+        <span className="sr-only">
+          {data.goal ? "Future goal · " : ""}
+          {statusLabel[n.status]} · {categoryLabel(n.kind)}
         </span>
-        <ChevronRight size={15} />
       </button>
-      <Handle type="source" position={Position.Right} />
+      <Handle type="source" position={Position.Bottom} />
     </div>
   );
 }
+function ConstellationEdge(props: EdgeProps) {
+  const data = props.data as
+    { sourceSize: number; targetSize: number } | undefined;
+  const ss = data?.sourceSize || 70,
+    ts = data?.targetSize || 70;
+  const a = { x: props.sourceX, y: props.sourceY - ss / 2 },
+    b = { x: props.targetX, y: props.targetY + ts / 2 };
+  const dx = b.x - a.x,
+    dy = b.y - a.y,
+    length = Math.max(1, Math.hypot(dx, dy)),
+    ux = dx / length,
+    uy = dy / length;
+  const start = { x: a.x + (ux * ss) / 2, y: a.y + (uy * ss) / 2 },
+    end = { x: b.x - (ux * ts) / 2, y: b.y - (uy * ts) / 2 };
+  const bend = Math.min(65, length * 0.13);
+  const path = `M ${start.x} ${start.y} Q ${(start.x + end.x) / 2 - uy * bend} ${(start.y + end.y) / 2 + ux * bend} ${end.x} ${end.y}`;
+  return <BaseEdge path={path} style={props.style} />;
+}
 const nodeTypes = { living: LivingNode };
+const edgeTypes = { constellation: ConstellationEdge };
 export function LivingTree(props: {
   workspace: Workspace;
   onState: (patch: Partial<LivingState>) => void;
@@ -180,7 +227,10 @@ function TreeWorkspace({
     [domain, setDomain] = useState(""),
     [institution, setInstitution] = useState(""),
     [status, setStatus] = useState(""),
-    [reading, setReading] = useState<boolean | null>(null),
+    [reading, setReading] = useState(false),
+    [toolsOpen, setToolsOpen] = useState(false),
+    [fullscreen, setFullscreen] = useState(false),
+    [zoom, setZoom] = useState(0.85),
     [panel, setPanel] = useState<
       "node" | "academic" | "inventory" | "guide" | "compare" | null
     >(null),
@@ -268,17 +318,25 @@ function TreeWorkspace({
     setEvidence("");
     setGuideAnswer(null);
     setPanel("node");
-    if (!mobile) requestAnimationFrame(() => focus(id));
+    requestAnimationFrame(() => focus(id));
   };
   const focus = (id: string) => {
     const p = positions.current.get(id);
     if (p)
-      void flow.setCenter(p.x + 120, p.y + 50, {
-        zoom: 0.95,
-        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? 0
-          : 240,
-      });
+      void flow.setCenter(
+        p.x +
+          (graph?.nodes.find((n) => n.id === id)
+            ? nodeSize(graph.nodes.find((n) => n.id === id)!) / 2
+            : 35),
+        p.y + 35,
+        {
+          zoom: mobile ? 0.9 : 1,
+          duration: window.matchMedia("(prefers-reduced-motion: reduce)")
+            .matches
+            ? 0
+            : 240,
+        },
+      );
   };
   const close = () => {
     setPanel(null);
@@ -292,35 +350,25 @@ function TreeWorkspace({
   };
   const shown = useMemo(() => {
     if (!graph) return { nodes: [], edges: [] };
-    const g =
-      query || domain || institution || status
-        ? { nodes: graph.nodes, edges: graph.edges }
-        : visibleWorld(graph, state);
+    const g = visibleWorld(
+      graph,
+      state,
+      state.mode === "goal" ? "explore" : state.mode,
+    );
     return {
-      nodes: [...g.nodes]
-        .sort((a, b) =>
-          state.mode === "history"
-            ? a.id === "person"
-              ? -1
-              : b.id === "person"
-                ? 1
-                : (Number(a.date?.match(/\d{4}/)?.[0]) || 9999) -
-                  (Number(b.date?.match(/\d{4}/)?.[0]) || 9999)
-            : 0,
-        )
-        .filter(
-          (n) =>
-            (!domain || n.domain === domain) &&
-            (!institution || n.institution === institution) &&
-            (!status || n.status === status) &&
-            (!query ||
-              (n.label + " " + n.summary)
-                .toLowerCase()
-                .includes(query.toLowerCase())),
-        ),
+      nodes: [...g.nodes].sort((a, b) =>
+        state.mode === "history"
+          ? a.id === "person"
+            ? -1
+            : b.id === "person"
+              ? 1
+              : (Number(a.date?.match(/\d{4}/)?.[0]) || 9999) -
+                (Number(b.date?.match(/\d{4}/)?.[0]) || 9999)
+          : 0,
+      ),
       edges: g.edges,
     };
-  }, [graph, state, domain, institution, status, query]);
+  }, [graph, state]);
   const activeIds = new Set(shown.nodes.map((n) => n.id));
   const sim =
     graph && simulation.length
@@ -328,52 +376,37 @@ function TreeWorkspace({
       : null;
   const [nodeRecords, setNodeRecords] = useState<TreeNode[]>([]);
   useEffect(() => {
-    const occupied = [...positions.current.values()];
-    const buckets: Record<string, number> = {};
-    const records = shown.nodes.map((n) => {
-      let p = positions.current.get(n.id);
-      if (!p) {
-        const col =
-          n.id === "person"
-            ? 0
-            : n.kind === "AcademicProgramme" ||
-                n.kind === "UniversityCourse" ||
-                n.kind === "ProfessionalExperience" ||
-                n.kind === "Internship"
-              ? 1
-              : n.kind === "Capability" || n.kind === "KnowledgeDomain"
-                ? 2
-                : n.kind === "Project" || n.kind === "ProgressMilestone"
-                  ? 3
-                  : 4;
-        let row = buckets[String(col)] || 0;
-        const x = col * 305;
-        while (
-          occupied.some((p) => p.x === x && Math.abs(p.y - row * 132) < 120)
+    positions.current = constellationLayout(shown.nodes, positions.current);
+    const network = graph
+      ? focusNetwork(
+          graph,
+          state.selected,
+          state.mode === "goal" ? state.goals : [],
         )
-          row++;
-        p = { x, y: row * 132 };
-        buckets[String(col)] = row + 1;
-        positions.current.set(n.id, p);
-        occupied.push(p);
-      }
-      return {
-        id: n.id,
-        type: "living" as const,
-        position: p,
-        data: {
-          record: n,
-          selected: n.id === state.selected,
-          expanded: state.expanded.includes(n.id),
-          hypothetical: !!(
-            sim?.hypothetical.includes(n.id) ||
-            sim?.potentialEvidence.includes(n.id)
-          ),
-          onSelect: choose,
-          onFocus: focus,
-        },
-      };
-    });
+      : null;
+    const records = shown.nodes.map((n) => ({
+      id: n.id,
+      type: "living" as const,
+      position: positions.current.get(n.id)!,
+      data: {
+        record: n,
+        selected: n.id === state.selected,
+        expanded: state.expanded.includes(n.id),
+        hypothetical: !!(
+          sim?.hypothetical.includes(n.id) ||
+          sim?.potentialEvidence.includes(n.id)
+        ),
+        faded: !!(
+          (network && !network.has(n.id)) ||
+          (domain && domain !== n.domain) ||
+          (institution && institution !== n.institution) ||
+          (status && status !== n.status)
+        ),
+        goal: state.goals.includes(n.id),
+        onSelect: choose,
+        onFocus: focus,
+      },
+    }));
     let live = true;
     queueMicrotask(() => {
       if (live) setNodeRecords(records);
@@ -383,14 +416,42 @@ function TreeWorkspace({
     };
     // Positions are incrementally allocated and retained while clusters expand.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shown.nodes, state.selected, state.expanded, simulation]);
+  }, [
+    shown.nodes,
+    state.selected,
+    state.expanded,
+    simulation,
+    domain,
+    institution,
+    status,
+  ]);
+  const cameraReady = useRef(false);
+  useEffect(() => {
+    if (nodeRecords.length && !cameraReady.current) {
+      cameraReady.current = true;
+      const t = setTimeout(
+        () =>
+          void flow.setCenter(0, 0, {
+            zoom: mobile ? 0.65 : 0.85,
+            duration: 0,
+          }),
+        120,
+      );
+      return () => clearTimeout(t);
+    }
+  }, [nodeRecords.length, flow, mobile]);
   const edges = shown.edges
     .filter((e) => activeIds.has(e.from) && activeIds.has(e.to))
     .map((e) => ({
       id: e.id,
       source: e.from,
       target: e.to,
-      type: "smoothstep",
+      type: "constellation",
+      data: {
+        sourceSize: nodeSize(graph!.nodes.find((n) => n.id === e.from)!),
+        targetSize: nodeSize(graph!.nodes.find((n) => n.id === e.to)!),
+      },
+      className: `constellation-edge ${["reported", "verified", "historical"].includes(graph?.nodes.find((n) => n.id === e.from)?.status || "") ? "is-earned" : ""} ${simulation.includes(e.from) ? "is-simulated" : ""}`,
       animated: false,
       style: {
         stroke:
@@ -398,6 +459,12 @@ function TreeWorkspace({
             ? "var(--tree-required)"
             : "var(--tree-edge)",
         strokeWidth: e.relation === "REQUIRES" ? 2 : 1.3,
+        opacity:
+          graph &&
+          state.selected &&
+          !focusNetwork(graph, state.selected, [])?.has(e.from)
+            ? 0.18
+            : 0.85,
         strokeDasharray: [
           "SUPPORTS_APPLICATION_TO",
           "RECOMMENDED_PREPARATION",
@@ -445,7 +512,7 @@ function TreeWorkspace({
   const semester = graph
     ? planSemester(graph, courses, state, state.goals)
     : null;
-  const isReading = reading ?? (mobile || state.mode === "history");
+  const isReading = reading;
   const progress = (
     n: WorldNode,
     action: "planned" | "working" | "completed",
@@ -481,187 +548,259 @@ function TreeWorkspace({
     setToast("Goal updated. Past evidence and other goals are preserved.");
   };
   return (
-    <section className="living-tree" aria-label="The Living Career Tree">
-      <div className="tree-masthead">
-        <div>
-          <span className="eyebrow">
-            SYRKA ODYSSEY / YOUR LIFE IS THE SKILL TREE
-          </span>
-          <h1>The Living Career Tree</h1>
-        </div>
-        <div className="tree-entry-actions">
-          <button className="secondary" onClick={onUpload}>
-            <Upload size={16} />
-            Add your CV
-          </button>
-          <button
-            className="icon-button"
-            aria-label="Open evidence inventory"
-            onClick={() => setPanel("inventory")}
-          >
-            <Backpack size={18} />
-          </button>
-          <button className="secondary" onClick={() => setPanel("guide")}>
-            <Sparkles size={16} />
-            Syrka Guide
-          </button>
-        </div>
-      </div>
-      <div
-        className="tree-player"
-        role="region"
-        aria-label="Your professional overview"
-      >
-        <button onClick={onProfile}>
-          <span className="tree-avatar">
-            {workspace.person.name.slice(0, 1)}
-          </span>
-          <span>
-            <strong>{workspace.person.name}</strong>
-            <small>
-              {
-                workspace.person.assertions.filter(
-                  (a) => a.consent && a.selected !== false,
-                ).length
-              }{" "}
-              selected capability claims · {state.goals.length} active goals
-            </small>
-          </span>
+    <section
+      className={`living-tree immersive-tree ${toolsOpen ? "tools-open" : ""} ${fullscreen ? "distraction-free" : ""}`}
+      aria-label="The Living Career Tree"
+    >
+      <div className="scene-hud">
+        <button
+          className="secondary"
+          onClick={() => setToolsOpen(!toolsOpen)}
+          aria-expanded={toolsOpen}
+        >
+          <Menu size={16} /> {toolsOpen ? "Close tools" : "Explore & tools"}
         </button>
-        <span className="tree-objective">
-          <Target size={16} />
-          {state.goals
-            .map((id) => graph?.nodes.find((n) => n.id === id)?.label)
-            .filter(Boolean)
-            .join(" + ") || "Explore a direction. Your history stays with you."}
+        <span>
+          <Orbit size={17} /> SYRKA <b>ROADMAPS</b>
         </span>
-        {workspace.paths.length > 0 && (
-          <button className="text-button" onClick={onResume}>
-            Resume my roadmap <ArrowRight size={14} />
-          </button>
-        )}
-      </div>
-      <div className="tree-toolbar">
-        <div className="tree-mode" role="tablist" aria-label="Tree modes">
-          {(["explore", "history", "goal"] as const).map((mode) => (
-            <button
-              key={mode}
-              role="tab"
-              aria-selected={state.mode === mode}
-              onClick={() => onState({ mode })}
-            >
-              {mode === "explore" ? (
-                <Compass size={15} />
-              ) : mode === "history" ? (
-                <History size={15} />
-              ) : (
-                <Target size={15} />
-              )}{" "}
-              {mode === "explore"
-                ? "Explore"
-                : mode === "history"
-                  ? "History"
-                  : "Goal plan"}
-            </button>
-          ))}
-        </div>
-        <label className="search-control">
-          <Search size={16} />
-          <input
-            aria-label="Search the living tree"
-            placeholder="Find a node…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
-        <button className="secondary" onClick={() => setPanel("academic")}>
-          <CalendarDays size={15} />
-          Semester lab
+        <button
+          className="icon-button"
+          aria-label="Open next action"
+          onClick={() => choose(plan?.available[0] || "project:starter")}
+        >
+          <Play size={17} />
         </button>
         <button
           className="icon-button"
-          aria-label={isReading ? "Show spatial tree" : "Show reading tree"}
-          onClick={() => setReading(!isReading)}
+          aria-label="Return to character"
+          onClick={() => focus("person")}
         >
-          {isReading ? <MapIcon size={17} /> : <Menu size={17} />}
+          <Target size={18} />
         </button>
-      </div>
-      <div className="tree-filters">
-        <select
-          aria-label="Filter tree academic area"
-          value={domain}
-          onChange={(e) => setDomain(e.target.value)}
-        >
-          <option value="">All areas</option>
-          {[...new Set(graph?.nodes.map((n) => n.domain))].map((d) => (
-            <option key={d}>{d}</option>
-          ))}
-        </select>
-        <select
-          aria-label="Filter tree institution"
-          value={institution}
-          onChange={(e) => setInstitution(e.target.value)}
-        >
-          <option value="">All institutions</option>
-          {[
-            ...new Set(graph?.nodes.map((n) => n.institution).filter(Boolean)),
-          ].map((d) => (
-            <option key={d}>{d}</option>
-          ))}
-        </select>
-        <select
-          aria-label="Filter tree status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        >
-          <option value="">All states</option>
-          {Object.entries(statusLabel).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v}
-            </option>
-          ))}
-        </select>
         <button
-          className="text-button"
-          onClick={() => {
-            setQuery("");
-            setDomain("");
-            setInstitution("");
-            setStatus("");
-          }}
+          className="icon-button"
+          aria-label="Fit constellation"
+          onClick={() => void flow.fitView({ padding: 0.18, duration: 300 })}
         >
-          Reset filters
+          <MapIcon size={18} />
         </button>
-        <button className="text-button" onClick={() => setPanel("compare")}>
-          Compare routes
+        <button
+          className="icon-button"
+          aria-label="Toggle distraction-free exploration"
+          aria-pressed={fullscreen}
+          onClick={() => setFullscreen(!fullscreen)}
+        >
+          <Layers size={18} />
         </button>
       </div>
-      {query.trim() && graph && (
+      <div className="tree-tools-overlay">
+        <div className="tree-masthead">
+          <div>
+            <span className="eyebrow">
+              SYRKA ODYSSEY / YOUR LIFE IS THE SKILL TREE
+            </span>
+            <h1>The Living Career Tree</h1>
+          </div>
+          <div className="tree-entry-actions">
+            <button className="secondary" onClick={onUpload}>
+              <Upload size={16} />
+              Add your CV
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Open evidence inventory"
+              onClick={() => setPanel("inventory")}
+            >
+              <Backpack size={18} />
+            </button>
+            <button className="secondary" onClick={() => setPanel("guide")}>
+              <Sparkles size={16} />
+              Syrka Guide
+            </button>
+          </div>
+        </div>
         <div
-          className="tree-search-results"
+          className="tree-player"
           role="region"
-          aria-label="Tree search results"
+          aria-label="Your professional overview"
         >
-          {graph.nodes
-            .filter((n) =>
-              (n.label + " " + n.summary)
-                .toLowerCase()
-                .includes(query.trim().toLowerCase()),
-            )
-            .slice(0, 8)
-            .map((n) => (
+          <button onClick={onProfile}>
+            <span className="tree-avatar">
+              {workspace.person.name.slice(0, 1)}
+            </span>
+            <span>
+              <strong>{workspace.person.name}</strong>
+              <small>
+                {
+                  workspace.person.assertions.filter(
+                    (a) => a.consent && a.selected !== false,
+                  ).length
+                }{" "}
+                selected capability claims · {state.goals.length} active goals
+              </small>
+            </span>
+          </button>
+          <span className="tree-objective">
+            <Target size={16} />
+            {state.goals
+              .map((id) => graph?.nodes.find((n) => n.id === id)?.label)
+              .filter(Boolean)
+              .join(" + ") ||
+              "Explore a direction. Your history stays with you."}
+          </span>
+          {workspace.paths.length > 0 && (
+            <button className="text-button" onClick={onResume}>
+              Resume my roadmap <ArrowRight size={14} />
+            </button>
+          )}
+        </div>
+        <div className="tree-toolbar">
+          <div className="tree-mode" role="tablist" aria-label="Tree modes">
+            {(["explore", "history", "goal"] as const).map((mode) => (
               <button
-                key={n.id}
-                className="secondary"
-                aria-label={`Open search result ${n.label}`}
-                onClick={() => choose(n.id)}
+                key={mode}
+                role="tab"
+                aria-selected={state.mode === mode}
+                onClick={() => {
+                  onState({
+                    mode,
+                    selected: mode === "history" ? null : state.selected,
+                  });
+                  if (mode === "history")
+                    setTimeout(
+                      () =>
+                        void flow.fitView({
+                          nodes: graph?.nodes
+                            .filter((n) => n.status === "historical")
+                            .map((n) => ({ id: n.id })),
+                          padding: 0.3,
+                          minZoom: mobile ? 0.45 : 0.6,
+                          maxZoom: 0.9,
+                          duration: window.matchMedia(
+                            "(prefers-reduced-motion: reduce)",
+                          ).matches
+                            ? 0
+                            : 300,
+                        }),
+                      120,
+                    );
+                }}
               >
-                {n.label}
-                <ArrowRight size={13} />
+                {mode === "explore" ? (
+                  <Compass size={15} />
+                ) : mode === "history" ? (
+                  <History size={15} />
+                ) : (
+                  <Target size={15} />
+                )}{" "}
+                {mode === "explore"
+                  ? "Explore"
+                  : mode === "history"
+                    ? "History"
+                    : "Goal plan"}
               </button>
             ))}
+          </div>
+          <label className="search-control">
+            <Search size={16} />
+            <input
+              aria-label="Search the living tree"
+              placeholder="Find a node…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <button className="secondary" onClick={() => setPanel("academic")}>
+            <CalendarDays size={15} />
+            Semester lab
+          </button>
+          <button
+            className="icon-button"
+            aria-label={isReading ? "Show spatial tree" : "Show reading tree"}
+            onClick={() => setReading(!isReading)}
+          >
+            {isReading ? <MapIcon size={17} /> : <Menu size={17} />}
+          </button>
         </div>
-      )}
+        <div className="tree-filters">
+          <select
+            aria-label="Filter tree academic area"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+          >
+            <option value="">All areas</option>
+            {[...new Set(graph?.nodes.map((n) => n.domain))].map((d) => (
+              <option key={d}>{d}</option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter tree institution"
+            value={institution}
+            onChange={(e) => setInstitution(e.target.value)}
+          >
+            <option value="">All institutions</option>
+            {[
+              ...new Set(
+                graph?.nodes.map((n) => n.institution).filter(Boolean),
+              ),
+            ].map((d) => (
+              <option key={d}>{d}</option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter tree status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="">All states</option>
+            {Object.entries(statusLabel).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+          <button
+            className="text-button"
+            onClick={() => {
+              setQuery("");
+              setDomain("");
+              setInstitution("");
+              setStatus("");
+            }}
+          >
+            Reset filters
+          </button>
+          <button className="text-button" onClick={() => setPanel("compare")}>
+            Compare routes
+          </button>
+        </div>
+        {query.trim() && graph && (
+          <div
+            className="tree-search-results"
+            role="region"
+            aria-label="Tree search results"
+          >
+            {graph.nodes
+              .filter((n) =>
+                (n.label + " " + n.summary)
+                  .toLowerCase()
+                  .includes(query.trim().toLowerCase()),
+              )
+              .slice(0, 8)
+              .map((n) => (
+                <button
+                  key={n.id}
+                  className="secondary"
+                  aria-label={`Open search result ${n.label}`}
+                  onClick={() => choose(n.id)}
+                >
+                  {n.label}
+                  <ArrowRight size={13} />
+                </button>
+              ))}
+          </div>
+        )}
+      </div>
       {loading && (
         <p role="status" className="tree-notice">
           Connecting your progression universe…
@@ -730,6 +869,8 @@ function TreeWorkspace({
         ) : (
           <div
             className="tree-canvas"
+            data-disclosed-count={shown.nodes.length}
+            style={{ "--scene-zoom": zoom } as React.CSSProperties}
             role="region"
             aria-label="Progression universe"
             onKeyDown={(e) => {
@@ -755,14 +896,22 @@ function TreeWorkspace({
               nodes={nodeRecords}
               edges={edges}
               nodeTypes={nodeTypes}
-              defaultViewport={state.view || { x: 30, y: 70, zoom: 0.8 }}
-              minZoom={0.2}
-              maxZoom={1.8}
+              edgeTypes={edgeTypes}
+              fitView
+              fitViewOptions={{
+                padding: mobile ? 0.15 : 0.2,
+                minZoom: mobile ? 0.6 : 0.65,
+                maxZoom: 0.9,
+              }}
+              defaultViewport={{ x: 0, y: 0, zoom: 0.7 }}
+              minZoom={0.12}
+              maxZoom={2.2}
               nodesDraggable={false}
               nodesConnectable={false}
               nodesFocusable={false}
               edgesFocusable={false}
               onlyRenderVisibleElements
+              onMove={(_e, v) => setZoom(v.zoom)}
               onMoveEnd={(_e, v) => onState({ view: v })}
               onNodeDoubleClick={(_e, n) => focus(n.id)}
               proOptions={{ hideAttribution: false }}
@@ -779,6 +928,17 @@ function TreeWorkspace({
                 />
               )}
             </ReactFlow>
+            <div className="constellation-regions" aria-hidden="true">
+              {regions.map((r, i) => (
+                <span
+                  key={r.id}
+                  className={`region-label region-label-${i}`}
+                  style={{ color: r.color }}
+                >
+                  {r.label}
+                </span>
+              ))}
+            </div>
             <div className="tree-canvas-caption">
               Select to reveal connections · double-click to focus · Alt + arrow
               keys to navigate
@@ -808,6 +968,26 @@ function TreeWorkspace({
               if (mobile) trapFocus(e);
             }}
           >
+            <div
+              className="tree-sheet-handle"
+              role="button"
+              tabIndex={0}
+              aria-label="Dismiss node sheet"
+              onClick={close}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") close();
+              }}
+              onPointerDown={(e) => {
+                e.currentTarget.dataset.start = String(e.clientY);
+                e.currentTarget.setPointerCapture(e.pointerId);
+              }}
+              onPointerUp={(e) => {
+                if (e.clientY - Number(e.currentTarget.dataset.start) > 65)
+                  close();
+              }}
+            >
+              <span />
+            </div>
             <div className="tree-inspector-heading">
               <span className="eyebrow">
                 {panel === "node" ? "NODE INTELLIGENCE" : panel.toUpperCase()}
@@ -1329,6 +1509,11 @@ function TreeWorkspace({
             )}
             {panel === "inventory" && (
               <>
+                <RelationshipReview
+                  workspace={workspace}
+                  graph={graph}
+                  onState={onState}
+                />
                 <h2>Your evidence inventory</h2>
                 <p>
                   Original records, source quotes and historical dates remain
@@ -1434,13 +1619,13 @@ function TreeWorkspace({
           className="secondary"
           onClick={() => choose(plan?.available[0] || "project:starter")}
         >
-          Open next action <ArrowRight size={15} />
+          Continue preparation <ArrowRight size={15} />
         </button>
       </div>
       <p className="tree-footnote">
         {graph?.notice} {simulation.length > 0 && sim?.notice}
       </p>
-      <details className="tree-universe-search" open>
+      <details className="tree-universe-search">
         <summary>Explore another destination or demonstration</summary>
         <form
           className="destination-search"

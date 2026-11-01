@@ -24,6 +24,18 @@ const mapping = z.object({
   selected: z.boolean().optional(),
 });
 export const claimSchema = z.object({
+  educationState: z
+    .enum([
+      "attended",
+      "current",
+      "completed",
+      "withdrawn",
+      "transferred",
+      "incomplete",
+      "unknown",
+    ])
+    .optional(),
+  interpretation: z.enum(["local", "ai-candidate", "user-reviewed"]).optional(),
   id: str,
   kind: z.enum([
     "education",

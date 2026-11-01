@@ -23,6 +23,10 @@ for (const width of [390, 1440]) {
         "utf8",
       );
       await page.goto("/");
+      await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+      await page
+        .getByRole("button", { name: "Explore & tools", exact: true })
+        .click();
       await page
         .getByRole("button", { name: "Add your CV", exact: true })
         .click();
@@ -126,6 +130,10 @@ for (const width of [390, 1440]) {
         "1 self-reported",
       );
       await page.goto("/");
+      await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+      await page
+        .getByRole("button", { name: "Explore & tools", exact: true })
+        .click();
       await expect(page.getByLabel("Your professional overview")).toContainText(
         name,
       );
@@ -181,6 +189,10 @@ test("correcting an extracted skill clears stale mappings and preserves the orig
   page,
 }) => {
   await page.goto("/");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
   await page.getByRole("button", { name: "Add your CV", exact: true }).click();
   await page.getByRole("dialog").getByRole("checkbox").first().check();
   await page.getByText("Paste résumé text instead", { exact: true }).click();

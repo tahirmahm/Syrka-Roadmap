@@ -3,7 +3,10 @@ import AxeBuilder from "@axe-core/playwright";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { zipSync, strToU8 } from "fflate";
 async function nav(page: Page, label: string) {
-  if ((page.viewportSize()?.width || 1440) < 768)
+  if (
+    (page.viewportSize()?.width || 1440) < 768 ||
+    (await page.locator(".immersive-shell").count())
+  )
     await page
       .getByRole("button", { name: "Open navigation", exact: true })
       .click();
@@ -14,6 +17,19 @@ async function nav(page: Page, label: string) {
 }
 async function choose(page: Page, query: string) {
   await page.goto("/");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
+  if (
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .click();
+  await page.locator(".tree-universe-search summary").click();
   await page.getByLabel("Search career destinations").fill(query);
   await page
     .getByRole("button", { name: "Explore destinations", exact: true })
@@ -66,6 +82,12 @@ async function upload(
   academic = false,
 ) {
   await page.goto(academic ? "/profile" : "/");
+  if (!academic) {
+    await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+    await page
+      .getByRole("button", { name: "Explore & tools", exact: true })
+      .click();
+  }
   await page
     .getByRole("button", {
       name: academic ? "Import coursework" : "Add your CV",
@@ -222,6 +244,10 @@ test("scanned PDF runs local OCR and produces reviewable text", async ({
 }) => {
   test.setTimeout(150000);
   await page.goto("/");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
   const image = await imageCV(page);
   const pdf = await PDFDocument.create();
   const png = await pdf.embedPng(image);
@@ -243,6 +269,10 @@ for (const mime of ["image/png", "image/jpeg"])
   test(`local image OCR extracts ${mime}`, async ({ page }) => {
     test.setTimeout(150000);
     await page.goto("/");
+    await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+    await page
+      .getByRole("button", { name: "Explore & tools", exact: true })
+      .click();
     const buffer = await imageCV(page, mime);
     await upload(page, {
       name: mime === "image/png" ? "fictional-cv.png" : "fictional-cv.jpg",
@@ -256,6 +286,10 @@ test("unsafe or spoofed files fail without changing profile; cancellation remain
   page,
 }) => {
   await page.goto("/");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
   await page.getByRole("button", { name: "Add your CV", exact: true }).click();
   await page.getByRole("dialog").getByRole("checkbox").first().check();
   await page.getByLabel("Select CV or academic document").setInputFiles({
@@ -279,6 +313,19 @@ test("fictional coursework links to source competency with provenance", async ({
   page,
 }) => {
   await page.goto("/");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
+  if (
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .click();
+  await page.locator(".tree-universe-search summary").click();
   await page
     .getByRole("button", { name: "Load fictional demonstration", exact: true })
     .click();
@@ -457,6 +504,10 @@ test("home and document consent dialog pass automated accessibility checks", asy
   page,
 }) => {
   await page.goto("/");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
   expect(
     (
       await new AxeBuilder({ page })
@@ -666,6 +717,10 @@ test("pasted fictional CVs produce different recommendations and global selectio
         .map((s: { label: string }) => s.label);
       expect(labels.length).toBeGreaterThan(2);
       await p.goto("/");
+      await expect(p.locator("[data-workspace-ready=true]")).toBeVisible();
+      await p
+        .getByRole("button", { name: "Explore & tools", exact: true })
+        .click();
       await p.getByRole("button", { name: "Add your CV", exact: true }).click();
       await p.getByRole("dialog").getByRole("checkbox").first().check();
       await p.getByText("Paste résumé text instead", { exact: true }).click();
@@ -771,6 +826,19 @@ test("labelled simulated AI outage preserves profile and progress and supplies d
   page,
 }) => {
   await page.goto("/");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
+  if (
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .click();
+  await page.locator(".tree-universe-search summary").click();
   await page
     .getByRole("button", { name: "Load fictional demonstration", exact: true })
     .click();
@@ -827,6 +895,10 @@ test("explicit CV AI consent invokes the isolated adapter while retaining local 
     });
   });
   await page.goto("/");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
   await page.getByRole("button", { name: "Add your CV", exact: true }).click();
   await page.getByRole("dialog").getByRole("checkbox").first().check();
   await page
@@ -856,6 +928,19 @@ test("career guidance uses deterministic evidence when AI is unavailable (fixtur
   page,
 }) => {
   await page.goto("/");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
+  if (
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .click();
+  await page.locator(".tree-universe-search summary").click();
   await page
     .getByRole("button", { name: "Load fictional demonstration", exact: true })
     .click();
@@ -882,6 +967,10 @@ test("cancelling document processing returns to upload without changing the save
   page,
 }) => {
   await page.goto("/");
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
   await page.getByRole("button", { name: "Add your CV", exact: true }).click();
   await page.getByRole("dialog").getByRole("checkbox").first().check();
   await page.route("**/api/catalogue?mode=skills", async (route) => {

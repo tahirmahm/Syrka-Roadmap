@@ -364,6 +364,10 @@ export async function extractClaims(
       }
       const mappings = mapText(line, skills);
       claims.push({
+        educationState: ["education", "qualification"].includes(kind)
+          ? educationStateFromQuote(line)
+          : undefined,
+        interpretation: "local",
         id: crypto.randomUUID(),
         kind: kind === "other" && i > 0 && mappings.length ? "skill" : kind,
         text: line,
@@ -528,23 +532,56 @@ export function mergeCandidateClaims(
       (c) => c.quote === candidate.quote && c.page === candidate.page,
     );
     if (found) {
+      if (found.text === found.quote && found.kind !== candidate.kind) {
+        found.kind = candidate.kind;
+        found.approved = false;
+        found.interpretation = "ai-candidate";
+      }
+      if (
+        candidate.educationState &&
+        (!found.educationState || found.educationState === "unknown")
+      ) {
+        found.educationState = candidate.educationState;
+        found.interpretation = "ai-candidate";
+        found.approved = false;
+      }
       const ids = new Set(found.mappings.map((m) => m.skillId));
       found.mappings.push(
         ...candidate.mappings
           .filter((m) => !ids.has(m.skillId))
-          .map((m) => ({ ...m, confirmed: false, selected: true })),
+          .map((m) => ({ ...m, confirmed: false, selected: false })),
       );
     } else
       merged.push({
         ...candidate,
         id: crypto.randomUUID(),
-        approved: true,
+        approved: false,
+        interpretation: "ai-candidate",
         mappings: candidate.mappings.map((m) => ({
           ...m,
           confirmed: false,
-          selected: true,
+          selected: false,
         })),
       });
   }
   return merged;
+}
+
+/** Conservative lifecycle inference from explicit wording only, never a date or institution name alone. */
+export function educationStateFromQuote(
+  quote: string,
+): import("./types").EducationState {
+  const q = quote.toLowerCase();
+  if (/withdrawn|withdrew|dropped out/.test(q)) return "withdrawn";
+  if (/transferred|transfer to|transfer from/.test(q)) return "transferred";
+  if (/incomplete|not completed|did not complete|without completing/.test(q))
+    return "incomplete";
+  if (
+    /currently|enrolled|enrolment|in progress|present|expected|pursuing/.test(q)
+  )
+    return "current";
+  if (/graduated|awarded|completed|earned|conferred/.test(q))
+    return "completed";
+  if (/attended|attendance|studied at/.test(q)) return "attended";
+  return "unknown";
 }

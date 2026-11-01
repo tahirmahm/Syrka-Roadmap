@@ -147,16 +147,7 @@ export function livingDemo(
         : limited
           ? ["goal:research"]
           : ["goal:mckinsey", "goal:mba"],
-    expanded: [
-      "person",
-      tax
-        ? "goal:doctoral"
-        : limited
-          ? "project:starter"
-          : scenario === "ppe-risk"
-            ? "goal:risk"
-            : "goal:mckinsey",
-    ],
+    expanded: ["person"],
     academic: {
       institution: tax
         ? "Fictional institution"

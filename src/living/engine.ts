@@ -213,10 +213,7 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
   // The existing capability projection remains the single source of personal evidence.
   for (const a of brain.capabilities.slice(0, 120))
     if (index.skills.has(a.capabilityId)) capability(a.capabilityId);
-  const hasAcademic =
-    w.person.courses.length > 0 ||
-    w.person.claims.some((c) => c.kind === "education") ||
-    !!state.academic;
+  const hasAcademic = w.person.courses.length > 0 || !!state.academic;
   if (hasAcademic || w.person.fictional) {
     const n = add(
       base(
@@ -231,6 +228,12 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
       ),
     );
     n.institution = state.academic?.institution;
+    n.status =
+      state.academic || w.person.courses.some((c) => c.status === "in-progress")
+        ? "working"
+        : "historical";
+    n.summary +=
+      " This groups your reported academic context; it is not an awarded qualification or an automatically selected future destination.";
     link(
       "person",
       n.id,
@@ -554,9 +557,10 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
   destinationSeeds.forEach((d) =>
     occupation(d.id, d.label, d.query, d.domain, d.caps, d.projects),
   );
-  extra.forEach((o) =>
-    occupation("occupation:" + o.id, o.label, o.label, o.domain),
-  );
+  extra.forEach((o, i) => {
+    occupation("occupation:" + o.id, o.label, o.label, o.domain).discoveryRank =
+      i;
+  });
   const mck = add(
     base(
       "goal:mckinsey",
@@ -860,7 +864,12 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
         quality: w.person.fictional ? "fictional" : "document-supported",
       }),
     );
-    n.status = "historical";
+    n.status = c.educationState === "current" ? "working" : "historical";
+    if (["education", "qualification"].includes(c.kind)) {
+      n.summary += ` Education status: ${c.educationState || "unknown"}. Attendance, transfer and incomplete study do not establish a completed qualification. Institution verification is not implied.`;
+      if (c.educationState !== "completed" && n.kind === "Credential")
+        n.kind = "AcademicProgramme";
+    }
     n.date = c.dates;
     n.evidence = [
       {
@@ -883,8 +892,14 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
       link(
         n.id,
         capability(id).id,
-        "DEMONSTRATES",
-        "An evidence relationship, not independent verification.",
+        c.mappings.some(
+          (m) =>
+            (m.skillId === id || "cap:" + m.skillId === id) &&
+            (m.confirmed || ["exact", "alias"].includes(m.method)),
+        )
+          ? "DEMONSTRATES"
+          : "RELATED_TO",
+        "User-reviewed evidence association; candidate mappings are advisory, not independent verification.",
         n.source,
       );
   }
@@ -1042,6 +1057,47 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
       n.status === "available"
     )
       n.status = "prerequisites";
+  for (const r of state.advisoryRelationships || []) {
+    const claim = w.person.claims.find((c) => c.id === r.claimId && c.approved);
+    if (
+      !claim ||
+      !claim.quote.includes(r.quote) ||
+      !nodes.has(r.from) ||
+      !nodes.has(r.to) ||
+      r.from === r.to
+    )
+      continue;
+    if (
+      ![r.from, r.to].some(
+        (id) =>
+          id === "evidence:" + claim.id ||
+          claim.mappings.some(
+            (m) =>
+              m.selected && (m.skillId === id || "cap:" + m.skillId === id),
+          ),
+      )
+    )
+      continue;
+    if (
+      /\b(must|required|mandatory|guaranteed|eligible|admitted)\b/i.test(
+        r.rationale,
+      )
+    )
+      continue;
+    link(
+      r.from,
+      r.to,
+      r.relation,
+      "AI-suggested, user-accepted advisory association: " + r.rationale,
+      {
+        kind: "self-reported",
+        reference: "Reviewed candidate from claim " + claim.id,
+        version: "ai-advisory-1",
+        checkedAt: null,
+        quality: "advisory",
+      },
+    );
+  }
   const validEdges = [...edges.values()].filter(
     (e) => nodes.has(e.from) && nodes.has(e.to),
   );
@@ -1270,7 +1326,8 @@ export function visibleWorld(
   } else {
     if (graph.nodes.some((n) => n.id === "programme")) visible.add("programme");
     const suggested = graph.nodes
-      .filter((n) => n.id.startsWith("occupation:"))
+      .filter((n) => n.discoveryRank !== undefined)
+      .sort((a, b) => (a.discoveryRank ?? 999) - (b.discoveryRank ?? 999))
       .slice(0, 3);
     (suggested.length
       ? suggested

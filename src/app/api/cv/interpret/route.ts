@@ -6,6 +6,7 @@ import { authenticatedBudget } from "@/odyssey/server/ai-session";
 import { catalogue, ontologySkillById } from "@/odyssey/server/data";
 import { mapText } from "@/odyssey/catalogue";
 import { claimSchema } from "@/odyssey/profile";
+import { supportedEducationState } from "@/living/inference";
 const inputSchema = z
   .object({
     consent: z.literal(true),
@@ -40,12 +41,13 @@ export async function POST(req: NextRequest) {
     const output = await aiJSON(
       {
         ...config,
+        model: "qwen3.8-flash",
         maxOutputTokens: Math.min(2500, Math.max(config.maxOutputTokens, 1800)),
       },
       budget,
       "cv-interpret",
       {
-        task: "Extract at most 12 high-signal candidate CV claims. The local parser retains the complete document; do not attempt to replace every local claim. Do not infer unmentioned facts. Use only verbatim quotes from the supplied page. For ontology mappings, select only supplied candidate identifiers if the source quote supports them. All mappings remain unconfirmed.",
+        task: "Extract at most 12 high-signal candidate CV claims, distinguishing education attendance from completed qualifications, current enrolment, incomplete study, withdrawal and transfer. Include educationState (attended|current|completed|withdrawn|transferred|incomplete|unknown), institution, dates and grade only when explicitly supported by the quote. Dates alone never prove graduation. Infer transferable methods/capabilities only from described actions, not a project or job title. The local parser retains the complete document; do not attempt to replace every local claim. Do not infer unmentioned facts. Use only verbatim quotes from the supplied page. For ontology mappings, select only supplied candidate identifiers if the source quote supports them. All mappings remain unconfirmed.",
         pages: input.pages,
         candidates: candidates.map((c) => ({
           skillId: c.skillId,
@@ -70,6 +72,8 @@ export async function POST(req: NextRequest) {
                 },
               ],
               approved: false,
+              educationState: "unknown",
+              interpretation: "ai-candidate",
             },
           ],
         },
@@ -85,7 +89,8 @@ export async function POST(req: NextRequest) {
         c.mappings.some((m) => !allowed.has(m.skillId)) ||
         (c.institution && !c.quote.includes(c.institution)) ||
         (c.dates && !c.quote.includes(c.dates)) ||
-        (c.grade && !c.quote.includes(c.grade))
+        (c.grade && !c.quote.includes(c.grade)) ||
+        !supportedEducationState(c.educationState, c.quote)
       )
         throw new Error("AI returned an unsupported source reference.");
     }
@@ -93,6 +98,7 @@ export async function POST(req: NextRequest) {
       claims: output.claims.map((c) => ({
         ...c,
         approved: false,
+        interpretation: "ai-candidate",
         mappings: c.mappings.map((m) => ({
           ...m,
           label: ontologySkillById.get(m.skillId)!.label,
