@@ -28,7 +28,7 @@ Coordinates do not create relationships, and dependency depth is not time-to-suc
 
 `src/journey/schema.ts` defines bounded actions, source metadata, deadline/event types, import proposals, connector states and workload settings. Tasks, fixed events, administration and optional preparation are distinct. Progress is planned/working/submitted/completed/cancelled; evidence reliability and practical feasibility remain separate. A past event does not prove attendance, and submitting a draft is not delivery to a source application.
 
-`rankActions` is deterministic and exposes reasons. It first considers imminent fixed commitments, overdue mandatory work and reviewed source-reported hard deadlines; then blocking mandatory preparation, other source deadlines, required commitments, administration and optional goal preparation. User priority and supplied/estimated remaining effort are used transparently within those constraints. Prestige is not an ordering input.
+`rankActions` is deterministic and exposes reasons. It first considers imminent fixed commitments, overdue mandatory work and reviewed source-reported hard deadlines; then blocking mandatory preparation, other source deadlines, required commitments, administration and optional goal preparation. User priority breaks ties. Supplied/estimated effort is displayed and used by weekly capacity, not a hidden slack score. Prestige is not an ordering input.
 
 The initial **30-minute imminent fixed-commitment window** is an explicit product policy, bounded/configurable in the ranking function. A class later today does not automatically hide tomorrow's mandatory assignment merely because both are relevant. Unresolved relative wording stays unresolved. Instant deadlines retain their timezone; a date-only deadline is a local calendar date, never silently midnight UTC. Supplied or estimated effort is labelled. Missing effort never becomes an invented duration or a false slack calculation. Source observations older than 14 days produce a visible freshness warning.
 
@@ -44,7 +44,7 @@ Source identity `(owner, tenant, app, record ID)` determines a stable derived ac
 
 ICS handles stable UID, sequence, cancellation/completion metadata, explicit timezone/date types and reviewed source URLs. Ambiguous/nonexistent DST local times are rejected for correction. Missing UIDs are not guessed by fuzzy matching. Unsupported recurrence does not become a fabricated live recurring feed; review warnings preserve the limitation. Source text is data, never executable instructions.
 
-Deep links require known HTTPS source origins, without URL credentials, nonstandard ports, API paths or unsafe redirect parameters. Resource links use a separate known-publisher allowlist. Import never fetches arbitrary URLs. External actions require source consent and permission; an expired event, cancelled task or revoked source does not remain an actionable link.
+Deep links require known HTTPS source origins, without URL credentials, nonstandard ports, API paths or unsafe redirect parameters. Resource links use a separate known-publisher allowlist. Import never fetches arbitrary URLs. External actions require source consent and permission. Expired fixed commitments are unavailable as next actions; retained historical source navigation still requires permission. Cancelled tasks and revoked sources do not remain actionable next steps.
 
 The inspected Mail and Workspace contracts, pinned source commits and minimal owning-app prerequisites are documented in [odyssey-connectors.md](odyssey-connectors.md). The working fallback is reviewed import/export. There is no browser-token forwarding, shared service key or authorization inferred from matching email addresses. Campus retains academic authority, Mail owns delivery, Workspace Calendar owns live events and Passport owns evidence/disclosure.
 
@@ -52,7 +52,7 @@ A reviewed Calendar export follows the existing `syrka.calendar-action.v1` contr
 
 ## Work, evidence and corrected history
 
-The action surface is functional local work: notes/draft and supporting work text persist immediately through the existing workspace snapshot path. Submission and completion are separate, explicit self-reports with confirmation. A checkbox does not verify a credential, mastery or external submission. Event completion requires the user's acknowledgement rather than elapsed time.
+The action surface is functional local work: notes/draft and supporting work text use the existing local workspace snapshot path, with save failures surfaced. This does not establish immediate hosted acknowledgement. Submission and completion are separate, explicit self-reports with confirmation. A checkbox does not verify a credential, mastery or external submission. Event completion requires the user's acknowledgement rather than elapsed time.
 
 A separate **Review this work as evidence** action passes user-authored work into the existing DocumentReview extraction/mapping/correction workflow. The user reviews actual work text, original quotations and candidate mappings. Only approved claims are saved. Newly derived assertions from these work notes remain **self-reported**. A project title or a task completion toggle alone never creates a capability assertion. External Qwen processing remains separately consent-controlled.
 
@@ -70,7 +70,7 @@ Capability trade-offs and shared goal benefits follow supplied identifiers and t
 
 The existing version-2 workspace gains optional version-1 Journey and navigation objects. Older snapshots remain readable; there is no second Passport database and no additional new SQL migration for this increment. Existing account isolation, local snapshots, export/recovery and authorized cloud-snapshot revision checks remain in force. Local success does not establish hosted multi-device synchronization.
 
-The prior `202611010001_living_ai_actions.sql` quota-operation migration is still required for authenticated Guide/embedding/relationship operations and remains **unapplied/unverified on hosted Supabase**. This increment does not reset databases or repair migration history by destructive replay.
+The prior `202611010001_living_ai_actions.sql` quota-operation migration is still required for authenticated Guide/embedding/relationship operations. Its **hosted applied status is unknown/unverified; no hosted migration was run in this task**. This increment does not reset databases or repair migration history by destructive replay.
 
 The existing server-only Qwen gateway and free-only restrictions are retained. Flash interpretation/explanation, selective separately authorized Max reasoning and optional approved embeddings remain enhancements. No model is required to navigate, restore, expand, prioritize known actions or compare supplied constraints. No paid fallback, new subscription, credential copy or external profile dump was introduced. Provider configuration, response, schema-valid output and successful graph use require separate evidence.
 
@@ -80,7 +80,7 @@ The local non-secret linkage identifies the existing `syrkaroadmap` Vercel proje
 
 ## Validation checkpoints and remaining evidence
 
-An earlier development checkpoint reported **107 unit/database/provider tests passed**, and initial browser source/action workflows passed. Those are intermediate observations, not a final release count. The final expanded browser regression and latest unit/build results were still pending when this architecture note was written; [odyssey-validation.md](odyssey-validation.md) is the authoritative final result record.
+The final local results are **109 unit/database/provider tests passed**, **61 browser scenarios passed**, and **3 focused planner browser regressions passed** after the last course-evidence guard. Lint, TypeScript and the production build pass. [odyssey-validation.md](odyssey-validation.md) records the exact scope, final performance observation, artifacts and external limitations.
 
 Use deterministic fictional fixtures and a controllable clock to distinguish priority changes, source updates, shared visibility, real versus hypothetical state and correction invalidation. Browser acceptance must inspect the map and actual work launch, not merely count nodes or validate JSON. Action budgets, screenshots, recordings, light/dark/reduced-motion behavior, security failures and current performance measurements belong in the final report.
 
