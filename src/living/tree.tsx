@@ -1053,7 +1053,9 @@ function TreeWorkspace({
         <button
           className="icon-button"
           aria-label="Fit constellation"
-          onClick={() => void flow.fitView({ padding: 0.18, duration: 300 })}
+          onClick={() =>
+            void flow.fitView({ padding: 0.18, duration: reduced() ? 0 : 300 })
+          }
         >
           <MapIcon size={18} />
         </button>
@@ -1092,7 +1094,11 @@ function TreeWorkspace({
           ))}
         </div>
         <span className="active-journey-goal">
-          {nav.previewRouteId ? "Preview · " : "Goal · "}
+          {nav.previewRouteId
+            ? "Preview · "
+            : nav.routeId && !state.goals.includes(nav.routeId)
+              ? "Exploring · "
+              : "Goal · "}
           {graph?.nodes.find((n) => n.id === (nav.routeId || state.goals[0]))
             ?.label || "Explore your next chapter"}
         </span>
@@ -1236,11 +1242,7 @@ function TreeWorkspace({
                           padding: 0.3,
                           minZoom: mobile ? 0.45 : 0.6,
                           maxZoom: 0.9,
-                          duration: window.matchMedia(
-                            "(prefers-reduced-motion: reduce)",
-                          ).matches
-                            ? 0
-                            : 300,
+                          duration: reduced() ? 0 : 300,
                         }),
                       120,
                     );
@@ -2282,7 +2284,10 @@ function TreeWorkspace({
                     setToast(
                       "Exit the hypothetical view before reviewing actual evidence.",
                     );
-                  else onReviewEvidence(text);
+                  else {
+                    close();
+                    onReviewEvidence(text);
+                  }
                 }}
               />
             )}

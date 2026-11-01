@@ -183,7 +183,10 @@ for (const width of [390, 1440])
       )?.progress,
     ).toBe("planned");
     await page.reload();
-    await expect(dock(page)).toBeVisible();
+    await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+    await expect(page.locator(".journey-action-surface")).toContainText(
+      "Complete the public-policy essay",
+    );
     const saved = (await state(page)).living!.journey!.actions.find(
       (a) => a.source.recordId === "ppe-essay",
     )!;
@@ -263,6 +266,7 @@ for (const width of [390, 1440])
     await expect(
       page.getByLabel("Progression universe", { exact: true }),
     ).toBeVisible();
+    await expect(dock(page)).toBeVisible();
     await page.screenshot({
       path: info.outputPath("reviewed-work-return-to-route.png"),
       fullPage: true,
