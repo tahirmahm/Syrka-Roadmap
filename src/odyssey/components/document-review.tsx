@@ -45,11 +45,15 @@ const kinds: ClaimKind[] = [
 export function DocumentReview({
   person,
   academic = false,
+  initialText,
+  sourceLabel,
   onClose,
   onApprove,
 }: {
   person: Person;
   academic?: boolean;
+  initialText?: string;
+  sourceLabel?: string;
   onClose: () => void;
   onApprove: (p: Person, docId: string, next?: "profile" | "discover") => void;
 }) {
@@ -66,7 +70,7 @@ export function DocumentReview({
     ),
     [visible, setVisible] = useState(12),
     [external, setExternal] = useState(false),
-    [pastedText, setPastedText] = useState(""),
+    [pastedText, setPastedText] = useState(initialText || ""),
     [aiBusy, setAiBusy] = useState(false),
     [mappingBusy, setMappingBusy] = useState<string | null>(null),
     [academicFields, setAcademicFields] = useState({
@@ -187,7 +191,7 @@ export function DocumentReview({
       await reviewDocument(
         {
           id: crypto.randomUUID(),
-          name: "Pasted résumé.txt",
+          name: sourceLabel?.trim().slice(0, 200) || "Pasted résumé.txt",
           mime: "text/plain",
           pages: [{ number: 1, text: pastedText.trim(), method: "text" }],
           status: "review-required",
@@ -270,7 +274,11 @@ export function DocumentReview({
                 : "FROM YOUR STORY TO YOUR POSSIBILITIES"}
             </span>
             <h2 id="document-title">
-              {academic ? "Import academic records" : "Add your CV"}
+              {academic
+                ? "Import academic records"
+                : initialText
+                  ? "Review your work as evidence"
+                  : "Add your CV"}
             </h2>
           </div>
           <button
@@ -363,8 +371,19 @@ export function DocumentReview({
               />
             </div>
             {!academic && (
-              <details>
-                <summary>Paste résumé text instead</summary>
+              <details open={!!initialText}>
+                <summary>
+                  {initialText
+                    ? "Review source work text"
+                    : "Paste résumé text instead"}
+                </summary>
+                {initialText && (
+                  <p className="small">
+                    User-authored work offered for review. This is not an
+                    institutional record or independent verification of
+                    competence. Correct or remove any claim before approving it.
+                  </p>
+                )}
                 <label>
                   Paste résumé text
                   <textarea

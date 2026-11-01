@@ -200,6 +200,27 @@ export function parseWorkspace(raw: string): Workspace | null {
       const w = workspaceSchema.parse(x);
       return {
         ...w,
+        ...(w.living
+          ? {
+              living: {
+                ...w.living,
+                ...(w.living.journey
+                  ? {
+                      journey: {
+                        ...w.living.journey,
+                        actions: w.living.journey.actions.map((a) => ({
+                          ...a,
+                          evidenceStatus:
+                            a.evidenceStatus === "issuer-verified"
+                              ? ("document-supported" as const)
+                              : a.evidenceStatus,
+                        })),
+                      },
+                    }
+                  : {}),
+              },
+            }
+          : {}),
         person: {
           ...w.person,
           assertions: w.person.assertions.map((a) => ({

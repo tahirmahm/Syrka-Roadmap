@@ -3,6 +3,14 @@ import AxeBuilder from "@axe-core/playwright";
 async function load(page: Page, label: string) {
   await page.goto("/tree");
   await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  if (
+    await page
+      .getByRole("button", { name: "Switch to light theme", exact: true })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", { name: "Switch to light theme", exact: true })
+      .click();
   await page.locator(".tree-universe-search summary").click();
   await page.getByRole("button", { name: label, exact: true }).click();
   await expect(page.locator(".tree-player")).toContainText("fictional");
@@ -329,9 +337,13 @@ for (const width of [390, 1440]) {
       .getByRole("button", { name: "Open next action", exact: true })
       .focus();
     await page.keyboard.press("Enter");
-    await expect(page.getByLabel("Living node inspector")).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Action work surface", exact: true }),
+    ).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByLabel("Living node inspector")).toHaveCount(0);
+    await expect(
+      page.getByRole("region", { name: "Action work surface", exact: true }),
+    ).toHaveCount(0);
     expect(
       (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
         .violations,

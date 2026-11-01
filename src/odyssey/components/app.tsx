@@ -57,6 +57,9 @@ import { LivingRecords } from "@/living/records";
 import { LivingTree } from "@/living/tree";
 import { ThemeToggle } from "@/living/theme";
 import { livingDemo, type DemoScenario } from "@/living/demos";
+import { reconcileEvidence, reconcileAdvisoryLinks } from "@/living/node-state";
+import { emptyNavigation } from "@/living/navigation";
+import { ppeJourney } from "@/journey/fixtures";
 import { emptyLiving } from "@/living/schema";
 import { Overview } from "./overview";
 import { ProfilePanel } from "./profile-panel";
@@ -108,6 +111,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
     [loading, setLoading] = useState(false),
     [error, setError] = useState(""),
     [documentMode, setDocumentMode] = useState<"cv" | "academic" | null>(null),
+    [evidenceDraft, setEvidenceDraft] = useState(""),
     [jsonOpen, setJsonOpen] = useState(false),
     [resetOpen, setResetOpen] = useState(false),
     [focusTopic, setFocusTopic] = useState<string | null>(null),
@@ -378,7 +382,25 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
     }
   };
   const setPerson = (person: Person) =>
-    commit((w) => ({ ...w, person }), "profile.updated");
+    commit(
+      (w) => ({
+        ...w,
+        person: reconcileEvidence(person, w.person).person,
+        ...(w.living?.advisoryRelationships
+          ? {
+              living: {
+                ...w.living,
+                advisoryRelationships: reconcileAdvisoryLinks(
+                  w.living.advisoryRelationships,
+                  person,
+                  w.person,
+                ),
+              },
+            }
+          : {}),
+      }),
+      "profile.updated",
+    );
   const onRestore = (w: Workspace) => {
     setWorkspace(w);
     setBlocked(false);
@@ -386,10 +408,27 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
   };
   const livingState = workspace.living || emptyLiving();
   const updateLiving = (patch: Partial<typeof livingState>) =>
-    commit(
-      (w) => ({ ...w, living: { ...(w.living || emptyLiving()), ...patch } }),
-      "living.updated",
-    );
+    commit((w) => {
+      const current = w.living || emptyLiving();
+      const navigation =
+        patch.navigation ||
+        (patch.selected !== undefined ||
+        patch.expanded !== undefined ||
+        patch.view !== undefined
+          ? {
+              ...(current.navigation || emptyNavigation(current)),
+              ...(patch.selected !== undefined
+                ? { selected: patch.selected }
+                : {}),
+              ...(patch.expanded ? { expanded: patch.expanded } : {}),
+              ...(patch.view ? { camera: patch.view } : {}),
+            }
+          : current.navigation);
+      return {
+        ...w,
+        living: { ...current, ...patch, ...(navigation ? { navigation } : {}) },
+      };
+    }, "living.updated");
   const loadLivingDemo = async (scenario: DemoScenario) => {
     setLoading(true);
     try {
@@ -405,7 +444,13 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
       const demo = livingDemo(await getVocabulary(), scenario);
       setWorkspace({
         ...demo,
-        living: { ...demo.living!, theme: livingState.theme },
+        living: {
+          ...demo.living!,
+          theme: livingState.theme,
+          ...(scenario.startsWith("ppe-")
+            ? { journey: ppeJourney(demo.person.id) }
+            : {}),
+        },
       });
       setBundle(null);
       navigate("tree");
@@ -696,7 +741,14 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               key={storageKey + ":" + workspace.person.id}
               workspace={workspace}
               onState={updateLiving}
-              onUpload={() => setDocumentMode("cv")}
+              onUpload={() => {
+                setEvidenceDraft("");
+                setDocumentMode("cv");
+              }}
+              onReviewEvidence={(text) => {
+                setEvidenceDraft(text);
+                setDocumentMode("cv");
+              }}
               onDiscover={discover}
               onDemo={(scenario) => void loadLivingDemo(scenario)}
               onLegacyDemo={() => void loadDemo()}
@@ -1294,15 +1346,46 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
       )}
       {documentMode && (
         <DocumentReview
-          person={workspace.person.fictional ? emptyPerson() : workspace.person}
+          person={
+            workspace.person.fictional && !evidenceDraft
+              ? emptyPerson()
+              : workspace.person
+          }
+          initialText={evidenceDraft}
+          sourceLabel={
+            evidenceDraft ? "User-authored work note.txt" : undefined
+          }
           academic={documentMode === "academic"}
-          onClose={() => setDocumentMode(null)}
+          onClose={() => {
+            setDocumentMode(null);
+            setEvidenceDraft("");
+          }}
           onApprove={(person, id, next = "profile") => {
             commit(
               (w) =>
-                w.person.fictional
+                w.person.fictional && !evidenceDraft
                   ? { ...emptyWorkspace(person), audit: w.audit }
-                  : { ...w, person },
+                  : {
+                      ...w,
+                      person: reconcileEvidence(
+                        evidenceDraft
+                          ? {
+                              ...person,
+                              assertions: person.assertions.map((a) =>
+                                w.person.assertions.some(
+                                  (old) => old.id === a.id,
+                                )
+                                  ? a
+                                  : {
+                                      ...a,
+                                      verification: "self-reported" as const,
+                                    },
+                              ),
+                            }
+                          : person,
+                        w.person,
+                      ).person,
+                    },
               "document.review.confirmed",
               id,
             );
@@ -1311,7 +1394,8 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               "Reviewed claims saved locally. No institutional verification was created.",
             );
             setQuery("");
-            navigate(next);
+            navigate(evidenceDraft ? "tree" : next);
+            setEvidenceDraft("");
           }}
         />
       )}

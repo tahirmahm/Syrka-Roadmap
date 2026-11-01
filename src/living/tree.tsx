@@ -12,6 +12,7 @@ import {
   type Node,
   type NodeProps,
   BaseEdge,
+  MarkerType,
   type EdgeProps,
 } from "@xyflow/react";
 import {
@@ -57,14 +58,32 @@ import {
   type NodeStatus,
   type CourseRecord,
 } from "./schema";
-import { visibleWorld, reversePlan, simulate, planSemester } from "./engine";
+import { reversePlan, simulate, planSemester } from "./engine";
+import { nodeSize, regionOf, regions, focusNetwork } from "./spatial";
 import {
-  constellationLayout,
-  nodeSize,
-  regionOf,
-  regions,
-  focusNetwork,
-} from "./spatial";
+  emptyNavigation,
+  navigationReducer,
+  visibleNavigation,
+  type NavigationEvent,
+  type NavigationState,
+} from "./navigation";
+import { resizedCamera, type SceneCamera } from "./camera";
+import { routeLayout } from "./route-layout";
+import {
+  emptyJourney,
+  journeyActionSchema,
+  type JourneyState,
+} from "../journey/schema";
+import {
+  projectGraphActions,
+  rankActions,
+  actionAvailability,
+} from "../journey/actions";
+import { QuestDock } from "../journey/quest-dock";
+import { IntegrationInbox } from "../journey/integration-inbox";
+import { ActionSurface } from "../journey/action-surface";
+import { Brand } from "@/components/brand";
+import { SemesterComparison } from "../journey/semester-comparison";
 import { RelationshipReview } from "./relationship-review";
 import { importCourseCatalogue } from "./catalogue";
 import type { GuideAnswer } from "./guide";
@@ -194,6 +213,7 @@ export function LivingTree(props: {
   onProfile: () => void;
   onOccupation: (id: string) => void;
   onResume: () => void;
+  onReviewEvidence: (text: string) => void;
 }) {
   return (
     <ReactFlowProvider>
@@ -203,7 +223,7 @@ export function LivingTree(props: {
 }
 function TreeWorkspace({
   workspace,
-  onState,
+  onState: persistState,
   onUpload,
   onDiscover,
   onDemo,
@@ -211,6 +231,7 @@ function TreeWorkspace({
   onProfile,
   onOccupation,
   onResume,
+  onReviewEvidence,
 }: Parameters<typeof LivingTree>[0]) {
   const mobile = useMobile(),
     flow = useReactFlow();
@@ -218,6 +239,52 @@ function TreeWorkspace({
     () => workspace.living || emptyLiving(),
     [workspace.living],
   );
+  const nav = useMemo(
+    () => state.navigation || emptyNavigation(state),
+    [state],
+  );
+  const onState = (patch: Partial<LivingState>) => persistState(patch);
+  const dispatch = (event: NavigationEvent, browser = true) => {
+    const box = canvas.current?.getBoundingClientRect();
+    const anchorId =
+      event.type === "OPEN_NODE" && event.goal
+        ? event.id
+        : event.type === "PREVIEW_ROUTE"
+          ? event.id
+          : null;
+    const point = anchorId ? positions.current.get(anchorId) : null;
+    const base = {
+      ...nav,
+      ...(anchorId && point
+        ? { anchors: { ...nav.anchors, [anchorId]: point } }
+        : {}),
+      camera: {
+        ...flow.getViewport(),
+        ...(box ? { width: box.width, height: box.height } : {}),
+      },
+    };
+    const next = navigationReducer(base, event);
+    persistState({
+      navigation: next,
+      selected: next.selected,
+      expanded: next.expanded,
+      view: next.camera,
+    });
+    if (
+      browser &&
+      !["SET_CAMERA", "CLOSE", "SET_QUIET", "SET_FOCUS"].includes(event.type)
+    ) {
+      window.history.pushState(
+        {
+          ...window.history.state,
+          odyssey: { owner: workspace.person.id, navigation: next },
+        },
+        "",
+        window.location.href,
+      );
+    }
+    return next;
+  };
   const [graph, setGraph] = useState<WorldGraph | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
@@ -232,10 +299,32 @@ function TreeWorkspace({
     [fullscreen, setFullscreen] = useState(false),
     [zoom, setZoom] = useState(0.85),
     [panel, setPanel] = useState<
-      "node" | "academic" | "inventory" | "guide" | "compare" | null
-    >(null),
+      | "node"
+      | "academic"
+      | "inventory"
+      | "guide"
+      | "compare"
+      | "action"
+      | "inbox"
+      | "edge"
+      | null
+    >(
+      nav.inspectorOpen
+        ? nav.scale === "action"
+          ? "action"
+          : nav.edgeId
+            ? "edge"
+            : "node"
+        : null,
+    ),
+    [actionId, setActionId] = useState<string | null>(
+      nav.scale === "action"
+        ? nav.selected?.replace(/^action:/, "") || null
+        : null,
+    ),
+    [sheetDetail, setSheetDetail] = useState(false),
+    [reducedMotion, setReducedMotion] = useState(false),
     [simulation, setSimulation] = useState<string[]>([]),
-    [breadcrumbs, setBreadcrumbs] = useState<string[]>([]),
     [toast, setToast] = useState(""),
     [evidence, setEvidence] = useState(""),
     [guideQ, setGuideQ] = useState("What should I do next?"),
@@ -245,12 +334,35 @@ function TreeWorkspace({
     [guideBusy, setGuideBusy] = useState(false);
   const inspector = useRef<HTMLElement>(null),
     origin = useRef<HTMLElement | null>(null),
+    motionEpoch = useRef(0),
+    canvas = useRef<HTMLDivElement>(null),
+    overviewPositions = useRef(new Map<string, { x: number; y: number }>()),
+    routePositions = useRef(
+      new Map<string, Map<string, { x: number; y: number }>>(),
+    ),
     positions = useRef(new Map<string, { x: number; y: number }>());
   const profileKey = JSON.stringify({
     person: workspace.person,
     living: {
       ...state,
       view: undefined,
+      navigation: undefined,
+      journey: state.journey
+        ? {
+            ownerId: state.journey.ownerId,
+            actions: state.journey.actions.map((a) => ({
+              id: a.id,
+              source: a.source,
+              progress: a.progress,
+              nodeIds: a.nodeIds,
+              title: a.title,
+              reason: a.reason,
+              work: a.work,
+              feasibility: a.feasibility,
+              hypothetical: a.hypothetical,
+            })),
+          }
+        : undefined,
       selected: undefined,
       expanded: undefined,
       investigated: state.expanded.filter((id) => id.startsWith("occupation:")),
@@ -305,85 +417,321 @@ function TreeWorkspace({
       document.body.style.overflow = before;
     };
   }, [mobile, panel]);
-  const selected = graph?.nodes.find((n) => n.id === state.selected) || null;
+  const graphById = useMemo(
+    () => new Map(graph?.nodes.map((n) => [n.id, n]) || []),
+    [graph],
+  );
+  const focusedIds = useMemo(
+    () =>
+      graph
+        ? focusNetwork(
+            graph,
+            state.selected,
+            state.mode === "goal" ? state.goals : [],
+          )
+        : null,
+    [graph, state.selected, state.mode, state.goals],
+  );
+  const selected = graphById.get(state.selected || "") || null;
   useEffect(() => {
     if (panel) inspector.current?.focus();
   }, [panel, state.selected]);
+  const reduced = () =>
+    reducedMotion ||
+    nav.quiet ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const focus = (id: string, preserve = true) => {
+    const p = positions.current.get(id);
+    if (!p) return;
+    const size = graph?.nodes.find((n) => n.id === id);
+    const viewport = flow.getViewport();
+    const inset = 0;
+    void flow.setCenter(
+      p.x + (size ? nodeSize(size) / 2 : 35) + inset / viewport.zoom,
+      p.y + 35 + (mobile && panel ? 180 : 0),
+      {
+        zoom: preserve ? viewport.zoom : mobile ? 0.65 : 0.85,
+        duration: reduced() ? 0 : 280,
+      },
+    );
+  };
   const choose = (id: string) => {
     setQuery("");
     origin.current = document.activeElement as HTMLElement;
-    if (state.selected && state.selected !== id)
-      setBreadcrumbs((b) => [...b.slice(-10), state.selected!]);
-    onState({ selected: id, expanded: [...new Set([...state.expanded, id])] });
+    const n = graph?.nodes.find((n) => n.id === id);
+    dispatch({
+      type: "OPEN_NODE",
+      id,
+      goal:
+        !!n &&
+        [
+          "Occupation",
+          "EmployerRole",
+          "GraduateProgramme",
+          "ResearchPathway",
+        ].includes(n.kind),
+      action: !!n?.actionId,
+    });
     setEvidence("");
     setGuideAnswer(null);
-    setPanel("node");
-    requestAnimationFrame(() => focus(id));
+    setSheetDetail(false);
+    if (n?.actionId) {
+      setActionId(n.actionId);
+      setPanel("action");
+    } else setPanel("node");
+    const epoch = motionEpoch.current;
+    setTimeout(() => {
+      if (epoch === motionEpoch.current) focus(id);
+    }, 60);
   };
-  const focus = (id: string) => {
-    const p = positions.current.get(id);
-    if (p)
-      void flow.setCenter(
-        p.x +
-          (graph?.nodes.find((n) => n.id === id)
-            ? nodeSize(graph.nodes.find((n) => n.id === id)!) / 2
-            : 35),
-        p.y + 35,
-        {
-          zoom: mobile ? 0.9 : 1,
-          duration: window.matchMedia("(prefers-reduced-motion: reduce)")
-            .matches
-            ? 0
-            : 240,
-        },
-      );
+  const restore = (next: NavigationState) => {
+    if (next.scale === "action")
+      setActionId(next.selected?.replace(/^action:/, "") || null);
+    setPanel(
+      next.inspectorOpen
+        ? next.edgeId
+          ? "edge"
+          : next.scale === "action"
+            ? "action"
+            : "node"
+        : null,
+    );
+    const box = canvas.current?.getBoundingClientRect();
+    void flow.setViewport(
+      box ? resizedCamera(next.camera, box.width, box.height) : next.camera,
+      { duration: reduced() ? 0 : 240 },
+    );
+  };
+  const back = () => {
+    if (
+      window.history.state?.odyssey?.owner === workspace.person.id &&
+      nav.history.length
+    )
+      window.history.back();
+    else restore(dispatch({ type: "BACK" }, false));
   };
   const close = () => {
     setPanel(null);
+    dispatch({ type: "CLOSE" }, false);
     if (origin.current?.isConnected) origin.current.focus();
     else
       document
-        .querySelector<HTMLInputElement>(
-          '[aria-label="Search the living tree"]',
-        )
+        .querySelector<HTMLButtonElement>('[aria-label="Return to character"]')
         ?.focus();
   };
+  useEffect(() => {
+    if (window.history.state?.odyssey?.owner !== workspace.person.id)
+      window.history.replaceState(
+        {
+          ...window.history.state,
+          odyssey: { owner: workspace.person.id, navigation: nav },
+        },
+        "",
+        window.location.href,
+      );
+    // An initial browser journal entry is scoped to this mounted person/account workspace.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace.person.id]);
+  useEffect(() => {
+    const pop = (e: PopStateEvent) => {
+      const entry = e.state?.odyssey;
+      if (entry?.owner === workspace.person.id) {
+        persistState({
+          navigation: entry.navigation,
+          selected: entry.navigation.selected,
+          expanded: entry.navigation.expanded,
+          view: entry.navigation.camera,
+        });
+        if (entry.navigation.scale === "action")
+          setActionId(
+            entry.navigation.selected?.replace(/^action:/, "") || null,
+          );
+        setPanel(
+          entry.navigation.inspectorOpen
+            ? entry.navigation.edgeId
+              ? "edge"
+              : entry.navigation.scale === "action"
+                ? "action"
+                : "node"
+            : null,
+        );
+        const box = canvas.current?.getBoundingClientRect();
+        void flow.setViewport(
+          box
+            ? resizedCamera(entry.navigation.camera, box.width, box.height)
+            : entry.navigation.camera,
+          { duration: 0 },
+        );
+      }
+    };
+    window.addEventListener("popstate", pop);
+    return () => window.removeEventListener("popstate", pop);
+  }, [workspace.person.id, persistState, flow]);
+  const visibilitySignature = JSON.stringify([
+    nav.scale,
+    nav.selected,
+    nav.routeId,
+    nav.expanded,
+    nav.pinned,
+    nav.previewRouteId,
+    nav.focus,
+  ]);
   const shown = useMemo(() => {
-    if (!graph) return { nodes: [], edges: [] };
-    const g = visibleWorld(
+    if (!graph)
+      return {
+        nodes: [],
+        edges: [],
+        hiddenCount: 0,
+        hiddenRequired: 0,
+        hiddenByBranch: {} as Record<string, number>,
+      };
+    const view = visibleNavigation(graph, nav, state.goals);
+    if (state.mode !== "history") return view;
+    const nodes = view.nodes.filter(
+      (n) =>
+        n.id === "person" ||
+        n.evidence.length ||
+        n.dimensions?.history ||
+        ["historical", "reported", "verified", "working"].includes(n.status),
+    );
+    const ids = new Set(nodes.map((n) => n.id));
+    return {
+      ...view,
+      nodes,
+      edges: view.edges.filter((e) => ids.has(e.from) && ids.has(e.to)),
+    };
+    // Numeric camera movement and quiet preference do not change graph disclosure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph, visibilitySignature, state.goals, state.mode]);
+  const baseJourney = useMemo(
+    () =>
+      state.journey?.ownerId === workspace.person.id
+        ? state.journey
+        : emptyJourney(workspace.person.id, "Europe/Prague"),
+    [state.journey, workspace.person.id],
+  );
+  const journey = useMemo(() => {
+    if (!graph) return baseJourney;
+    const suggestions = projectGraphActions(
       graph,
-      state,
-      state.mode === "goal" ? "explore" : state.mode,
+      workspace.person.id,
+      state.goals,
     );
     return {
-      nodes: [...g.nodes].sort((a, b) =>
-        state.mode === "history"
-          ? a.id === "person"
-            ? -1
-            : b.id === "person"
-              ? 1
-              : (Number(a.date?.match(/\d{4}/)?.[0]) || 9999) -
-                (Number(b.date?.match(/\d{4}/)?.[0]) || 9999)
-          : 0,
-      ),
-      edges: g.edges,
+      ...baseJourney,
+      actions: [
+        ...baseJourney.actions,
+        ...suggestions.filter(
+          (a) => !baseJourney.actions.some((b) => b.id === a.id),
+        ),
+      ],
     };
-  }, [graph, state]);
-  const activeIds = new Set(shown.nodes.map((n) => n.id));
+  }, [baseJourney, graph, workspace.person.id, state.goals]);
+  const saveJourney = (value: JourneyState) => {
+    if (simulation.length || nav.previewRouteId) {
+      setToast(
+        "Exit simulation or discard the route preview before changing actual work.",
+      );
+      return;
+    }
+    if (value.ownerId === workspace.person.id) onState({ journey: value });
+  };
+  const openAction = (id: string) => {
+    if (simulation.length || nav.previewRouteId) {
+      setToast(
+        "Exit simulation or discard the route preview before editing actual work.",
+      );
+      return;
+    }
+    if (!journey.actions.some((a) => a.id === id)) return;
+    saveJourney({
+      ...journey,
+      actions: journey.actions.map((a) =>
+        a.id === id && a.kind === "task" && a.progress === "planned"
+          ? { ...a, progress: "working", updatedAt: new Date().toISOString() }
+          : a,
+      ),
+    });
+    setActionId(id);
+    setToolsOpen(false);
+    setPanel("action");
+    setSheetDetail(true);
+    dispatch({ type: "OPEN_NODE", id: "action:" + id, action: true });
+  };
+  const openNodeWork = (n: WorldNode) => {
+    const found = journey.actions.find((a) => a.nodeIds.includes(n.id));
+    if (found) {
+      openAction(found.id);
+      return;
+    }
+    if (simulation.length || nav.previewRouteId) {
+      setToast("Exit the hypothetical view before editing actual work.");
+      return;
+    }
+    const now = new Date().toISOString();
+    const a = journeyActionSchema.parse({
+      id: "node-work:" + n.id,
+      title: n.actions[0]?.title || "Investigate " + n.label,
+      verb: "Continue preparation",
+      kind: "task",
+      category: "preparation",
+      source: {
+        app: "roadmaps",
+        recordId: n.id,
+        ownerId: workspace.person.id,
+        tenantId: null,
+        version: 1,
+        observedAt: now,
+        permissions: ["read", "open", "draft"],
+        consent: true,
+        authority: "self-reported",
+      },
+      progress: "working",
+      evidenceStatus: "self-reported",
+      feasibility: "unknown",
+      hypothetical: false,
+      nodeIds: [n.id],
+      dependsOn: [],
+      reason:
+        n.actions[0]?.deliverable ||
+        "Verify the current source and document the next feasible step.",
+      notes: n.actions
+        .map((a) => a.deliverable + "\nCompletion criterion: " + a.criteria)
+        .join("\n\n")
+        .slice(0, 3000),
+      evidence: "",
+      work: { kind: "local-note", label: "Continue preparation" },
+      updatedAt: now,
+    });
+    saveJourney({ ...journey, actions: [...journey.actions, a] });
+    setActionId(a.id);
+    setPanel("action");
+    setToolsOpen(false);
+    setSheetDetail(true);
+    dispatch({ type: "OPEN_NODE", id: "action:" + a.id, action: true });
+  };
+  const activeIds = useMemo(
+    () => new Set(shown.nodes.map((n) => n.id)),
+    [shown.nodes],
+  );
   const sim =
     graph && simulation.length
       ? simulate(graph, simulation, state.goals)
       : null;
   const [nodeRecords, setNodeRecords] = useState<TreeNode[]>([]);
   useEffect(() => {
-    positions.current = constellationLayout(shown.nodes, positions.current);
-    const network = graph
-      ? focusNetwork(
-          graph,
-          state.selected,
-          state.mode === "goal" ? state.goals : [],
-        )
-      : null;
+    if (graph) {
+      const key = nav.routeId || nav.selected || "route";
+      const prior =
+        nav.scale === "overview"
+          ? overviewPositions.current
+          : routePositions.current.get(key) || overviewPositions.current;
+      positions.current = routeLayout(graph, shown.nodes, nav, prior).positions;
+      if (nav.scale === "overview")
+        overviewPositions.current = positions.current;
+      else routePositions.current.set(key, positions.current);
+    }
+    const network = focusedIds;
     const records = shown.nodes.map((n) => ({
       id: n.id,
       type: "living" as const,
@@ -424,94 +772,165 @@ function TreeWorkspace({
     domain,
     institution,
     status,
+    nav.quiet,
+    reducedMotion,
   ]);
-  const cameraReady = useRef(false);
+  const cameraReady = useRef(false),
+    initialCamera = useRef<SceneCamera | undefined>(
+      state.navigation?.camera || state.view,
+    );
+  const applyCamera = (camera: SceneCamera) => {
+    const box = canvas.current?.getBoundingClientRect();
+    return flow.setViewport(
+      box ? resizedCamera(camera, box.width, box.height) : camera,
+      { duration: 0 },
+    );
+  };
   useEffect(() => {
-    if (nodeRecords.length && !cameraReady.current) {
-      cameraReady.current = true;
-      const t = setTimeout(
-        () =>
-          void flow.setCenter(0, 0, {
-            zoom: mobile ? 0.65 : 0.85,
+    if (!nodeRecords.length || cameraReady.current) return;
+    cameraReady.current = true;
+    const t = setTimeout(() => {
+      const camera = initialCamera.current;
+      if (camera?.width || (camera && !mobile)) void applyCamera(camera);
+      else {
+        const p =
+          positions.current.get(nav.selected || "person") ||
+          positions.current.get("person");
+        if (p)
+          void flow.setCenter(p.x + 40, p.y + 40, {
+            zoom: camera?.zoom || (mobile ? 0.65 : 0.85),
             duration: 0,
-          }),
-        120,
-      );
-      return () => clearTimeout(t);
-    }
-  }, [nodeRecords.length, flow, mobile]);
-  const edges = shown.edges
-    .filter((e) => activeIds.has(e.from) && activeIds.has(e.to))
-    .map((e) => ({
-      id: e.id,
-      source: e.from,
-      target: e.to,
-      type: "constellation",
-      data: {
-        sourceSize: nodeSize(graph!.nodes.find((n) => n.id === e.from)!),
-        targetSize: nodeSize(graph!.nodes.find((n) => n.id === e.to)!),
-      },
-      className: `constellation-edge ${["reported", "verified", "historical"].includes(graph?.nodes.find((n) => n.id === e.from)?.status || "") ? "is-earned" : ""} ${simulation.includes(e.from) ? "is-simulated" : ""}`,
-      animated: false,
-      style: {
-        stroke:
-          e.relation === "REQUIRES"
-            ? "var(--tree-required)"
-            : "var(--tree-edge)",
-        strokeWidth: e.relation === "REQUIRES" ? 2 : 1.3,
-        opacity:
-          graph &&
-          state.selected &&
-          !focusNetwork(graph, state.selected, [])?.has(e.from)
-            ? 0.18
-            : 0.85,
-        strokeDasharray: [
-          "SUPPORTS_APPLICATION_TO",
-          "RECOMMENDED_PREPARATION",
-          "ALTERNATIVE_PATH_TO",
-        ].includes(e.relation)
-          ? "5 5"
-          : undefined,
-      },
-      label: undefined,
-    }));
-  const plan = graph ? reversePlan(graph, state.goals, simulation) : null;
+          });
+      }
+    }, 120);
+    return () => clearTimeout(t);
+    // Initial framing is performed once; user navigation owns subsequent camera movement.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeRecords.length]);
+  useEffect(() => {
+    const el = canvas.current;
+    if (!el) return;
+    let size = { width: el.clientWidth, height: el.clientHeight };
+    const observer = new ResizeObserver(() => {
+      const width = el.clientWidth,
+        height = el.clientHeight;
+      if (!width || !height) return;
+      if (
+        size.width &&
+        size.height &&
+        (width !== size.width || height !== size.height)
+      )
+        void flow.setViewport(
+          resizedCamera({ ...flow.getViewport(), ...size }, width, height),
+          { duration: 0 },
+        );
+      size = { width, height };
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [flow, reading]);
+  const edges = useMemo(
+    () =>
+      shown.edges
+        .filter((e) => activeIds.has(e.from) && activeIds.has(e.to))
+        .map((e) => ({
+          id: e.id,
+          source: e.from,
+          target: e.to,
+          type: "constellation",
+          data: {
+            sourceSize: nodeSize(graphById.get(e.from)!),
+            targetSize: nodeSize(graphById.get(e.to)!),
+          },
+          className: `constellation-edge ${["reported", "verified", "historical"].includes(graphById.get(e.from)?.status || "") ? "is-earned" : ""} ${simulation.includes(e.from) ? "is-simulated" : ""}`,
+          animated: false,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color:
+              e.requirement === "formal"
+                ? "var(--tree-required)"
+                : "var(--tree-edge)",
+            width: 14,
+            height: 14,
+          },
+          style: {
+            stroke:
+              e.relation === "REQUIRES"
+                ? "var(--tree-required)"
+                : "var(--tree-edge)",
+            strokeWidth: e.relation === "REQUIRES" ? 2 : 1.3,
+            opacity:
+              graph && state.selected && !focusedIds?.has(e.from) ? 0.18 : 0.85,
+            strokeDasharray: [
+              "SUPPORTS_APPLICATION_TO",
+              "RECOMMENDED_PREPARATION",
+              "ALTERNATIVE_PATH_TO",
+            ].includes(e.relation)
+              ? "5 5"
+              : undefined,
+          },
+          label: undefined,
+        })),
+    [
+      shown.edges,
+      activeIds,
+      graphById,
+      simulation,
+      graph,
+      state.selected,
+      focusedIds,
+    ],
+  );
+  const plan = useMemo(
+    () => (graph ? reversePlan(graph, state.goals, simulation) : null),
+    [graph, state.goals, simulation],
+  );
+  const selectedEdge = graph?.edges.find((e) => e.id === nav.edgeId);
   const related =
     graph && selected
       ? graph.edges.filter(
           (e) => e.to === selected.id || e.from === selected.id,
         )
       : [];
-  const courses: CourseRecord[] = graph
-    ? graph.nodes
-        .filter(
-          (n) =>
-            n.kind === "UniversityCourse" && !n.id.startsWith("record-course:"),
-        )
-        .map(
-          (n) =>
-            state.catalogue?.courses.find((c) => c.id === n.id) || {
-              id: n.id,
-              title: n.label,
-              institution: n.institution || "",
-              programme: state.academic?.programme || "",
-              code: null,
-              credits: n.credits ?? null,
-              language: "Unverified",
-              term: state.academic?.term || "Unverified",
-              outcomes: [n.summary],
-              skillIds: n.skillIds,
-              prerequisites: n.prerequisites,
-              restrictions: [],
-              availability: n.source.kind === "fixture" ? "fixture" : "unknown",
-              schedule: [],
-              source: n.source,
-            },
-        )
-    : [];
-  const semester = graph
-    ? planSemester(graph, courses, state, state.goals)
-    : null;
+  const courses: CourseRecord[] = useMemo(
+    () =>
+      graph
+        ? graph.nodes
+            .filter(
+              (n) =>
+                n.kind === "UniversityCourse" &&
+                !n.id.startsWith("record-course:"),
+            )
+            .map(
+              (n) =>
+                state.catalogue?.courses.find((c) => c.id === n.id) || {
+                  id: n.id,
+                  title: n.label,
+                  institution: n.institution || "",
+                  programme: state.academic?.programme || "",
+                  code: null,
+                  credits: n.credits ?? null,
+                  language: "Unverified",
+                  term: state.academic?.term || "Unverified",
+                  outcomes: [n.summary],
+                  skillIds: n.skillIds,
+                  prerequisites: n.prerequisites,
+                  restrictions: [],
+                  availability:
+                    n.source.kind === "fixture" ? "fixture" : "unknown",
+                  schedule: [],
+                  source: n.source,
+                },
+            )
+        : [],
+    [graph, state.catalogue, state.academic],
+  );
+  const semester = useMemo(
+    () => (graph ? planSemester(graph, courses, state, state.goals) : null),
+    // Planning depends on supplied academic rules, not the presentation camera.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [graph, courses, state.academic, state.goals],
+  );
   const isReading = reading;
   const progress = (
     n: WorldNode,
@@ -549,10 +968,27 @@ function TreeWorkspace({
   };
   return (
     <section
-      className={`living-tree immersive-tree ${toolsOpen ? "tools-open" : ""} ${fullscreen ? "distraction-free" : ""}`}
+      className={`living-tree immersive-tree ${toolsOpen ? "tools-open" : ""} ${fullscreen ? "distraction-free" : ""} ${panel ? "has-inspector" : ""} ${sheetDetail ? "sheet-detail" : "sheet-peek"} ${nav.quiet || reducedMotion ? "quiet-presentation" : ""}`}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          if (toolsOpen) setToolsOpen(false);
+          else if (panel) close();
+          else if (nav.previewRouteId)
+            restore(dispatch({ type: "DISCARD_PREVIEW" }));
+        }
+      }}
+      data-semantic-scale={nav.scale}
       aria-label="The Living Career Tree"
     >
       <div className="scene-hud">
+        <button
+          className="icon-button"
+          aria-label="Back to previous tree context"
+          disabled={!nav.history.length}
+          onClick={back}
+        >
+          <ArrowLeft size={18} />
+        </button>
         <button
           className="secondary"
           onClick={() => setToolsOpen(!toolsOpen)}
@@ -561,19 +997,37 @@ function TreeWorkspace({
           <Menu size={16} /> {toolsOpen ? "Close tools" : "Explore & tools"}
         </button>
         <span>
-          <Orbit size={17} /> SYRKA <b>ROADMAPS</b>
+          <Brand /> SYRKA <b>ROADMAPS</b>
         </span>
         <button
           className="icon-button"
           aria-label="Open next action"
-          onClick={() => choose(plan?.available[0] || "project:starter")}
+          onClick={() => {
+            const next = rankActions(
+              journey.actions,
+              new Date(),
+              journey.timezone,
+              state.goals,
+            ).find(
+              (r) =>
+                actionAvailability(r.action, journey.actions, new Date())
+                  .actionable,
+            );
+            if (next) openAction(next.action.id);
+            else if (selected) openNodeWork(selected);
+            else choose("project:starter");
+          }}
         >
           <Play size={17} />
         </button>
         <button
           className="icon-button"
           aria-label="Return to character"
-          onClick={() => focus("person")}
+          onClick={() => {
+            dispatch({ type: "HOME" });
+            setPanel(null);
+            focus("person", false);
+          }}
         >
           <Target size={18} />
         </button>
@@ -593,6 +1047,93 @@ function TreeWorkspace({
           <Layers size={18} />
         </button>
       </div>
+      <div className="journey-context-hud">
+        <div role="tablist" aria-label="Journey scales">
+          {(["overview", "route", "action"] as const).map((scale) => (
+            <button
+              key={scale}
+              role="tab"
+              aria-selected={nav.scale === scale}
+              onClick={() => {
+                if (scale === "action") {
+                  if (selected) openNodeWork(selected);
+                  else if (journey.actions[0])
+                    openAction(journey.actions[0].id);
+                } else if (scale === "route" && !nav.routeId && state.goals[0])
+                  choose(state.goals[0]);
+                else dispatch({ type: "SET_SCALE", scale });
+              }}
+            >
+              {scale === "overview"
+                ? "Overview"
+                : scale === "route"
+                  ? "Route"
+                  : "Action"}
+            </button>
+          ))}
+        </div>
+        <span className="active-journey-goal">
+          {nav.previewRouteId ? "Preview · " : "Goal · "}
+          {graph?.nodes.find((n) => n.id === (nav.routeId || state.goals[0]))
+            ?.label || "Explore your next chapter"}
+        </span>
+        <button
+          className="text-button"
+          onClick={() => {
+            onState({ mode: state.mode === "history" ? "explore" : "history" });
+          }}
+        >
+          History
+        </button>
+        <button
+          className="text-button"
+          onClick={() => {
+            setPanel("compare");
+            setToolsOpen(false);
+          }}
+        >
+          Compare
+        </button>
+      </div>
+      <QuestDock
+        state={journey}
+        ownerId={workspace.person.id}
+        graph={graph}
+        goals={state.goals}
+        onChange={saveJourney}
+        onOpenAction={openAction}
+        onSelectNode={choose}
+        onOpenInbox={() => {
+          setPanel("inbox");
+          setToolsOpen(false);
+          setSheetDetail(true);
+        }}
+      />
+      {nav.previewRouteId && (
+        <div className="journey-preview-banner" role="status">
+          Hypothetical route · goals and actual evidence unchanged{" "}
+          <button
+            onClick={() => restore(dispatch({ type: "DISCARD_PREVIEW" }))}
+          >
+            Discard preview
+          </button>
+          <button
+            onClick={() => {
+              goal(nav.previewRouteId!);
+              dispatch({ type: "PIN_ROUTE", id: nav.previewRouteId! });
+            }}
+          >
+            Adopt this goal
+          </button>
+        </div>
+      )}
+      {shown.hiddenCount > 0 && (
+        <p className="journey-hidden-notice" role="status">
+          {shown.hiddenCount} more nodes · {shown.hiddenRequired} formal
+          prerequisites outside this view. Search or use the accessible outline
+          to inspect them.
+        </p>
+      )}
       <div className="tree-tools-overlay">
         <div className="tree-masthead">
           <div>
@@ -774,6 +1315,36 @@ function TreeWorkspace({
             Compare routes
           </button>
         </div>
+        <div className="journey-presentation-controls">
+          <label>
+            <input
+              type="checkbox"
+              checked={nav.focus}
+              onChange={(e) =>
+                dispatch({ type: "SET_FOCUS", value: e.target.checked }, false)
+              }
+            />
+            Focus this route
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={nav.quiet}
+              onChange={(e) =>
+                dispatch({ type: "SET_QUIET", value: e.target.checked }, false)
+              }
+            />
+            Quiet presentation
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={reducedMotion}
+              onChange={(e) => setReducedMotion(e.target.checked)}
+            />
+            Reduced motion
+          </label>
+        </div>
         {query.trim() && graph && (
           <div
             className="tree-search-results"
@@ -837,7 +1408,18 @@ function TreeWorkspace({
             role="region"
             aria-label="Living tree reading mode"
           >
-            {shown.nodes.map((n) => {
+            {(
+              graph?.nodes.filter(
+                (n) =>
+                  state.mode !== "history" ||
+                  n.id === "person" ||
+                  n.dimensions?.history ||
+                  n.evidence.length ||
+                  ["historical", "reported", "verified", "working"].includes(
+                    n.status,
+                  ),
+              ) || shown.nodes
+            ).map((n) => {
               const Icon = icons[n.kind];
               return (
                 <button
@@ -868,7 +1450,12 @@ function TreeWorkspace({
           </div>
         ) : (
           <div
+            ref={canvas}
             className="tree-canvas"
+            onPointerDownCapture={() => {
+              motionEpoch.current++;
+              void flow.setViewport(flow.getViewport(), { duration: 0 });
+            }}
             data-disclosed-count={shown.nodes.length}
             style={{ "--scene-zoom": zoom } as React.CSSProperties}
             role="region"
@@ -897,22 +1484,34 @@ function TreeWorkspace({
               edges={edges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
-              fitView
-              fitViewOptions={{
-                padding: mobile ? 0.15 : 0.2,
-                minZoom: mobile ? 0.6 : 0.65,
-                maxZoom: 0.9,
-              }}
-              defaultViewport={{ x: 0, y: 0, zoom: 0.7 }}
+              defaultViewport={state.view || nav.camera}
               minZoom={0.12}
               maxZoom={2.2}
               nodesDraggable={false}
               nodesConnectable={false}
               nodesFocusable={false}
-              edgesFocusable={false}
+              edgesFocusable={true}
               onlyRenderVisibleElements
               onMove={(_e, v) => setZoom(v.zoom)}
-              onMoveEnd={(_e, v) => onState({ view: v })}
+              onMoveEnd={(_e, v) => {
+                const box = canvas.current?.getBoundingClientRect();
+                const next = navigationReducer(nav, {
+                  type: "SET_CAMERA",
+                  camera: {
+                    ...v,
+                    ...(box ? { width: box.width, height: box.height } : {}),
+                  },
+                });
+                persistState({ view: v, navigation: next });
+              }}
+              onEdgeClick={(_e, e) => {
+                dispatch({ type: "SELECT_EDGE", id: e.id });
+                setPanel("edge");
+                setToolsOpen(false);
+              }}
+              onPaneClick={() => {
+                if (panel && mobile) close();
+              }}
               onNodeDoubleClick={(_e, n) => focus(n.id)}
               proOptions={{ hideAttribution: false }}
             >
@@ -961,10 +1560,19 @@ function TreeWorkspace({
                     ? "Academic planner"
                     : panel === "inventory"
                       ? "Evidence inventory"
-                      : "Route comparison"
+                      : panel === "inbox"
+                        ? "Integration inbox"
+                        : panel === "action"
+                          ? "Action inspector"
+                          : panel === "edge"
+                            ? "Connection inspector"
+                            : "Route comparison"
             }
             onKeyDown={(e) => {
-              if (e.key === "Escape") close();
+              if (e.key === "Escape") {
+                e.stopPropagation();
+                close();
+              }
               if (mobile) trapFocus(e);
             }}
           >
@@ -972,10 +1580,10 @@ function TreeWorkspace({
               className="tree-sheet-handle"
               role="button"
               tabIndex={0}
-              aria-label="Dismiss node sheet"
-              onClick={close}
+              aria-label={sheetDetail ? "Peek node sheet" : "Expand node sheet"}
+              onClick={() => setSheetDetail(!sheetDetail)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") close();
+                if (e.key === "Enter") setSheetDetail(!sheetDetail);
               }}
               onPointerDown={(e) => {
                 e.currentTarget.dataset.start = String(e.clientY);
@@ -1008,14 +1616,8 @@ function TreeWorkspace({
                 >
                   <button
                     className="text-button"
-                    disabled={!breadcrumbs.length}
-                    onClick={() => {
-                      const prev = breadcrumbs.at(-1);
-                      if (prev) {
-                        setBreadcrumbs((b) => b.slice(0, -1));
-                        onState({ selected: prev });
-                      }
-                    }}
+                    disabled={!nav.history.length}
+                    onClick={back}
                   >
                     <ArrowLeft size={14} />
                     Back
@@ -1027,6 +1629,60 @@ function TreeWorkspace({
                   {statusLabel[selected.status]}
                 </span>
                 <p>{selected.summary}</p>
+                <div
+                  className="journey-node-facts"
+                  aria-label="Independent node states"
+                >
+                  <span>
+                    Progress: {selected.dimensions?.progress || "none"}
+                  </span>
+                  <span>
+                    Evidence: {selected.dimensions?.evidence || "none"}
+                  </span>
+                  <span>
+                    Feasibility: {selected.dimensions?.feasibility || "unknown"}
+                  </span>
+                  <span>
+                    {simulation.includes(selected.id)
+                      ? "Hypothetical"
+                      : "Actual record / proposed action"}
+                  </span>
+                </div>
+                <div className="journey-next-action">
+                  <strong>Next action</strong>
+                  <p>
+                    {selected.actions[0]?.deliverable ||
+                      "Review the source and choose supported preparation."}
+                  </p>
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      openNodeWork(selected);
+                    }}
+                  >
+                    Open work surface <ArrowRight size={15} />
+                  </button>
+                </div>
+                {!!selected.requirementGroups?.length && (
+                  <details>
+                    <summary>
+                      Published alternative / combined preparation
+                    </summary>
+                    {selected.requirementGroups.map((g) => (
+                      <p key={g.id}>
+                        {g.requirement} · {g.operator}:{" "}
+                        {g.nodeIds
+                          .map(
+                            (id) =>
+                              graph?.nodes.find((n) => n.id === id)?.label ||
+                              id,
+                          )
+                          .join(g.operator === "OR" ? " OR " : " AND ")}{" "}
+                        · Source: {g.sourceReference}
+                      </p>
+                    ))}
+                  </details>
+                )}
                 <div className="node-command-row">
                   <button
                     className="secondary"
@@ -1040,16 +1696,30 @@ function TreeWorkspace({
                   <button
                     className="secondary"
                     onClick={() => {
-                      onState({
-                        expanded: state.expanded.includes(selected.id)
-                          ? state.expanded.filter((id) => id !== selected.id)
-                          : [...state.expanded, selected.id],
-                      });
+                      dispatch({ type: "TOGGLE_BRANCH", id: selected.id });
                     }}
                   >
                     {state.expanded.includes(selected.id)
                       ? "Collapse branch"
-                      : "Expand branch"}
+                      : `Expand branch (${shown.hiddenByBranch[selected.id] || related.length})`}
+                  </button>
+                  <button
+                    className="secondary"
+                    onClick={() =>
+                      dispatch({ type: "PIN_ROUTE", id: selected.id })
+                    }
+                  >
+                    {nav.pinned.includes(selected.id)
+                      ? "Unpin route"
+                      : "Pin route"}
+                  </button>
+                  <button
+                    className="secondary"
+                    onClick={() => {
+                      dispatch({ type: "PREVIEW_ROUTE", id: selected.id });
+                    }}
+                  >
+                    Try this route
                   </button>
                   <button
                     className="secondary"
@@ -1067,8 +1737,8 @@ function TreeWorkspace({
                       : "What if I complete this?"}
                   </button>
                 </div>
-                <section>
-                  <h3>Source, scope and uncertainty</h3>
+                <details>
+                  <summary>Source, scope and uncertainty</summary>
                   <span className="tree-source-kind">
                     {selected.source.kind} ·{" "}
                     {selected.requirement === "unknown"
@@ -1091,7 +1761,7 @@ function TreeWorkspace({
                       Open source / discovery reference <LinkIcon size={13} />
                     </a>
                   )}
-                </section>
+                </details>
                 {["EmployerRole", "GraduateProgramme", "Opportunity"].includes(
                   selected.kind,
                 ) && (
@@ -1203,7 +1873,7 @@ function TreeWorkspace({
                     <button
                       className="secondary"
                       disabled={!!simulation.length}
-                      onClick={() => progress(selected, "working")}
+                      onClick={() => openNodeWork(selected)}
                     >
                       <Play size={14} />
                       Start quest
@@ -1367,6 +2037,14 @@ function TreeWorkspace({
                   Plan across several goals. No fictional fixture is treated as
                   an actual university offering.
                 </p>
+                {graph && (
+                  <SemesterComparison
+                    courses={courses}
+                    graph={graph}
+                    state={state}
+                    onSelectNode={choose}
+                  />
+                )}
                 <AcademicProfile
                   state={state}
                   onState={onState}
@@ -1542,6 +2220,56 @@ function TreeWorkspace({
                   Review and correct my records
                 </button>
               </>
+            )}
+            {panel === "inbox" && (
+              <IntegrationInbox
+                state={journey}
+                ownerId={workspace.person.id}
+                onChange={saveJourney}
+                graph={graph}
+              />
+            )}
+            {panel === "action" && actionId && (
+              <ActionSurface
+                actionId={actionId}
+                state={journey}
+                ownerId={workspace.person.id}
+                onChange={saveJourney}
+                graph={graph}
+                onSelectNode={choose}
+                onReviewEvidence={(text) => {
+                  if (simulation.length || nav.previewRouteId)
+                    setToast(
+                      "Exit the hypothetical view before reviewing actual evidence.",
+                    );
+                  else onReviewEvidence(text);
+                }}
+              />
+            )}
+            {panel === "edge" && selectedEdge && (
+              <section>
+                <h2>Connection intelligence</h2>
+                <p>
+                  {graph?.nodes.find((n) => n.id === selectedEdge.from)?.label}{" "}
+                  → {graph?.nodes.find((n) => n.id === selectedEdge.to)?.label}
+                </p>
+                <strong>{selectedEdge.relation.replaceAll("_", " ")}</strong>
+                <p>{selectedEdge.rationale}</p>
+                <p>
+                  {selectedEdge.requirement} · {selectedEdge.source.kind} ·{" "}
+                  {selectedEdge.source.quality}
+                </p>
+                <p>{selectedEdge.source.reference}</p>
+                {selectedEdge.source.url && (
+                  <a
+                    href={selectedEdge.source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Inspect source
+                  </a>
+                )}
+              </section>
             )}
             {panel === "compare" && (
               <>

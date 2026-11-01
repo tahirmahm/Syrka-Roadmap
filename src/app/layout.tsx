@@ -4,6 +4,8 @@ import "./globals.css";
 import "@/odyssey/styles.css";
 import "@/living/styles.css";
 import "@/living/constellation.css";
+import "@/journey/journey.css";
+import "@/living/journey-scene.css";
 export const metadata: Metadata = {
   title: "Syrka Roadmaps · The Living Career Tree",
   description:
@@ -15,9 +17,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const theme =
-    (await cookies()).get("syrka_roadmaps_theme")?.value === "dark"
-      ? "dark"
-      : "light";
+    (await cookies()).get("syrka_roadmaps_theme")?.value === "light"
+      ? "light"
+      : "dark";
   return (
     <html lang="en" data-theme={theme} suppressHydrationWarning>
       <body>{children}</body>

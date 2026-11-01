@@ -42,13 +42,19 @@ export function detectCourseCycles(courses: CourseRecord[]) {
     throw new Error("Duplicate course identifier");
   for (const c of courses) {
     if (
-      /^(?:person$|programme$|cap:|subject:|goal:|project:|quest:|evidence:|record-course:|legacy-progress:|opportunity:|occupation:)/.test(
+      /^(?:person$|programme$|cap:|subject:|goal:|project:|quest:|evidence:|record-course:|legacy-progress:|opportunity:|occupation:|action:|node-work:)/.test(
         c.id,
       )
     )
       throw new Error(
         "Reserved graph identifier cannot be used as a course ID",
       );
+    if (
+      (c.requirementGroups || []).some((g) =>
+        g.nodeIds.some((id) => !courseIds.has(id)),
+      )
+    )
+      throw new Error("Course requirement group references an unknown course");
     if (c.prerequisites.some((id) => !courseIds.has(id)))
       throw new Error("Course prerequisite references an unknown course");
   }

@@ -1,3 +1,4 @@
+import { currentAssertions } from "../living/node-state";
 import type {
   Catalogue,
   Occupation,
@@ -104,8 +105,12 @@ export function relatedOccupations(data: Catalogue, id: string, limit = 8) {
     )
     .slice(0, limit);
 }
-export function matchOccupation(person: Person, o: Occupation): Match {
-  const assertions = person.assertions.filter(
+export function matchOccupation(
+  person: Person,
+  o: Occupation,
+  active = currentAssertions(person),
+): Match {
+  const assertions = active.filter(
     (a) => a.consent && a.selected !== false && o.essential.includes(a.skillId),
   );
   const documented = new Set(
@@ -221,8 +226,9 @@ export function discover(
   const specificity = (id: string) =>
     1 +
     Math.log(1 + data.occupations.length / (1 + (frequencies!.get(id) || 0)));
-  const weights = new Map<string, number>();
-  for (const a of person.assertions) {
+  const weights = new Map<string, number>(),
+    active = currentAssertions(person);
+  for (const a of active) {
     if (!a.consent || a.selected === false) continue;
     const weight =
       a.verification === "inferred"
@@ -255,7 +261,7 @@ export function discover(
   );
   return data.occupations
     .map((o) => {
-      const match = matchOccupation(person, o);
+      const match = matchOccupation(person, o, active);
       const denominator = o.essential.reduce((n, id) => n + specificity(id), 0);
       const overlap = match.shared.reduce(
         (n, id) => n + specificity(id) * (weights.get(id) || 0),

@@ -8,13 +8,13 @@ export function ThemeToggle({
   value?: "light" | "dark";
   onChange: (theme: "light" | "dark") => void;
 }) {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   useEffect(() => {
     const next =
       value ||
-      (localStorage.getItem("syrka-roadmaps:theme") === "dark"
-        ? "dark"
-        : "light");
+      (localStorage.getItem("syrka-roadmaps:theme") === "light"
+        ? "light"
+        : "dark");
     queueMicrotask(() => setTheme(next));
     document.documentElement.dataset.theme = next;
     document.cookie =

@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { journeyStateSchema } from "../journey/schema";
+import { prerequisiteGroupSchema } from "./node-state";
+import { navigationSchema } from "./navigation";
 const text = z.string().max(3000),
   ids = z.array(z.string().max(250)).max(500);
 export const provenanceSchema = z.object({
@@ -40,6 +43,7 @@ export const catalogueCourseSchema = z.object({
   outcomes: z.array(text).max(50),
   skillIds: ids,
   prerequisites: ids,
+  requirementGroups: z.array(prerequisiteGroupSchema).max(30).optional(),
   restrictions: z.array(text).max(30),
   availability: z.enum(["published", "unknown", "fixture"]),
   schedule: z.array(z.string().max(100)).max(20),
@@ -51,6 +55,8 @@ export const courseCatalogueSchema = z.object({
 });
 export const livingStateSchema = z.object({
   version: z.literal(1),
+  journey: journeyStateSchema.optional(),
+  navigation: navigationSchema.optional(),
   theme: z.enum(["light", "dark"]).optional(),
   mode: z.enum(["explore", "history", "goal"]).default("explore"),
   goals: ids.default([]),
@@ -122,6 +128,7 @@ export const livingStateSchema = z.object({
         claimId: z.string().max(250),
         quote: z.string().max(1200),
         acceptedAt: z.string().datetime(),
+        reviewStatus: z.enum(["accepted", "needs-review"]).optional(),
       }),
     )
     .max(100)
@@ -160,6 +167,9 @@ export type NodeStatus =
   | "explored"
   | "historical";
 export type WorldNode = {
+  dimensions?: import("./node-state").NodeDimensions;
+  requirementGroups?: import("./node-state").PrerequisiteGroup[];
+  actionId?: string;
   id: string;
   label: string;
   kind: NodeKind;

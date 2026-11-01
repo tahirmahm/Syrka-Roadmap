@@ -119,7 +119,11 @@ export function RelationshipReview({
                         x.relation === r.relation
                       ),
                   ),
-                  { ...r, acceptedAt: new Date().toISOString() },
+                  {
+                    ...r,
+                    acceptedAt: new Date().toISOString(),
+                    reviewStatus: "accepted" as const,
+                  },
                 ].slice(-100),
               });
               setCandidates((cs) => cs.filter((_, idx) => idx !== i));
@@ -142,7 +146,12 @@ export function RelationshipReview({
       ))}
       {(workspace.living?.advisoryRelationships || []).map((r, i) => (
         <div key={i}>
-          <p className="small">Accepted advisory association: {r.rationale}</p>
+          <p className="small">
+            {r.reviewStatus === "needs-review"
+              ? "Needs review after source correction"
+              : "Accepted advisory association"}
+            : {r.rationale}
+          </p>
           <button
             className="text-button"
             onClick={() =>

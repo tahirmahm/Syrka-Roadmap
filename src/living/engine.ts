@@ -15,6 +15,11 @@ import {
   editorial,
   fixtureSource,
 } from "./seeds";
+import {
+  deriveNodeDimensions,
+  evaluatePrerequisiteGroups,
+  hasEvidenceSupport,
+} from "./node-state";
 import { detectCourseCycles } from "./catalogue";
 import {
   emptyLiving,
@@ -241,7 +246,7 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
       "Programme reported in your reviewed academic record.",
     );
   }
-  const catalog =
+  const catalog: CourseRecord[] =
     state.catalogue?.courses ||
     (w.person.fictional
       ? courseSeeds.map((c) => ({
@@ -286,6 +291,7 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
     n.institution = c.institution;
     n.skillIds = c.skillIds;
     n.prerequisites = c.prerequisites;
+    if (c.requirementGroups) n.requirementGroups = c.requirementGroups;
     n.credits = c.credits;
     n.requirement = c.source.kind === "fixture" ? "advisory" : "unknown";
     n.actions = [
@@ -1035,6 +1041,11 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
         );
     }
   }
+  const historicalNodes = new Set(
+    [...nodes.values()]
+      .filter((n) => n.status === "historical")
+      .map((n) => n.id),
+  );
   for (const p of state.progress) {
     const n = nodes.get(p.nodeId);
     if (n) {
@@ -1074,6 +1085,7 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
     )
       n.status = "prerequisites";
   for (const r of state.advisoryRelationships || []) {
+    if (r.reviewStatus === "needs-review") continue;
     const claim = w.person.claims.find((c) => c.id === r.claimId && c.approved);
     if (
       !claim ||
@@ -1114,6 +1126,94 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
       },
     );
   }
+  // Imported commitments and locally authored work share the same graph by explicit IDs.
+  // Merely importing a task never demonstrates a skill or grants a credential.
+  if (state.journey?.ownerId === w.person.id) {
+    for (const a of state.journey.actions.filter(
+      (a) =>
+        a.source.consent &&
+        a.source.ownerId === w.person.id &&
+        a.source.permissions.includes("read"),
+    )) {
+      const n = add(
+        base(
+          "action:" + a.id,
+          a.title,
+          "ProgressMilestone",
+          a.reason ||
+            "A reviewed action; inspect its source and completion criterion.",
+          "Current commitments",
+          {
+            kind: a.source.authority === "demo" ? "fixture" : "self-reported",
+            reference: `${a.source.app}:${a.source.recordId} · version ${a.source.version}`,
+            version: String(a.source.version),
+            checkedAt: null,
+            quality: a.source.authority === "demo" ? "fictional" : "advisory",
+          },
+        ),
+      );
+      n.actionId = a.id;
+      n.status =
+        a.progress === "working"
+          ? "working"
+          : a.progress === "completed"
+            ? "reported"
+            : "planned";
+      n.actions = [
+        {
+          title: a.verb,
+          deliverable: a.work.label,
+          criteria:
+            "Reported action status does not verify mastery, submission or attendance at its source.",
+          resource: a.work.href,
+        },
+      ];
+      n.dimensions = {
+        progress:
+          a.progress === "working"
+            ? "in-progress"
+            : a.progress === "cancelled"
+              ? "none"
+              : a.progress,
+        evidence:
+          a.evidenceStatus === "issuer-verified"
+            ? "document-supported"
+            : a.evidenceStatus,
+        feasibility: a.feasibility,
+        reality: a.hypothetical ? "hypothetical" : "actual",
+        history: a.progress === "completed",
+        eligibility: "unknown",
+      };
+      link(
+        "person",
+        n.id,
+        "RELATED_TO",
+        "A current commitment or personal task, not a capability assertion.",
+        n.source,
+      );
+      for (const id of a.nodeIds)
+        if (nodes.has(id))
+          link(
+            n.id,
+            id,
+            "CONTRIBUTES_TO",
+            a.reason ||
+              "User-reviewed association; no requirement or capability mastery is inferred.",
+            n.source,
+          );
+    }
+  }
+  for (const n of nodes.values()) {
+    if (!n.dimensions) {
+      n.dimensions = deriveNodeDimensions(n, {
+        progress: state.progress.find((p) => p.nodeId === n.id)?.status,
+        prerequisites: n.requirementGroups?.length
+          ? evaluatePrerequisiteGroups(n.requirementGroups, [...nodes.values()])
+          : undefined,
+      });
+      if (historicalNodes.has(n.id)) n.dimensions.history = true;
+    }
+  }
   const validEdges = [...edges.values()].filter(
     (e) => nodes.has(e.from) && nodes.has(e.to),
   );
@@ -1141,6 +1241,17 @@ export function reversePlan(
     active = new Set<string>(),
     order: string[] = [],
     cycles: string[][] = [];
+  const incoming = new Map<string, string[]>();
+  for (const e of graph.edges)
+    if (
+      [
+        "REQUIRES",
+        "RECOMMENDED_PREPARATION",
+        "CONTRIBUTES_TO",
+        "DEVELOPS",
+      ].includes(e.relation)
+    )
+      incoming.set(e.to, [...(incoming.get(e.to) || []), e.from]);
   function visit(id: string, path: string[]) {
     if (active.has(id)) {
       cycles.push([...path, id]);
@@ -1148,17 +1259,21 @@ export function reversePlan(
     }
     if (seen.has(id) || !byId.has(id)) return;
     active.add(id);
-    for (const e of graph.edges.filter(
-      (e) =>
-        e.to === id &&
-        [
-          "REQUIRES",
-          "RECOMMENDED_PREPARATION",
-          "CONTRIBUTES_TO",
-          "DEVELOPS",
-        ].includes(e.relation),
-    ))
-      visit(e.from, [...path, id]);
+    const node = byId.get(id)!;
+    for (const p of node.prerequisites) visit(p, [...path, id]);
+    for (const group of node.requirementGroups || []) {
+      const candidates = group.nodeIds.filter((p) => byId.has(p));
+      const selected =
+        group.operator === "AND"
+          ? candidates
+          : candidates
+              .filter((p) => hasEvidenceSupport(byId.get(p)!))
+              .slice(0, 1);
+      // Unknown alternatives remain explicit. This preparation suggestion is not official eligibility.
+      const chosen = selected.length ? selected : candidates.slice(0, 1);
+      chosen.forEach((p) => visit(p, [...path, id]));
+    }
+    for (const from of incoming.get(id) || []) visit(from, [...path, id]);
     active.delete(id);
     seen.add(id);
     order.push(id);
