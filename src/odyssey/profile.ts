@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { livingStateSchema } from "../living/schema";
 import type {
   Person,
   Workspace,
@@ -71,6 +72,8 @@ const assertion = z.object({
   selected: z.boolean().optional(),
 });
 const course = z.object({
+  grade: str.optional(),
+  credits: z.number().min(0).max(100).optional(),
   id: str,
   institution: str,
   programme: str,
@@ -120,6 +123,7 @@ export const personSchema = z.object({
     .optional(),
 });
 export const workspaceSchema = z.object({
+  living: livingStateSchema.optional(),
   version: z.literal(2),
   person: personSchema,
   paths: z

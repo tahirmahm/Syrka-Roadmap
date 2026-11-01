@@ -142,7 +142,7 @@
 .recent-paths > button {
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: white;
+  background: var(--surface);
   padding: 23px;
   text-align: left;
 }
@@ -205,7 +205,7 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--roadmaps-control-border);
   border-radius: 7px;
   padding: 10px 13px;
@@ -234,7 +234,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 7px;
   padding: 8px 12px;
@@ -245,7 +245,7 @@
   width: 100%;
   font-size: 12px;
   border: 0;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   min-height: 29px;
 }
@@ -275,7 +275,7 @@
   margin: 17px 0;
 }
 .filter-chips button {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 20px;
   min-height: 36px;
@@ -298,7 +298,7 @@
 }
 .career-results {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -409,7 +409,7 @@
   min-width: 180px;
 }
 .explorer-toolbar > select {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 6px;
   min-height: 44px;
@@ -419,7 +419,7 @@
 }
 .mode-toggle {
   display: flex;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 3px;
@@ -452,7 +452,7 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   overflow: hidden;
-  background: #fff;
+  background: var(--surface);
   position: relative;
   align-items: stretch;
 }
@@ -470,7 +470,7 @@
   width: 260px;
   border: 1px solid var(--roadmaps-control-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 2px 5px #26384c06;
 }
 .od-node > button {
@@ -540,7 +540,7 @@
   gap: 7px;
 }
 .od-canvas-controls .icon-button {
-  background: white;
+  background: var(--surface);
   width: 36px;
   height: 36px;
 }
@@ -573,7 +573,7 @@
   text-align: left;
   padding: 21px 24px;
   gap: 20px;
-  background: #fff;
+  background: var(--surface);
 }
 .reading-family > button small {
   display: block;
@@ -605,7 +605,7 @@
   align-items: center;
   gap: 14px;
   padding: 17px 14px;
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   width: 100%;
   border-radius: 7px;
@@ -656,7 +656,7 @@
   flex-shrink: 0;
   border-left: 1px solid var(--line);
   padding: 20px;
-  background: #fff;
+  background: var(--surface);
   max-height: 76vh;
   min-height: 580px;
   overflow: auto;
@@ -772,7 +772,7 @@
   position: relative;
   padding: 16px 15px 16px 43px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   text-align: left;
   border-radius: 7px;
 }
@@ -831,7 +831,7 @@
   padding: 10px 12px;
   text-align: left;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   width: 100%;
   border-radius: 5px;
   margin: 7px 0;
@@ -878,7 +878,7 @@
   margin: 20px 0;
 }
 .onward-grid > button {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 7px;
   padding: 18px;
@@ -899,7 +899,7 @@
   gap: 8px;
 }
 .profile-settings {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 9px;
   padding: 25px;
@@ -934,7 +934,7 @@
   width: 100%;
   min-width: 0;
   min-height: 44px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 5px;
   padding: 9px 11px;
@@ -956,7 +956,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 20px;
-  background: white;
+  background: var(--surface);
   margin: 15px 0;
   font-size: 12px;
 }
@@ -1001,12 +1001,12 @@
   width: 100%;
   text-align: left;
   padding: 12px;
-  background: #fff;
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
   font-size: 12px;
 }
 .assertion-table {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
@@ -1042,7 +1042,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 22px;
-  background: white;
+  background: var(--surface);
   display: grid;
   grid-template-columns: 180px 1fr;
   gap: 18px;
@@ -1061,7 +1061,7 @@
   border: 1px solid var(--line);
   padding: 19px;
   border-radius: 7px;
-  background: #fff;
+  background: var(--surface);
 }
 .record-list article > p {
   font-size: 12px;
@@ -1132,7 +1132,7 @@
 .compare-toolbar input,
 .compare-toolbar select {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   border-radius: 6px;
   padding: 11px 13px;
   font-size: 12px;
@@ -1146,7 +1146,7 @@
   overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
 }
 .comparison-table {
   width: 100%;
@@ -1220,7 +1220,7 @@
   margin: 26px 0;
 }
 .opportunity-routes article {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 9px;
   padding: 25px;
@@ -1239,7 +1239,7 @@
 .progress-path {
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
   padding: 23px;
   margin: 22px 0;
 }
@@ -1265,7 +1265,7 @@
 .audit-log {
   padding: 20px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
   border-radius: 8px;
   font-size: 12px;
 }
@@ -1282,7 +1282,7 @@
   max-width: 100%;
   max-height: 92dvh;
   overflow: auto;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
   padding: 28px 32px;
   border-radius: 12px;
@@ -1443,7 +1443,7 @@
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: #fff;
+  background: var(--surface);
   font-size: 11px;
 }
 .claim-top .icon-button {
@@ -1921,13 +1921,13 @@
     min-height: 0;
     box-shadow: 0 -8px 40px #26384c30;
     padding: 20px 23px;
-    background: #fff;
+    background: var(--surface);
   }
   .topic-panel-heading {
     position: sticky;
     top: -20px;
     padding: 10px 0;
-    background: #fff;
+    background: var(--surface);
     z-index: 2;
   }
   .topic-panel > h2 {
@@ -1936,7 +1936,7 @@
   .topic-tabs {
     position: sticky;
     top: 32px;
-    background: #fff;
+    background: var(--surface);
     z-index: 1;
     padding: 8px 0 12px;
     flex-wrap: nowrap;

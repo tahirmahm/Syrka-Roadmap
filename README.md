@@ -51,3 +51,12 @@ Apply the additive migrations only to an authorized dedicated Roadmaps database.
 For the CONNECT 403 investigation and protected Vercel-side probe, see [Qwen diagnostics](docs/qwen-connectivity.md).
 
 Existing Vercel project: https://syrkaroadmap.vercel.app. See [deployment](docs/deployment.md), [architecture](docs/architecture.md), [audit](docs/v2-audit.md) and [validation](docs/validation.md). Canonical `www.syrka.co/roadmaps` routing requires a separately approved change in the domain-owning project.
+
+
+## Living Career Tree feature
+
+The feature branch introduces a shared academic/professional progression graph,
+light/dark themes, semester planning, history, quests, simulations and Syrka Guide.
+See [architecture and honest data boundaries](docs/living-tree.md) and
+[release validation](docs/living-tree-validation.md). The PPE catalogue is explicitly
+fictional until official institutional records can be retrieved and reviewed.

@@ -8,6 +8,8 @@ export default async function Page({
   const { view } = await params;
   if (
     ![
+      "tree",
+      "overview",
       "roadmap",
       "roadmaps",
       "discover",

@@ -73,6 +73,8 @@ export function DocumentReview({
       programme: "",
       code: "",
       title: "",
+      grade: "",
+      credits: "",
       status: "unknown" as Course["status"],
     }),
     [mappingQuery, setMappingQuery] = useState(""),
@@ -493,6 +495,36 @@ export function DocumentReview({
                     />
                   </label>
                   <label>
+                    Reported grade
+                    <input
+                      aria-label="Reported course grade"
+                      maxLength={200}
+                      value={academicFields.grade}
+                      onChange={(e) =>
+                        setAcademicFields({
+                          ...academicFields,
+                          grade: e.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Reported credits
+                    <input
+                      aria-label="Reported course credits"
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={academicFields.credits}
+                      onChange={(e) =>
+                        setAcademicFields({
+                          ...academicFields,
+                          credits: e.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
                     Reported completion
                     <select
                       value={academicFields.status}
@@ -892,7 +924,20 @@ export function DocumentReview({
                     doc,
                     claims,
                     { ...person, name: name.trim() },
-                    academic ? academicFields : undefined,
+                    academic
+                      ? {
+                          ...academicFields,
+                          credits: academicFields.credits
+                            ? Math.min(
+                                100,
+                                Math.max(
+                                  0,
+                                  Number(academicFields.credits) || 0,
+                                ),
+                              )
+                            : undefined,
+                        }
+                      : undefined,
                   );
                   setStage("completed");
                   onApprove(p, doc.id);

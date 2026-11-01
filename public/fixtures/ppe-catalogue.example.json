@@ -1,0 +1,312 @@
+{
+  "version": "syrka.courses/1",
+  "courses": [
+    {
+      "id": "course:statistics",
+      "institution": "Charles University — FICTIONAL teaching example",
+      "programme": "Fictional PPE example; not an official curriculum",
+      "code": null,
+      "title": "Statistics foundations",
+      "credits": 6,
+      "language": "English (fixture)",
+      "term": "Next semester (fixture)",
+      "outcomes": [
+        "Develop and demonstrate Statistics through assessed work (fictional outcome)."
+      ],
+      "skillIds": [
+        "http://data.europa.eu/esco/skill/7ee4c2ea-b349-4bd2-81a3-ec31475d4833"
+      ],
+      "prerequisites": [],
+      "restrictions": [
+        "Fictional example, not a current offering or enrolment permission"
+      ],
+      "availability": "fixture",
+      "schedule": [],
+      "source": {
+        "kind": "fixture",
+        "reference": "Fictional Charles University PPE teaching fixture. No real course code, offering or enrolment rule is asserted.",
+        "url": "https://is.cuni.cz/studium/eng/predmety/",
+        "version": "ppe-fixture-1",
+        "checkedAt": null,
+        "quality": "fictional"
+      }
+    },
+    {
+      "id": "course:economics",
+      "institution": "Charles University — FICTIONAL teaching example",
+      "programme": "Fictional PPE example; not an official curriculum",
+      "code": null,
+      "title": "Economic reasoning",
+      "credits": 6,
+      "language": "English (fixture)",
+      "term": "Next semester (fixture)",
+      "outcomes": [
+        "Develop and demonstrate Economics through assessed work (fictional outcome)."
+      ],
+      "skillIds": [
+        "http://data.europa.eu/esco/skill/88af9294-b697-4687-ae19-aefbb6234dfa"
+      ],
+      "prerequisites": [],
+      "restrictions": [
+        "Fictional example, not a current offering or enrolment permission"
+      ],
+      "availability": "fixture",
+      "schedule": [],
+      "source": {
+        "kind": "fixture",
+        "reference": "Fictional Charles University PPE teaching fixture. No real course code, offering or enrolment rule is asserted.",
+        "url": "https://is.cuni.cz/studium/eng/predmety/",
+        "version": "ppe-fixture-1",
+        "checkedAt": null,
+        "quality": "fictional"
+      }
+    },
+    {
+      "id": "course:politics",
+      "institution": "Charles University — FICTIONAL teaching example",
+      "programme": "Fictional PPE example; not an official curriculum",
+      "code": null,
+      "title": "Political theory and argument",
+      "credits": 6,
+      "language": "English (fixture)",
+      "term": "Next semester (fixture)",
+      "outcomes": [
+        "Develop and demonstrate Political analysis through assessed work (fictional outcome). Develop and demonstrate Academic writing through assessed work (fictional outcome)."
+      ],
+      "skillIds": [
+        "http://data.europa.eu/esco/skill/309bc48b-2899-4396-9242-efc26c0e1aee"
+      ],
+      "prerequisites": [],
+      "restrictions": [
+        "Fictional example, not a current offering or enrolment permission"
+      ],
+      "availability": "fixture",
+      "schedule": [],
+      "source": {
+        "kind": "fixture",
+        "reference": "Fictional Charles University PPE teaching fixture. No real course code, offering or enrolment rule is asserted.",
+        "url": "https://is.cuni.cz/studium/eng/predmety/",
+        "version": "ppe-fixture-1",
+        "checkedAt": null,
+        "quality": "fictional"
+      }
+    },
+    {
+      "id": "course:relations",
+      "institution": "Charles University — FICTIONAL teaching example",
+      "programme": "Fictional PPE example; not an official curriculum",
+      "code": null,
+      "title": "International relations",
+      "credits": 6,
+      "language": "English (fixture)",
+      "term": "Next semester (fixture)",
+      "outcomes": [
+        "Develop and demonstrate International relations through assessed work (fictional outcome). Develop and demonstrate Academic writing through assessed work (fictional outcome)."
+      ],
+      "skillIds": [],
+      "prerequisites": [
+        "course:politics"
+      ],
+      "restrictions": [
+        "Fictional example, not a current offering or enrolment permission"
+      ],
+      "availability": "fixture",
+      "schedule": [],
+      "source": {
+        "kind": "fixture",
+        "reference": "Fictional Charles University PPE teaching fixture. No real course code, offering or enrolment rule is asserted.",
+        "url": "https://is.cuni.cz/studium/eng/predmety/",
+        "version": "ppe-fixture-1",
+        "checkedAt": null,
+        "quality": "fictional"
+      }
+    },
+    {
+      "id": "course:econometrics",
+      "institution": "Charles University — FICTIONAL teaching example",
+      "programme": "Fictional PPE example; not an official curriculum",
+      "code": null,
+      "title": "Econometrics and evaluation",
+      "credits": 6,
+      "language": "English (fixture)",
+      "term": "Next semester (fixture)",
+      "outcomes": [
+        "Develop and demonstrate Econometrics through assessed work (fictional outcome). Develop and demonstrate Statistics through assessed work (fictional outcome)."
+      ],
+      "skillIds": [
+        "http://data.europa.eu/esco/skill/7ee4c2ea-b349-4bd2-81a3-ec31475d4833"
+      ],
+      "prerequisites": [
+        "course:statistics",
+        "course:economics"
+      ],
+      "restrictions": [
+        "Fictional example, not a current offering or enrolment permission"
+      ],
+      "availability": "fixture",
+      "schedule": [],
+      "source": {
+        "kind": "fixture",
+        "reference": "Fictional Charles University PPE teaching fixture. No real course code, offering or enrolment rule is asserted.",
+        "url": "https://is.cuni.cz/studium/eng/predmety/",
+        "version": "ppe-fixture-1",
+        "checkedAt": null,
+        "quality": "fictional"
+      }
+    },
+    {
+      "id": "course:programming",
+      "institution": "Charles University — FICTIONAL teaching example",
+      "programme": "Fictional PPE example; not an official curriculum",
+      "code": null,
+      "title": "Programming for social inquiry",
+      "credits": 6,
+      "language": "English (fixture)",
+      "term": "Next semester (fixture)",
+      "outcomes": [
+        "Develop and demonstrate Programming through assessed work (fictional outcome)."
+      ],
+      "skillIds": [
+        "http://data.europa.eu/esco/skill/ccd0a1d9-afda-43d9-b901-96344886e14d"
+      ],
+      "prerequisites": [],
+      "restrictions": [
+        "Fictional example, not a current offering or enrolment permission"
+      ],
+      "availability": "fixture",
+      "schedule": [],
+      "source": {
+        "kind": "fixture",
+        "reference": "Fictional Charles University PPE teaching fixture. No real course code, offering or enrolment rule is asserted.",
+        "url": "https://is.cuni.cz/studium/eng/predmety/",
+        "version": "ppe-fixture-1",
+        "checkedAt": null,
+        "quality": "fictional"
+      }
+    },
+    {
+      "id": "course:research",
+      "institution": "Charles University — FICTIONAL teaching example",
+      "programme": "Fictional PPE example; not an official curriculum",
+      "code": null,
+      "title": "Research design seminar",
+      "credits": 6,
+      "language": "English (fixture)",
+      "term": "Next semester (fixture)",
+      "outcomes": [
+        "Develop and demonstrate Research methods through assessed work (fictional outcome). Develop and demonstrate Academic writing through assessed work (fictional outcome)."
+      ],
+      "skillIds": [],
+      "prerequisites": [
+        "course:statistics"
+      ],
+      "restrictions": [
+        "Fictional example, not a current offering or enrolment permission"
+      ],
+      "availability": "fixture",
+      "schedule": [],
+      "source": {
+        "kind": "fixture",
+        "reference": "Fictional Charles University PPE teaching fixture. No real course code, offering or enrolment rule is asserted.",
+        "url": "https://is.cuni.cz/studium/eng/predmety/",
+        "version": "ppe-fixture-1",
+        "checkedAt": null,
+        "quality": "fictional"
+      }
+    },
+    {
+      "id": "course:finance",
+      "institution": "Charles University — FICTIONAL teaching example",
+      "programme": "Fictional PPE example; not an official curriculum",
+      "code": null,
+      "title": "Financial statements and valuation",
+      "credits": 6,
+      "language": "English (fixture)",
+      "term": "Next semester (fixture)",
+      "outcomes": [
+        "Develop and demonstrate Financial analysis through assessed work (fictional outcome). Develop and demonstrate Economics through assessed work (fictional outcome)."
+      ],
+      "skillIds": [
+        "http://data.europa.eu/esco/skill/99571e68-801f-49af-a897-5f75996642e1",
+        "http://data.europa.eu/esco/skill/88af9294-b697-4687-ae19-aefbb6234dfa"
+      ],
+      "prerequisites": [
+        "course:economics"
+      ],
+      "restrictions": [
+        "Fictional example, not a current offering or enrolment permission"
+      ],
+      "availability": "fixture",
+      "schedule": [],
+      "source": {
+        "kind": "fixture",
+        "reference": "Fictional Charles University PPE teaching fixture. No real course code, offering or enrolment rule is asserted.",
+        "url": "https://is.cuni.cz/studium/eng/predmety/",
+        "version": "ppe-fixture-1",
+        "checkedAt": null,
+        "quality": "fictional"
+      }
+    },
+    {
+      "id": "course:osint",
+      "institution": "Charles University — FICTIONAL teaching example",
+      "programme": "Fictional PPE example; not an official curriculum",
+      "code": null,
+      "title": "Open-source investigation workshop",
+      "credits": 4,
+      "language": "English (fixture)",
+      "term": "Next semester (fixture)",
+      "outcomes": [
+        "Develop and demonstrate OSINT research through assessed work (fictional outcome). Develop and demonstrate International relations through assessed work (fictional outcome). Develop and demonstrate Academic writing through assessed work (fictional outcome)."
+      ],
+      "skillIds": [],
+      "prerequisites": [
+        "course:relations"
+      ],
+      "restrictions": [
+        "Fictional example, not a current offering or enrolment permission"
+      ],
+      "availability": "fixture",
+      "schedule": [],
+      "source": {
+        "kind": "fixture",
+        "reference": "Fictional Charles University PPE teaching fixture. No real course code, offering or enrolment rule is asserted.",
+        "url": "https://is.cuni.cz/studium/eng/predmety/",
+        "version": "ppe-fixture-1",
+        "checkedAt": null,
+        "quality": "fictional"
+      }
+    },
+    {
+      "id": "course:enterprise",
+      "institution": "Charles University — FICTIONAL teaching example",
+      "programme": "Fictional PPE example; not an official curriculum",
+      "code": null,
+      "title": "Entrepreneurial inquiry",
+      "credits": 4,
+      "language": "English (fixture)",
+      "term": "Next semester (fixture)",
+      "outcomes": [
+        "Develop and demonstrate Entrepreneurship through assessed work (fictional outcome). Develop and demonstrate Financial analysis through assessed work (fictional outcome)."
+      ],
+      "skillIds": [
+        "http://data.europa.eu/esco/skill/658605f2-1c95-49f0-bd98-0af7b15ad0b0",
+        "http://data.europa.eu/esco/skill/99571e68-801f-49af-a897-5f75996642e1"
+      ],
+      "prerequisites": [],
+      "restrictions": [
+        "Fictional example, not a current offering or enrolment permission"
+      ],
+      "availability": "fixture",
+      "schedule": [],
+      "source": {
+        "kind": "fixture",
+        "reference": "Fictional Charles University PPE teaching fixture. No real course code, offering or enrolment rule is asserted.",
+        "url": "https://is.cuni.cz/studium/eng/predmety/",
+        "version": "ppe-fixture-1",
+        "checkedAt": null,
+        "quality": "fictional"
+      }
+    }
+  ]
+}

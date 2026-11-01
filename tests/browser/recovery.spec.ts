@@ -133,7 +133,7 @@ for (const width of [390, 1440]) {
         page.getByRole("button", { name: "Resume my roadmap" }),
       ).toBeVisible();
       await expect(
-        page.locator(".possibility-grid .position-card").first(),
+        page.locator(".living-node,.tree-reading-node").first(),
       ).toBeVisible();
       await page.screenshot({
         path: info.outputPath("overview.png"),

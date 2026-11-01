@@ -53,10 +53,16 @@ const DocumentReview = dynamic(() =>
   import("./document-review").then((m) => m.DocumentReview),
 );
 import { AccountWorkspace } from "./account-workspace";
+import { LivingTree } from "@/living/tree";
+import { ThemeToggle } from "@/living/theme";
+import { livingDemo, type DemoScenario } from "@/living/demos";
+import { emptyLiving } from "@/living/schema";
 import { Overview } from "./overview";
 import { ProfilePanel } from "./profile-panel";
 import { Compare } from "./compare";
 export type OdysseyView =
+  | "tree"
+  | "overview"
   | "home"
   | "discover"
   | "profile"
@@ -66,7 +72,7 @@ export type OdysseyView =
   | "progress"
   | "opportunities";
 const nav = [
-  { id: "home", label: "Overview", Icon: Home },
+  { id: "home", label: "Living Tree", Icon: Home },
   { id: "profile", label: "My Capabilities", Icon: Layers3 },
   { id: "discover", label: "Explore Careers", Icon: Compass },
   { id: "roadmaps", label: "My Roadmaps", Icon: GitBranch },
@@ -76,13 +82,19 @@ const routeView = (view: string): OdysseyView =>
   view === "capabilities"
     ? "profile"
     : nav.some((n) => n.id === view) ||
-        ["roadmap", "compare", "opportunities"].includes(view)
+        ["tree", "overview", "roadmap", "compare", "opportunities"].includes(
+          view,
+        )
       ? (view as OdysseyView)
       : "home";
 export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
   const mobile = useMobile();
 
   const [storageKey, setStorageKey] = useState(STORAGE_KEY);
+  const backupKey =
+    storageKey === STORAGE_KEY
+      ? "syrka-roadmaps:personal-backup"
+      : storageKey + ":personal-backup";
   const [workspace, setWorkspace] = useState<Workspace>(() => emptyWorkspace()),
     [ready, setReady] = useState(false),
     [blocked, setBlocked] = useState(false),
@@ -151,6 +163,15 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
       window.removeEventListener("popstate", pop);
     };
   }, []);
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        setHasBackup(!!localStorage.getItem(backupKey));
+      } catch {
+        setHasBackup(false);
+      }
+    });
+  }, [backupKey]);
   useEffect(() => {
     if (!ready || blocked) return;
     try {
@@ -338,10 +359,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
           workspace.person.assertions.length ||
           workspace.person.courses.length)
       ) {
-        localStorage.setItem(
-          "syrka-roadmaps:personal-backup",
-          JSON.stringify(workspace),
-        );
+        localStorage.setItem(backupKey, JSON.stringify(workspace));
         setHasBackup(true);
       }
       commit(
@@ -364,6 +382,40 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
     setWorkspace(w);
     setBlocked(false);
     setNotice("Workspace restored. Uploaded issuer claims remain unverified.");
+  };
+  const livingState = workspace.living || emptyLiving();
+  const updateLiving = (patch: Partial<typeof livingState>) =>
+    commit(
+      (w) => ({ ...w, living: { ...(w.living || emptyLiving()), ...patch } }),
+      "living.updated",
+    );
+  const loadLivingDemo = async (scenario: DemoScenario) => {
+    setLoading(true);
+    try {
+      if (
+        !workspace.person.fictional &&
+        (workspace.person.claims.length ||
+          workspace.person.assertions.length ||
+          workspace.paths.length)
+      ) {
+        localStorage.setItem(backupKey, JSON.stringify(workspace));
+        setHasBackup(true);
+      }
+      const demo = livingDemo(await getVocabulary(), scenario);
+      setWorkspace({
+        ...demo,
+        living: { ...demo.living!, theme: livingState.theme },
+      });
+      setBundle(null);
+      navigate("tree");
+      setNotice(
+        "Fictional demonstration loaded. Actual personal records are preserved in the backup.",
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
   const saveNow = () => {
     try {
@@ -423,7 +475,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
           {nav.map(({ id, label, Icon }) => (
             <button
               key={id}
-              className={`nav-item ${view === id || (id === "roadmaps" && view === "roadmap") ? "active" : ""}`}
+              className={`nav-item ${view === id || (id === "roadmaps" && view === "roadmap") || (id === "home" && view === "tree") ? "active" : ""}`}
               aria-current={view === id ? "page" : undefined}
               onClick={() => navigate(id)}
             >
@@ -443,6 +495,10 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
           >
             <GraduationCap size={18} />
             Opportunities
+          </button>
+          <button className="nav-item" onClick={() => navigate("overview")}>
+            <Home size={18} />
+            Profile overview
           </button>
           <div className="nav-heading">SYRKA APPS</div>
           <a
@@ -502,13 +558,21 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
           <div className="breadcrumb">
             Roadmaps <span>/</span>
             <strong>
-              {view === "roadmap"
-                ? "Roadmap explorer"
-                : nav.find((n) => n.id === view)?.label ||
-                  (view === "compare" ? "Compare paths" : "Opportunities")}
+              {view === "tree"
+                ? "Living Career Tree"
+                : view === "overview"
+                  ? "Profile overview"
+                  : view === "roadmap"
+                    ? "Roadmap explorer"
+                    : nav.find((n) => n.id === view)?.label ||
+                      (view === "compare" ? "Compare paths" : "Opportunities")}
             </strong>
           </div>
           <div className="topbar-right">
+            <ThemeToggle
+              value={workspace.living?.theme}
+              onChange={(theme) => updateLiving({ theme })}
+            />
             <span className="demo-pill">
               <span />
               {workspace.person.fictional
@@ -532,12 +596,16 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
         </header>
         <main
           id="main"
-          className={view === "roadmap" ? "roadmap-main" : "page-content"}
+          className={
+            view === "roadmap" || view === "tree" || view === "home"
+              ? "roadmap-main"
+              : "page-content"
+          }
         >
           <div className="workspace-notice">
             <ShieldCheck size={14} />
             {workspace.person.fictional
-              ? "Fictional student records. No real institution has verified this demo."
+              ? "Fictional demonstration records. No real institution has verified this profile."
               : "Documents stay on your device. Only reviewed claims become part of your profile."}
             <button onClick={() => setJsonOpen(true)}>
               Career Passport
@@ -558,6 +626,8 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               setBlocked(false);
             }}
             onLeave={() => {
+              if (storageKey !== STORAGE_KEY)
+                localStorage.removeItem(backupKey);
               setStorageKey(STORAGE_KEY);
               const guest = localStorage.getItem(STORAGE_KEY);
               setWorkspace(
@@ -602,13 +672,11 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               <button
                 className="text-button"
                 onClick={() => {
-                  const raw = localStorage.getItem(
-                    "syrka-roadmaps:personal-backup",
-                  );
+                  const raw = localStorage.getItem(backupKey);
                   const previous = raw && parseWorkspace(raw);
                   if (previous) {
                     onRestore(previous);
-                    localStorage.removeItem("syrka-roadmaps:personal-backup");
+                    localStorage.removeItem(backupKey);
                     setHasBackup(false);
                     navigate("profile");
                   }
@@ -618,7 +686,21 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               </button>
             </div>
           )}
-          {view === "home" &&
+          {(view === "home" || view === "tree") && (
+            <LivingTree
+              key={storageKey + ":" + workspace.person.id}
+              workspace={workspace}
+              onState={updateLiving}
+              onUpload={() => setDocumentMode("cv")}
+              onDiscover={discover}
+              onDemo={(scenario) => void loadLivingDemo(scenario)}
+              onLegacyDemo={() => void loadDemo()}
+              onProfile={() => navigate("profile")}
+              onOccupation={(id) => void selectOccupation(id)}
+              onResume={() => navigate("roadmap")}
+            />
+          )}
+          {view === "overview" &&
             (workspace.person.claims.length > 0 ||
               workspace.person.assertions.length > 0 ||
               workspace.person.interests.length > 0 ||
@@ -632,7 +714,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
                 onUpload={() => setDocumentMode("cv")}
               />
             )}
-          {view === "home" &&
+          {view === "overview" &&
             !workspace.person.claims.length &&
             !workspace.person.assertions.length &&
             !workspace.person.interests.length &&
@@ -1245,7 +1327,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
                 onClick={() => {
                   localStorage.removeItem(STORAGE_KEY);
                   localStorage.removeItem("syrka-roadmaps:v1");
-                  localStorage.removeItem("syrka-roadmaps:personal-backup");
+                  localStorage.removeItem(backupKey);
                   setHasBackup(false);
                   setWorkspace(emptyWorkspace());
                   setBlocked(false);

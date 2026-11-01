@@ -1,0 +1,895 @@
+:root {
+  --tree-surface: #ffffff;
+  --tree-stage: #f0f3fc;
+  --tree-text: #20283d;
+  --tree-muted: #536179;
+  --tree-edge: #7686ae;
+  --tree-required: #8e663e;
+  --tree-dot: #b3bfdb;
+  --tree-panel: #ffffff;
+  --tree-luminous: #687fd0;
+  --tree-minimap-node: #687fd0;
+  --tree-minimap-mask: #f6f7fcbf;
+  --tree-shadow: 0 10px 40px #253b7510;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --roadmaps-primary: #b9c9ff;
+  --roadmaps-secondary: #8d9eeb;
+  --roadmaps-accent: #293858;
+  --roadmaps-background: #101521;
+  --roadmaps-text: #e3e9fa;
+  --roadmaps-muted: #a3adc2;
+  --roadmaps-muted-text: #b3bfd6;
+  --roadmaps-border: #34415a;
+  --roadmaps-hover: #ced9ff;
+  --roadmaps-tint: #1c2539;
+  --roadmaps-control-border: #7e8eb1;
+  --roadmaps-connector: #899de0;
+  --roadmaps-canvas-dot: #3a4864;
+  --surface: #182132;
+  --tree-surface: #182132;
+  --tree-stage: #101827;
+  --tree-text: #e3e9fa;
+  --tree-muted: #aebcd5;
+  --tree-edge: #7386b3;
+  --tree-required: #d3ac7c;
+  --tree-dot: #34445f;
+  --tree-panel: #172032;
+  --tree-luminous: #94a8f3;
+  --tree-minimap-node: #879de2;
+  --tree-minimap-mask: #101521bf;
+  --tree-shadow: 0 12px 40px #0004;
+}
+[data-theme="dark"] .primary {
+  background: #9eafea;
+  border-color: #9eafea;
+  color: #131d33;
+}
+[data-theme="dark"] .primary:hover {
+  background: #c1ceff;
+}
+[data-theme="dark"] :is(input, select, textarea) {
+  background: var(--surface);
+  color: var(--ink);
+}
+[data-theme="dark"] :is(.od-onward, .od-status-working) {
+  background: #352c25;
+  border-color: #aa8962;
+}
+[data-theme="dark"] .error {
+  background: #38222b;
+  color: #ffccd1 !important;
+  border-color: #85505c;
+}
+[data-theme="dark"] :is(.confirm-bar, .topic-tabs, .topic-panel-heading) {
+  background: var(--surface);
+}
+[data-theme="dark"] .react-flow__controls-button {
+  background: var(--surface);
+  color: var(--ink);
+  fill: currentColor;
+  border-color: var(--line);
+}
+[data-theme="dark"] .canvas-caption {
+  background: var(--bg);
+}
+.living-tree {
+  color: var(--tree-text);
+  padding: 20px 0 28px;
+  --node-width: 240px;
+}
+.living-tree button:focus-visible,
+.living-tree a:focus-visible {
+  outline: 3px solid var(--action);
+  outline-offset: 3px;
+}
+.tree-masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.tree-masthead h1 {
+  font-size: 29px;
+  letter-spacing: -0.9px;
+  margin-top: 6px;
+}
+.tree-masthead .eyebrow {
+  font-size: 8px;
+  letter-spacing: 2px;
+}
+.tree-entry-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tree-player {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--tree-surface);
+  padding: 14px 18px;
+  margin-bottom: 18px;
+}
+.tree-player > button:first-child {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  background: transparent;
+  text-align: left;
+}
+.tree-player strong {
+  display: block;
+  font-size: 13px;
+}
+.tree-player small {
+  display: block;
+  font-size: 10px;
+  color: var(--tree-muted);
+  margin-top: 3px;
+}
+.tree-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 37px;
+  height: 37px;
+  border: 1px solid var(--roadmaps-secondary);
+  border-radius: 12px;
+  background: var(--selected);
+  color: var(--action);
+  font-weight: 600;
+}
+.tree-objective {
+  margin-left: auto;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--tree-muted);
+  max-width: 45%;
+}
+.tree-objective svg {
+  flex-shrink: 0;
+  color: var(--action);
+}
+.tree-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tree-toolbar .search-control {
+  flex: 1;
+  min-width: 150px;
+  padding: 6px 10px;
+}
+.tree-mode {
+  display: flex;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 3px;
+  background: var(--surface);
+}
+.tree-mode button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 9px 13px;
+  border-radius: 5px;
+  min-height: 38px;
+}
+.tree-mode button[aria-selected="true"] {
+  background: var(--selected);
+  color: var(--action);
+}
+.tree-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+}
+.tree-filters select {
+  font-size: 10px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink);
+  max-width: 250px;
+}
+.tree-filters .text-button {
+  font-size: 10px;
+  min-height: 36px;
+}
+.tree-stage {
+  display: flex;
+  position: relative;
+  min-width: 0;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--tree-stage);
+  box-shadow: var(--tree-shadow);
+}
+.tree-canvas {
+  height: 75vh;
+  min-height: 560px;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+.living-node {
+  width: 240px;
+  background: var(--tree-surface);
+  border: 1px solid var(--roadmaps-control-border);
+  border-radius: 9px;
+  box-shadow: 0 3px 12px #253b7508;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.living-node button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  text-align: left;
+  gap: 10px;
+  padding: 14px 13px;
+  min-height: 100px;
+  background: transparent;
+  color: var(--tree-text);
+}
+.living-node button > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+.living-node small {
+  display: block;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--tree-muted);
+  margin-bottom: 5px;
+}
+.living-node strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.living-node em {
+  display: block;
+  font-size: 9px;
+  font-style: normal;
+  margin-top: 7px;
+  color: var(--tree-muted);
+}
+.living-node-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 33px;
+  color: var(--action);
+  flex-shrink: 0;
+}
+.living-node:is(.kind-Occupation, .kind-EmployerRole, .kind-GraduateProgramme) {
+  border-top: 3px solid var(--roadmaps-secondary);
+}
+.living-node.kind-EmployerRole {
+  border-radius: 3px;
+}
+.living-node.kind-Capability {
+  border-radius: 24px;
+}
+.living-node.kind-Project {
+  border-style: dashed;
+  border-radius: 4px 14px;
+}
+.living-node.kind-Credential {
+  border-width: 2px;
+}
+.living-node.kind-PersonProfile {
+  border: 2px solid var(--roadmaps-secondary);
+  background: var(--roadmaps-tint);
+}
+.living-node.kind-UniversityCourse {
+  border-left: 4px solid var(--roadmaps-secondary);
+}
+.living-node.kind-ResearchPathway {
+  border-radius: 18px 4px;
+}
+.living-node.is-selected {
+  box-shadow:
+    0 0 0 3px var(--selected),
+    0 0 18px color-mix(in srgb, var(--tree-luminous) 25%, transparent);
+  border-color: var(--tree-luminous);
+}
+.living-node.state-reported {
+  background: var(--roadmaps-tint);
+}
+.living-node.state-verified {
+  border-width: 3px;
+}
+.living-node.state-working {
+  border-bottom: 4px solid var(--tree-required);
+}
+.living-node.state-planned {
+  border-style: dotted;
+  border-width: 2px;
+}
+.living-node.state-hypothetical {
+  border: 2px dashed var(--tree-luminous);
+  box-shadow: 0 0 0 3px var(--selected);
+}
+.living-node.state-historical {
+  border-bottom: 3px double var(--roadmaps-control-border);
+}
+.living-node.state-prerequisites .living-node-icon {
+  color: var(--tree-required);
+}
+.living-node .react-flow__handle {
+  width: 5px;
+  height: 5px;
+  background: var(--tree-edge);
+  border: 0;
+}
+.tree-canvas-caption {
+  position: absolute;
+  bottom: 9px;
+  left: 55px;
+  right: 190px;
+  font-size: 8px;
+  color: var(--tree-muted);
+  pointer-events: none;
+  text-align: center;
+  background: var(--tree-stage);
+  padding: 3px;
+}
+.tree-canvas .react-flow__minimap {
+  background: var(--tree-panel);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  width: 150px;
+  height: 95px;
+}
+.tree-canvas .react-flow__controls-button {
+  background: var(--surface);
+  color: var(--action);
+  fill: currentColor;
+  border-color: var(--line);
+}
+.tree-inspector {
+  flex-shrink: 0;
+  width: 370px;
+  max-height: 75vh;
+  overflow: auto;
+  padding: 22px;
+  background: var(--tree-panel);
+  border-left: 1px solid var(--line);
+  outline: none;
+}
+.tree-inspector-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  position: sticky;
+  top: -22px;
+  background: var(--tree-panel);
+  padding: 6px 0;
+  z-index: 3;
+}
+.tree-inspector h2 {
+  font-size: 23px;
+  margin: 16px 0 12px;
+  line-height: 1.3;
+}
+.tree-inspector h3 {
+  font-size: 13px;
+  margin: 15px 0 10px;
+}
+.tree-inspector p {
+  font-size: 12px;
+  line-height: 1.85;
+  margin: 12px 0;
+}
+.tree-inspector .small {
+  font-size: 10px;
+}
+.tree-inspector section {
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 6px;
+}
+.tree-inspector a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.tree-status,
+.tree-source-kind {
+  display: inline-block;
+  font-size: 9px;
+  background: var(--selected);
+  padding: 4px 7px;
+  border-radius: 4px;
+  color: var(--action);
+}
+.tree-source-kind {
+  background: var(--roadmaps-tint);
+}
+.tree-breadcrumbs {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 10px;
+}
+.node-command-row {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.node-command-row button {
+  font-size: 10px;
+  padding: 7px 10px;
+  min-height: 38px;
+  white-space: normal;
+}
+.connection-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  min-height: 44px;
+}
+.connection-row > span {
+  flex: 1;
+  min-width: 0;
+}
+.connection-row small {
+  display: block;
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 0.4px;
+}
+.connection-row strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+.connection-row em {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  font-style: normal;
+  line-height: 1.7;
+  margin-top: 5px;
+}
+.connection-row > svg {
+  flex-shrink: 0;
+  color: var(--action);
+}
+.tree-inspector blockquote {
+  padding: 12px;
+  margin: 12px 0;
+  background: var(--roadmaps-tint);
+  border-left: 2px solid var(--roadmaps-secondary);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.tree-inspector blockquote > span {
+  font-size: 9px;
+  color: var(--action);
+}
+.tree-inspector label {
+  display: block;
+  font-size: 11px;
+  margin: 14px 0;
+}
+.tree-inspector :is(textarea, input:not([type="checkbox"])) {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--roadmaps-control-border);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.tree-inspector textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.tree-inspector .inline-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.tree-inspector .inline-check input {
+  margin-top: 4px;
+  accent-color: var(--action);
+}
+.quest-card {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 15px;
+  margin: 13px 0;
+  background: var(--surface);
+}
+.quest-card strong {
+  font-size: 12px;
+}
+.quest-card small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.tree-next-strip {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 17px 20px;
+  margin-top: 17px;
+}
+.tree-next-strip > svg {
+  color: var(--action);
+  flex-shrink: 0;
+}
+.tree-next-strip > div {
+  flex: 1;
+}
+.tree-next-strip strong {
+  font-size: 12px;
+}
+.tree-next-strip p {
+  font-size: 11px;
+  margin: 5px 0 0;
+}
+.tree-footnote {
+  font-size: 9px;
+  line-height: 1.8;
+  margin: 12px 0;
+  color: var(--tree-muted);
+}
+.tree-universe-search {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 16px;
+}
+.tree-universe-search > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--action);
+  min-height: 36px;
+}
+.tree-demo-routes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 15px;
+}
+.tree-demo-routes button {
+  font-size: 10px;
+}
+.tree-demo-routes .text-button {
+  flex-basis: 100%;
+}
+.tree-toast {
+  position: fixed;
+  z-index: 100;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  max-width: min(620px, 95vw);
+  width: max-content;
+  background: var(--tree-panel);
+  box-shadow: var(--tree-shadow);
+  border: 1px solid var(--roadmaps-control-border);
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+.tree-toast button {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.simulation-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0;
+  padding: 15px;
+  border: 1px dashed var(--roadmaps-secondary);
+  background: var(--selected);
+  color: var(--action);
+  font-size: 11px;
+  border-radius: 7px;
+}
+.simulation-banner span {
+  flex: 1;
+}
+.tree-reading {
+  width: 100%;
+  padding: 13px;
+  max-height: 75vh;
+  overflow: auto;
+  min-height: 500px;
+}
+.tree-reading-node {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px 15px;
+  margin-bottom: 10px;
+  width: 100%;
+  min-height: 90px;
+  background: var(--tree-surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--roadmaps-secondary);
+  border-radius: 8px;
+  text-align: left;
+  color: var(--ink);
+}
+.tree-reading-node > span {
+  flex: 1;
+  min-width: 0;
+}
+.tree-reading-node small {
+  display: block;
+  font-size: 9px;
+  color: var(--muted);
+}
+.tree-reading-node strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 5px;
+}
+.tree-reading-node em {
+  display: block;
+  font-size: 9px;
+  font-style: normal;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.tree-reading-node > svg {
+  color: var(--action);
+  flex-shrink: 0;
+}
+.guide-prompts {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.guide-prompts button {
+  font-size: 10px;
+  min-height: 36px;
+  padding: 7px;
+  white-space: normal;
+}
+.guide-answer {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 17px;
+}
+.academic-profile summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--action);
+  padding: 13px 0;
+}
+.academic-profile .form-grid {
+  grid-template-columns: 1fr;
+}
+.catalogue-import input {
+  font-size: 10px !important;
+}
+.uncertainty {
+  border-left: 2px solid var(--tree-required);
+  padding-left: 12px;
+}
+@media (max-width: 1100px) {
+  .tree-masthead {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 13px;
+  }
+  .tree-inspector {
+    width: 330px;
+  }
+  .tree-objective {
+    max-width: 40%;
+  }
+}
+@media (max-width: 767px) {
+  .living-tree {
+    padding: 12px 0 22px;
+  }
+  .tree-masthead h1 {
+    font-size: 26px;
+  }
+  .tree-masthead .eyebrow {
+    font-size: 7px;
+    letter-spacing: 1.4px;
+  }
+  .tree-entry-actions {
+    width: 100%;
+  }
+  .tree-entry-actions .secondary {
+    font-size: 10px;
+    padding: 9px 11px;
+  }
+  .tree-player {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px;
+  }
+  .tree-player > button:first-child {
+    width: 100%;
+  }
+  .tree-objective {
+    margin-left: 0;
+    max-width: none;
+    font-size: 10px;
+  }
+  .tree-player > .text-button {
+    font-size: 10px;
+  }
+  .tree-toolbar {
+    gap: 8px;
+  }
+  .tree-mode {
+    width: 100%;
+  }
+  .tree-mode button {
+    flex: 1;
+    justify-content: center;
+    font-size: 11px;
+  }
+  .tree-toolbar .search-control {
+    flex-basis: calc(100% - 160px);
+  }
+  .tree-toolbar > .secondary {
+    font-size: 10px;
+    padding: 9px;
+  }
+  .tree-filters {
+    gap: 6px;
+  }
+  .tree-filters select {
+    max-width: calc(50% - 4px);
+    font-size: 10px;
+  }
+  .tree-stage {
+    overflow: visible;
+  }
+  .tree-reading {
+    max-height: 70vh;
+    min-height: 430px;
+    border-radius: 9px;
+  }
+  .tree-inspector {
+    position: fixed;
+    inset: 10dvh 0 0 0;
+    z-index: 80;
+    width: 100%;
+    max-height: 90dvh;
+    min-height: 0;
+    border: 1px solid var(--line);
+    border-radius: 15px 15px 0 0;
+    padding: 20px;
+    box-shadow: 0 -10px 45px #0004;
+  }
+  .tree-inspector-heading {
+    top: -20px;
+  }
+  .tree-canvas {
+    height: 70vh;
+    min-height: 460px;
+  }
+  .tree-canvas-caption {
+    right: 10px;
+    font-size: 7px;
+  }
+  .tree-next-strip {
+    flex-wrap: wrap;
+    padding: 17px;
+    gap: 12px;
+  }
+  .tree-next-strip > div {
+    flex-basis: calc(100% - 40px);
+  }
+  .tree-next-strip > .secondary {
+    width: 100%;
+    font-size: 11px;
+  }
+  .simulation-banner {
+    flex-wrap: wrap;
+  }
+  .simulation-banner .secondary {
+    width: 100%;
+  }
+  .tree-demo-routes {
+    flex-direction: column;
+  }
+  .tree-demo-routes button {
+    width: 100%;
+    white-space: normal;
+  }
+  .tree-toast {
+    bottom: 12px;
+    font-size: 10px;
+  }
+  .tree-inspector .node-command-row button {
+    min-height: 44px;
+  }
+  .tree-inspector .connection-row {
+    min-height: 50px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .living-tree * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+[data-theme="dark"] .react-flow__attribution {
+  background: var(--tree-surface);
+  color: var(--tree-muted);
+}
+[data-theme="dark"] .react-flow__attribution a {
+  color: var(--tree-muted);
+}
+.tree-inspector select {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--roadmaps-control-border);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 5px;
+  padding: 9px;
+  font-size: 11px;
+}
+.tree-search-results {display:flex;gap:7px;flex-wrap:wrap;padding:0 0 14px;}
+.tree-search-results .secondary {font-size:10px;min-height:38px;white-space:normal;text-align:left;}
+.living-node.kind-Internship {border-left:4px double var(--roadmaps-secondary);border-radius:4px 10px;}

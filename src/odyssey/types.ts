@@ -92,6 +92,8 @@ export type Assertion = {
   selected?: boolean;
 };
 export type Course = {
+  grade?: string;
+  credits?: number;
   id: string;
   institution: string;
   programme: string;
@@ -145,6 +147,7 @@ export type PathRecord = {
   }[];
 };
 export type Workspace = {
+  living?: import("../living/schema").LivingState;
   version: 2;
   person: Person;
   paths: PathRecord[];

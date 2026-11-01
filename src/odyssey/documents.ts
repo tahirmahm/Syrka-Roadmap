@@ -400,6 +400,8 @@ export function approveClaims(
     programme: string;
     code: string;
     title: string;
+    grade?: string;
+    credits?: number;
     status: Course["status"];
   },
 ): Person {
