@@ -144,3 +144,11 @@ user-recorded source review date (not institutional verification), chosen Passpo
 record IDs, a review checklist and notes. Drafts persist and can be exported. There
 is no automatic application or submission control. Reported course grades/credits
 can be supplied during reviewed academic imports; their provenance is retained.
+
+## Final trust and history refinements
+
+The tree bridges existing completed pathway milestones into lifetime history without modifying their original records or inventing missing completion dates. The bridge is bounded to 500 historical milestones with an explicit notice; full originals remain saved. Living goals and quest progress also appear in My Roadmaps and Progress.
+
+An inferred-only capability uses an inferred status and advisory relationship rather than `DEMONSTRATES`. Self-completion does not satisfy capability evidence in reverse planning. Personal record provenance is kept separate from ESCO taxonomy provenance. Related ESCO occupation nodes can themselves expand into requirements and further shared-skill continuations.
+
+See [validation and remaining gates](living-tree-validation.md) for measured test results and the explicit distinction between local implementation and live external verification.
