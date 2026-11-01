@@ -214,6 +214,7 @@ export function LivingTree(props: {
   onOccupation: (id: string) => void;
   onResume: () => void;
   onReviewEvidence: (text: string) => void;
+  workspaceScope: string;
 }) {
   return (
     <ReactFlowProvider>
@@ -232,6 +233,7 @@ function TreeWorkspace({
   onOccupation,
   onResume,
   onReviewEvidence,
+  workspaceScope,
 }: Parameters<typeof LivingTree>[0]) {
   const mobile = useMobile(),
     flow = useReactFlow();
@@ -256,7 +258,16 @@ function TreeWorkspace({
     const base = {
       ...nav,
       ...(anchorId && point
-        ? { anchors: { ...nav.anchors, [anchorId]: point } }
+        ? {
+            anchors: Object.fromEntries(
+              [
+                ...Object.entries(nav.anchors || {}).filter(
+                  ([id]) => id !== anchorId,
+                ),
+                [anchorId, point],
+              ].slice(-100),
+            ),
+          }
         : {}),
       camera: {
         ...flow.getViewport(),
@@ -277,7 +288,7 @@ function TreeWorkspace({
       window.history.pushState(
         {
           ...window.history.state,
-          odyssey: { owner: workspace.person.id, navigation: next },
+          odyssey: { owner: workspaceScope, navigation: next },
         },
         "",
         window.location.href,
@@ -323,6 +334,7 @@ function TreeWorkspace({
         : null,
     ),
     [sheetDetail, setSheetDetail] = useState(false),
+    [relatedLimit, setRelatedLimit] = useState(24),
     [reducedMotion, setReducedMotion] = useState(false),
     [simulation, setSimulation] = useState<string[]>([]),
     [toast, setToast] = useState(""),
@@ -457,6 +469,7 @@ function TreeWorkspace({
   };
   const choose = (id: string) => {
     setQuery("");
+    setRelatedLimit(24);
     origin.current = document.activeElement as HTMLElement;
     const n = graph?.nodes.find((n) => n.id === id);
     dispatch({
@@ -504,7 +517,7 @@ function TreeWorkspace({
   };
   const back = () => {
     if (
-      window.history.state?.odyssey?.owner === workspace.person.id &&
+      window.history.state?.odyssey?.owner === workspaceScope &&
       nav.history.length
     )
       window.history.back();
@@ -520,22 +533,22 @@ function TreeWorkspace({
         ?.focus();
   };
   useEffect(() => {
-    if (window.history.state?.odyssey?.owner !== workspace.person.id)
+    if (window.history.state?.odyssey?.owner !== workspaceScope)
       window.history.replaceState(
         {
           ...window.history.state,
-          odyssey: { owner: workspace.person.id, navigation: nav },
+          odyssey: { owner: workspaceScope, navigation: nav },
         },
         "",
         window.location.href,
       );
     // An initial browser journal entry is scoped to this mounted person/account workspace.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspace.person.id]);
+  }, [workspaceScope]);
   useEffect(() => {
     const pop = (e: PopStateEvent) => {
       const entry = e.state?.odyssey;
-      if (entry?.owner === workspace.person.id) {
+      if (entry?.owner === workspaceScope) {
         persistState({
           navigation: entry.navigation,
           selected: entry.navigation.selected,
@@ -566,7 +579,7 @@ function TreeWorkspace({
     };
     window.addEventListener("popstate", pop);
     return () => window.removeEventListener("popstate", pop);
-  }, [workspace.person.id, persistState, flow]);
+  }, [workspaceScope, persistState, flow]);
   const visibilitySignature = JSON.stringify([
     nav.scale,
     nav.selected,
@@ -621,13 +634,19 @@ function TreeWorkspace({
       ...baseJourney,
       actions: [
         ...baseJourney.actions,
-        ...suggestions.filter(
-          (a) => !baseJourney.actions.some((b) => b.id === a.id),
-        ),
+        ...suggestions
+          .filter((a) => !baseJourney.actions.some((b) => b.id === a.id))
+          .slice(0, Math.max(0, 500 - baseJourney.actions.length)),
       ],
     };
   }, [baseJourney, graph, workspace.person.id, state.goals]);
   const saveJourney = (value: JourneyState) => {
+    if (value.actions.length > 500 || value.inbox.length > 50) {
+      setToast(
+        "This workspace reached its action/import limit. Export or archive records before adding more; existing records were preserved.",
+      );
+      return;
+    }
     if (simulation.length || nav.previewRouteId) {
       setToast(
         "Exit simulation or discard the route preview before changing actual work.",
@@ -671,7 +690,7 @@ function TreeWorkspace({
     const now = new Date().toISOString();
     const a = journeyActionSchema.parse({
       id: "node-work:" + n.id,
-      title: n.actions[0]?.title || "Investigate " + n.label,
+      title: (n.actions[0]?.title || "Investigate " + n.label).slice(0, 200),
       verb: "Continue preparation",
       kind: "task",
       category: "preparation",
@@ -1798,9 +1817,9 @@ function TreeWorkspace({
                 </section>
                 <section>
                   <h3>Preparation and connected subnodes</h3>
-                  {related.map((e) => {
-                    const other = graph?.nodes.find(
-                      (n) => n.id === (e.to === selected.id ? e.from : e.to),
+                  {related.slice(0, relatedLimit).map((e) => {
+                    const other = graphById.get(
+                      e.to === selected.id ? e.from : e.to,
                     );
                     return other ? (
                       <button
@@ -1819,6 +1838,27 @@ function TreeWorkspace({
                       </button>
                     ) : null;
                   })}
+                  {related.length > relatedLimit && (
+                    <div className="journey-more-connections">
+                      <p>
+                        {related.length - relatedLimit} additional connections,
+                        including{" "}
+                        {
+                          related
+                            .slice(relatedLimit)
+                            .filter((e) => e.requirement === "formal").length
+                        }{" "}
+                        sourced formal relationships. Inspect all relevant rules
+                        before assessing eligibility.
+                      </p>
+                      <button
+                        className="secondary"
+                        onClick={() => setRelatedLimit((n) => n + 24)}
+                      >
+                        Show more connections ({related.length - relatedLimit})
+                      </button>
+                    </div>
+                  )}
                   {!related.length && (
                     <p>
                       Inspect this evidence record in My Capabilities to add

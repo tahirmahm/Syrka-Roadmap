@@ -1,3 +1,6 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { QuestDock } from "../src/journey/quest-dock";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -351,4 +354,95 @@ test("source cancellation does not erase previously completed personal history b
   assert.equal(next.evidence, "A retained submitted artifact");
   assert.equal(actionAvailability(next, [next], now).actionable, false);
   assert.equal(safeActionHref(next), null);
+});
+
+test("blocked overdue commitments stay visible while a feasible explicit prerequisite becomes the dock's primary action", () => {
+  const state = demo(),
+    essay = journeyActionSchema.parse({
+      ...state.actions[0],
+      deadline: {
+        kind: "instant",
+        at: "2026-11-01T07:00:00Z",
+        timezone: state.timezone,
+        confirmed: true,
+        authority: "source",
+      },
+      dependsOn: ["rubric"],
+    }),
+    prep = journeyActionSchema.parse({
+      ...state.actions[1],
+      id: "rubric",
+      title: "Read the assessment rubric",
+      mandatory: false,
+      priority: 0,
+      category: "preparation",
+      deadline: undefined,
+      nodeIds: [],
+      dependsOn: [],
+    }),
+    prestige = journeyActionSchema.parse({
+      ...state.actions[3],
+      id: "prestige",
+      title: "Explore a prestigious optional role",
+      category: "suggestion",
+      priority: 3,
+      deadline: undefined,
+      nodeIds: ["goal:mckinsey"],
+    });
+  state.actions = [essay, prep, prestige];
+  const ranked = rankActions(state.actions, now, state.timezone, [
+    "goal:mckinsey",
+  ]);
+  assert.equal(ranked[0].action.id, essay.id);
+  assert.deepEqual(ranked[0].blockedBy, ["rubric"]);
+  const main = ranked.find(
+    (r) => actionAvailability(r.action, state.actions, now).actionable,
+  )!;
+  assert.equal(main.action.id, prep.id);
+  assert.match(main.reasons[0], /Unblocks Complete the public-policy essay/);
+  assert.ok(
+    ranked.findIndex((r) => r.action.id === prep.id) <
+      ranked.findIndex((r) => r.action.id === prestige.id),
+  );
+  const markup = renderToStaticMarkup(
+    createElement(QuestDock, {
+      state,
+      ownerId: owner,
+      graph: null,
+      goals: ["goal:mckinsey"],
+      onChange: () => {},
+      onOpenAction: () => {},
+      onSelectNode: () => {},
+      onOpenInbox: () => {},
+      now,
+    }),
+  );
+  assert.match(
+    markup,
+    /class="journey-action-title"[^>]*>Read the assessment rubric/,
+  );
+  assert.match(markup, /mandatory commitment is blocked/);
+  assert.ok(markup.includes(essay.title));
+  assert.ok(markup.includes(ranked[0].deadlineLabel!));
+  assert.match(markup, /journey-alternative-title/);
+  // A circular dependency cannot create a feasible step or falsely unlock the work.
+  const cyclic = [essay, { ...prep, dependsOn: [essay.id] }],
+    cycleRanks = rankActions(cyclic, now, state.timezone);
+  assert.ok(
+    cycleRanks.every(
+      (r) => !actionAvailability(r.action, cyclic, now).actionable,
+    ),
+  );
+  assert.ok(
+    cycleRanks.every(
+      (r) => !r.reasons.some((reason) => reason.startsWith("Unblocks ")),
+    ),
+  );
+  assert.equal(essay.progress, "planned");
+  assert.equal(prep.progress, "planned");
+  const fixed = rankActions(demo().actions, now, state.timezone).find(
+    (r) => r.action.kind === "event",
+  )!;
+  assert.match(fixed.deadlineLabel!, /^Scheduled:/);
+  assert.doesNotMatch(fixed.deadlineLabel!, /deadline/i);
 });

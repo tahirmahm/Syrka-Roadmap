@@ -666,6 +666,16 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
             workspace={workspace}
             onOpen={(ownerId, remote) => {
               const key = "syrka-roadmaps:account:" + ownerId;
+              if (key !== storageKey) {
+                setDocumentMode(null);
+                setEvidenceDraft("");
+                setJsonOpen(false);
+                setResetOpen(false);
+                setNotice("");
+                setError("");
+                setQuery("");
+                setSearch("");
+              }
               const cached = localStorage.getItem(key);
               setStorageKey(key);
               setWorkspace(
@@ -676,6 +686,16 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               setBlocked(false);
             }}
             onLeave={() => {
+              if (storageKey !== STORAGE_KEY) {
+                setDocumentMode(null);
+                setEvidenceDraft("");
+                setJsonOpen(false);
+                setResetOpen(false);
+                setNotice("");
+                setError("");
+                setQuery("");
+                setSearch("");
+              }
               if (storageKey !== STORAGE_KEY)
                 localStorage.removeItem(backupKey);
               setStorageKey(STORAGE_KEY);
@@ -740,6 +760,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
             <LivingTree
               key={storageKey + ":" + workspace.person.id}
               workspace={workspace}
+              workspaceScope={storageKey + ":" + workspace.person.id}
               onState={updateLiving}
               onUpload={() => {
                 setEvidenceDraft("");
@@ -1346,6 +1367,13 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
       )}
       {documentMode && (
         <DocumentReview
+          key={
+            storageKey +
+            ":" +
+            workspace.person.id +
+            ":" +
+            (evidenceDraft ? "work" : "document")
+          }
           person={
             workspace.person.fictional && !evidenceDraft
               ? emptyPerson()
@@ -1371,6 +1399,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
                         evidenceDraft
                           ? {
                               ...person,
+                              fictional: w.person.fictional,
                               assertions: person.assertions.map((a) =>
                                 w.person.assertions.some(
                                   (old) => old.id === a.id,
@@ -1401,6 +1430,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
       )}
       {jsonOpen && (
         <JSONImport
+          key={storageKey + ":" + workspace.person.id}
           onClose={() => setJsonOpen(false)}
           onWorkspace={(w) => {
             onRestore(w);

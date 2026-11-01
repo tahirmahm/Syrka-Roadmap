@@ -12,7 +12,12 @@ import {
 } from "lucide-react";
 import type { JourneyAction, JourneyState } from "./schema";
 import type { WorldGraph } from "../living/schema";
-import { actionAvailability, rankActions, planWeek } from "./actions";
+import {
+  actionAvailability,
+  rankActions,
+  planWeek,
+  deadlineDistance,
+} from "./actions";
 import { safeActionHref } from "./imports";
 export function QuestDock({
   state,
@@ -92,8 +97,24 @@ export function QuestDock({
       </button>
     );
   };
-  const main = ranked[0],
-    alternatives = ranked.slice(1, expanded ? 8 : 3);
+  const main =
+      ranked.find(
+        ({ action }) =>
+          actionAvailability(action, state.actions, clock).actionable,
+      ) || ranked[0],
+    alternatives = ranked
+      .filter((row) => row.action.id !== main?.action.id)
+      .slice(0, expanded ? 7 : 2);
+  const urgentBlocked = ranked.filter(
+    ({ action }) =>
+      action.id !== main?.action.id &&
+      action.mandatory &&
+      !actionAvailability(action, state.actions, clock).actionable &&
+      action.deadline &&
+      action.deadline.kind !== "unresolved" &&
+      action.deadline.confirmed &&
+      (deadlineDistance(action, clock) ?? Infinity) <= 1,
+  );
   return (
     <aside
       className={`journey-dock ${expanded ? "is-expanded" : ""}`}
@@ -188,12 +209,25 @@ export function QuestDock({
                   </button>
                 </div>
               </div>
+              {urgentBlocked.length > 0 && (
+                <p className="journey-warning" role="status">
+                  {urgentBlocked.length} mandatory commitment
+                  {urgentBlocked.length === 1 ? " is" : "s are"} blocked with an
+                  overdue or imminent deadline.{" "}
+                  {urgentBlocked
+                    .slice(0, 2)
+                    .map((row) => `${row.action.title}: ${row.deadlineLabel}`)
+                    .join(" · ")}{" "}
+                  Resolve the prerequisite; no commitment or deadline was
+                  removed.
+                </p>
+              )}
               {alternatives.length > 0 && (
                 <div
                   className="journey-alternatives"
                   aria-label="Other available actions"
                 >
-                  {alternatives.map(({ action, reasons }) => (
+                  {alternatives.map(({ action, reasons, deadlineLabel }) => (
                     <div key={action.id}>
                       <button
                         className="text-button journey-alternative-title"
@@ -202,6 +236,11 @@ export function QuestDock({
                         {action.title}
                       </button>
                       <span>{reasons[0] || action.category}</span>
+                      {deadlineLabel && (
+                        <p className="journey-deadline-label">
+                          {deadlineLabel}
+                        </p>
+                      )}
                       {expanded && actionButton(action)}
                     </div>
                   ))}

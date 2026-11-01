@@ -53,14 +53,29 @@ For the CONNECT 403 investigation and protected Vercel-side probe, see [Qwen dia
 Existing Vercel project: https://syrkaroadmap.vercel.app. See [deployment](docs/deployment.md), [architecture](docs/architecture.md), [audit](docs/v2-audit.md) and [validation](docs/validation.md). Canonical `www.syrka.co/roadmaps` routing requires a separately approved change in the domain-owning project.
 
 
-## Living Career Tree feature
+## Living Career Tree and actionable Odyssey progression
 
-The feature branch introduces a shared academic/professional progression world:
-an interactive radial RPG skill tree on desktop and mobile, light/dark themes,
-semester planning, history, quests, simulations and a source-grounded Guide.
-CV lifecycle interpretation and separately reviewed AI relationship suggestions retain
-source quotations and never verify credentials automatically. See the
-[renderer and inference audit](docs/rpg-inference-audit.md).
-See [architecture and honest data boundaries](docs/living-tree.md) and
-[release validation](docs/living-tree-validation.md). The PPE catalogue is explicitly
-fictional until official institutional records can be retrieved and reviewed.
+The Living Tree remains the shared academic/professional map. The current
+`feature/odyssey-actionable-progression` increment adds Overview/Route/Action
+contexts, a Today/This week quest dock, dependency-aware focused routes, a bounded
+navigation journal, reviewed source imports and functional local work surfaces.
+Desktop and mobile keep the interactive RPG map; dark is the new-user default and
+explicit light preferences are preserved.
+
+Typed JSON/ICS imports retain source identity, reviewed updates, conflicts and
+revocation. Work notes enter the existing explicit evidence-review flow; completing
+a task never verifies mastery or a credential. A/B semester comparison uses
+supplied prerequisites, credits and timetable data. The PPE catalogue remains
+fictional until authorized institutional records are available.
+
+See [actionable progression architecture](docs/odyssey-actionable-progression.md),
+[inspected connector contracts and live boundaries](docs/odyssey-connectors.md) and
+[final increment validation](docs/odyssey-validation.md). Earlier [Living Tree
+architecture](docs/living-tree.md), [renderer/inference audit](docs/rpg-inference-audit.md)
+and [baseline validation](docs/living-tree-validation.md) remain available as history.
+
+The existing Qwen gateway and free-only guards remain. Live AI, the new feature's
+Vercel Preview and hosted migration/auth synchronization require independent
+verification; local fixtures and a successful build do not establish those services.
+No production merge, alternate Vercel project, domain change or modification to
+Campus, Workspace, Sessions or Mail is included.

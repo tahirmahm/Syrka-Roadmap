@@ -86,6 +86,42 @@ export function rankActions(
   const date = new Date(now),
     today = dateInZone(date, timezone),
     seen = new Set<string>();
+  const byId = new Map(actions.map((action) => [action.id, action]));
+  const availabilityById = new Map(
+    actions.map((action) => [
+      action.id,
+      actionAvailability(action, actions, date),
+    ]),
+  );
+  // This priority relation uses explicit task dependencies only, never graph proximity.
+  // A visited set bounds malformed cycles; only actually feasible leaves can be promoted.
+  const unblocks = new Map<string, string[]>();
+  for (const commitment of actions) {
+    if (
+      !commitment.mandatory ||
+      !commitment.source.consent ||
+      !commitment.source.permissions.includes("read") ||
+      commitment.sourceCancelled ||
+      commitment.hypothetical ||
+      ["completed", "cancelled", "submitted"].includes(commitment.progress)
+    )
+      continue;
+    const seenDependencies = new Set<string>([commitment.id]),
+      pending = [...commitment.dependsOn];
+    while (pending.length) {
+      const id = pending.pop()!;
+      if (seenDependencies.has(id)) continue;
+      seenDependencies.add(id);
+      const prerequisite = byId.get(id);
+      if (!prerequisite) continue;
+      if (availabilityById.get(prerequisite.id)!.actionable)
+        unblocks.set(id, [
+          ...new Set([...(unblocks.get(id) || []), commitment.title]),
+        ]);
+      if (prerequisite.progress !== "completed")
+        pending.push(...prerequisite.dependsOn);
+    }
+  }
   return actions
     .filter(
       (a) =>
@@ -98,7 +134,7 @@ export function rankActions(
         !["completed", "cancelled"].includes(a.progress),
     )
     .map((action) => {
-      const availability = actionAvailability(action, actions, date),
+      const availability = availabilityById.get(action.id)!,
         days = deadlineDistance(action, date),
         deadline = action.deadline;
       const hard =
@@ -176,6 +212,13 @@ export function rankActions(
             ? "Optional exploration; no artificial requirement."
             : "Personal preparation or user priority.",
         );
+      const supports = unblocks.get(action.id);
+      if (supports?.length && availability.actionable) {
+        bucket = Math.min(bucket, 2);
+        reasons.unshift(
+          `Unblocks ${supports.join("; ")} through its explicit task dependencies.`,
+        );
+      }
       if (action.progress === "submitted") bucket = 9;
       if (deadline?.kind === "unresolved")
         reasons.push(
@@ -189,12 +232,18 @@ export function rankActions(
         reasons.push(
           "Source observation is older than 14 days; verify that it is current.",
         );
+      const eventLabel =
+        action.event?.kind === "timed"
+          ? `Scheduled: ${new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: action.event.timezone }).format(new Date(action.event.start))} – ${new Intl.DateTimeFormat("en", { timeStyle: "short", timeZone: action.event.timezone }).format(new Date(action.event.end))} (${action.event.timezone})`
+          : action.event?.kind === "all-day"
+            ? `Scheduled: ${action.event.start} to ${action.event.end} (exclusive) · all-day (${action.event.timezone}; occupied hours unknown)`
+            : undefined;
       const deadlineLabel =
         deadline?.kind === "instant"
           ? `${new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: deadline.timezone }).format(new Date(deadline.at))} (${deadline.timezone})`
           : deadline?.kind === "date"
             ? `${deadline.date} · all-day date (${deadline.timezone}; no midnight deadline assumed)`
-            : deadline?.text;
+            : deadline?.text || eventLabel;
       return {
         action,
         reasons,
@@ -209,8 +258,8 @@ export function rankActions(
         Number(a.bucket) - Number(b.bucket) ||
         a.days - b.days ||
         b.action.priority - a.action.priority ||
-        Number(actionAvailability(b.action, actions, date).actionable) -
-          Number(actionAvailability(a.action, actions, date).actionable) ||
+        Number(availabilityById.get(b.action.id)!.actionable) -
+          Number(availabilityById.get(a.action.id)!.actionable) ||
         a.action.id.localeCompare(b.action.id),
     )
     .map(({ days, ...ranked }) => {

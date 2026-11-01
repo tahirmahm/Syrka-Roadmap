@@ -245,6 +245,7 @@ for (const width of [390, 1440])
         (a) => !original.assertions.some((old) => old.id === a.id),
       );
     expect(added.length).toBeGreaterThan(0);
+    expect(reviewed.person.fictional).toBe(true);
     expect(added.every((a) => a.verification === "self-reported")).toBe(true);
     expect(reviewed.person.courses).toEqual(original.courses);
     expect(reviewed.living!.goals).toEqual(after.living!.goals);
@@ -885,4 +886,145 @@ test("Odyssey viewport restore: desktop route stays selected and physically visi
     path: info.outputPath("desktop-route-restored-on-mobile.png"),
     fullPage: true,
   });
+});
+
+test("Odyssey isolation: unscoped or foreign-account browser journal cannot restore another context with the same person ID", async ({
+  page,
+}) => {
+  await load(page);
+  await inspect(page, "McKinsey · Business Analyst");
+  const before = await state(page),
+    nav = before.living!.navigation!;
+  const forged = {
+    ...nav,
+    selected: "goal:risk",
+    routeId: "goal:risk",
+    scale: "route" as const,
+  };
+  // Synthetic history events only: this is not a claim of hosted SDK authentication testing.
+  await page.evaluate(
+    ({ personId, navigation }) => {
+      window.dispatchEvent(
+        new PopStateEvent("popstate", {
+          state: {
+            ...window.history.state,
+            odyssey: { owner: personId, scope: "foreign-account", navigation },
+          },
+        }),
+      );
+      window.dispatchEvent(
+        new PopStateEvent("popstate", {
+          state: {
+            ...window.history.state,
+            odyssey: {
+              owner: "syrka-roadmaps:account:foreign-account:" + personId,
+              scope: "foreign-account",
+              navigation,
+            },
+          },
+        }),
+      );
+    },
+    { personId: before.person.id, navigation: forged },
+  );
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await expect(page.locator(".tree-inspector")).toContainText(
+    "McKinsey · Business Analyst",
+  );
+  expect((await state(page)).living!.navigation!.selected).toBe(
+    "goal:mckinsey",
+  );
+  expect((await state(page)).person).toEqual(before.person);
+});
+
+test("Odyssey blocked priority: a feasible declared dependency replaces a disabled next-action dead end", async ({
+  page,
+}) => {
+  await load(page);
+  const before = await state(page),
+    journey = before.living!.journey!,
+    base = journey.actions.find((a) => a.source.recordId === "ppe-essay")!;
+  const source = {
+    ...base.source,
+    app: "manual" as const,
+    tenantId: null,
+    authority: "self-reported" as const,
+    recordId: "declared-final",
+    observedAt: CLOCK,
+  };
+  const blocked: JourneyAction = {
+    ...base,
+    id: "declared-final",
+    title: "Finish the blocked fictional essay",
+    verb: "Continue blocked essay",
+    source,
+    dependsOn: ["declared-feedback"],
+    feasibility: "blocked",
+    deadline: {
+      kind: "instant",
+      at: "2026-11-04T04:00:00.000Z",
+      timezone: "Europe/Prague",
+      confirmed: true,
+      authority: "user",
+    },
+    priority: 3,
+    notes:
+      "This is explicitly fictional manual work with a declared dependency.",
+  };
+  const dependency: JourneyAction = {
+    ...base,
+    id: "declared-feedback",
+    title: "Read feedback before revising the essay",
+    verb: "Review blocking feedback",
+    source: { ...source, recordId: "declared-feedback" },
+    deadline: undefined,
+    mandatory: false,
+    priority: 1,
+    category: "preparation",
+    dependsOn: [],
+    feasibility: "actionable",
+    nodeIds: [],
+    notes:
+      "Fictional feedback: revise the unsupported claim before continuing.",
+    work: { kind: "local-note", label: "Review blocking feedback" },
+  };
+  await page.evaluate(
+    ({ key, workspace }) => {
+      localStorage.setItem(key, JSON.stringify(workspace));
+    },
+    {
+      key: STORAGE,
+      workspace: {
+        ...before,
+        living: {
+          ...before.living!,
+          journey: { ...journey, actions: [blocked, dependency] },
+        },
+      },
+    },
+  );
+  await page.reload();
+  await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await expect(dock(page)).toBeVisible();
+  await expect(dock(page).locator(".journey-next-action")).toContainText(
+    "Read feedback before revising the essay",
+  );
+  const primary = dock(page).getByRole("button", {
+    name: "Review blocking feedback",
+    exact: true,
+  });
+  await expect(primary).toBeEnabled();
+  await primary.click();
+  await expect(page.locator(".journey-action-surface")).toContainText(
+    "Read feedback before revising the essay",
+  );
+  await expect(
+    page.getByLabel("Action work notes", { exact: true }),
+  ).toHaveValue(/revise the unsupported claim/);
+  expect((await state(page)).person).toEqual(before.person);
 });

@@ -414,3 +414,19 @@
     min-height: 218px;
   }
 }
+@media (min-width: 761px) and (max-width: 1120px) {
+  .immersive-tree .tree-universe-search {
+    top: auto;
+    bottom: 48px;
+    right: 16px;
+    max-width: 300px;
+  }
+  .has-inspector .tree-universe-search {
+    display: none;
+  }
+}
+@media (max-width: 400px) {
+  .scene-hud [aria-label="Fit constellation"] {
+    display: none;
+  }
+}
