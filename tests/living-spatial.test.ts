@@ -159,3 +159,17 @@ test("relationship inference accepts only quoted known-node advisory candidates 
   assert.equal(edge.requirement, "advisory");
   assert.equal(edge.source.quality, "advisory");
 });
+
+test("editorial directions explicitly identify broader ESCO references without asserting occupational equivalence", () => {
+  const { g } = fixture(),
+    risk = g.nodes.find((n) => n.id === "goal:risk")!;
+  assert.equal(risk.source.kind, "editorial");
+  assert.equal(risk.source.quality, "advisory");
+  assert.match(risk.summary, /broader ESCO occupation/);
+  assert.match(risk.summary, /not an asserted equivalent title/);
+  assert.ok(
+    g.edges
+      .filter((e) => e.to === risk.id)
+      .every((e) => e.requirement === "advisory"),
+  );
+});

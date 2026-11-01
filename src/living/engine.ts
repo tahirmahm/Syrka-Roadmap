@@ -464,6 +464,20 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
         source,
       ),
     );
+    const equivalent =
+      !!o &&
+      [o.label, ...o.aliases].some(
+        (title) => normalize(title) === normalize(label),
+      );
+    if (o && !equivalent) {
+      n.summary = `Explore ${label}. This is an editorial direction associated with the broader ESCO occupation “${o.label}”, not an asserted equivalent title. Preparation links are advisory; exact employer or programme requirements remain unverified. Source occupation: ${o.description}`;
+      n.source = {
+        ...source,
+        kind: "editorial",
+        quality: "advisory",
+        reference: `Editorial direction using related ESCO record ${o.source.recordId} (${o.label})`,
+      };
+    }
     n.occupationId = o?.id;
     n.requirement = "unknown";
     n.skillIds = o?.essential || [];
@@ -489,7 +503,9 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
         cap.id,
         n.id,
         "CONTRIBUTES_TO",
-        "ESCO essential-skill relationship; this is not a legal, licensing or employer-specific rule.",
+        equivalent
+          ? "ESCO essential-skill relationship; this is not a legal, licensing or employer-specific rule."
+          : `Advisory association with the essential skills of related ESCO occupation ${o?.label}; not a published requirement for ${label}.`,
         source,
       );
     }

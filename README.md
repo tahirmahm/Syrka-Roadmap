@@ -55,8 +55,12 @@ Existing Vercel project: https://syrkaroadmap.vercel.app. See [deployment](docs/
 
 ## Living Career Tree feature
 
-The feature branch introduces a shared academic/professional progression graph,
-light/dark themes, semester planning, history, quests, simulations and Syrka Guide.
+The feature branch introduces a shared academic/professional progression world:
+an interactive radial RPG skill tree on desktop and mobile, light/dark themes,
+semester planning, history, quests, simulations and a source-grounded Guide.
+CV lifecycle interpretation and separately reviewed AI relationship suggestions retain
+source quotations and never verify credentials automatically. See the
+[renderer and inference audit](docs/rpg-inference-audit.md).
 See [architecture and honest data boundaries](docs/living-tree.md) and
 [release validation](docs/living-tree-validation.md). The PPE catalogue is explicitly
 fictional until official institutional records can be retrieved and reviewed.

@@ -22,8 +22,9 @@ The default interface is the Living Career Tree. Existing career discovery, CV
 review, evidence editing, detailed occupational learning roadmaps and recovery
 Overview remain accessible. The XYFlow surface supports stable incremental layout,
 pan/zoom, focus, search, nested expansion/collapse, breadcrumbs, minimap and filtering.
-Mobile defaults to reading exploration; history defaults to chronological reading
-on desktop too, with optional spatial navigation. Both light and dark themes use
+Desktop and mobile default to the interactive radial constellation, including history.
+The fixed-column renderer has been replaced by original circular/hexagonal icon nodes,
+curved shared connections and compact HUD overlays. Chronological reading is optional. Both light and dark themes use
 centralized tokens, a persistent header toggle, local preference and a server-read
 cookie to avoid whole-page theme flashing. Account snapshots can sync the preference.
 
@@ -114,8 +115,10 @@ default. No model has been verified live during this feature task.
 
 ## Persistence and database status
 
-No new SQL migration is required or applied. The additive living state is validated
-by the existing version-2 schema and saved through the existing dedicated Roadmaps
+The additive living state needs no new table. The quota action-name correction in
+`202611010001_living_ai_actions.sql` is required for authenticated Guide, embedding and
+relationship inference; it has been tested locally but not applied to hosted Supabase.
+The living state is validated by the existing version-2 schema and saved through the existing dedicated Roadmaps
 `workspace_snapshots` RLS/revision path. Historic records remain intact. Existing
 hosted migration/auth readiness and real multi-device account acceptance remain
 unverified; local PostgreSQL tests are not a claim about the hosted database.
@@ -130,7 +133,7 @@ Run `npm run build`, start with `npm run start -- --port 3000`, then:
 npx playwright test tests/browser/living.spec.ts
 ```
 
-The eight desktop/mobile flagship tests exercise real graph APIs and local Guide,
+The nine desktop/mobile and CV-lifecycle flagship tests exercise real graph APIs and local Guide,
 with screenshots written to Playwright output directories. The full browser suite
 also exercises existing CV/PDF/DOCX/scanned-document workflows. Provider contract
 fixtures are explicitly separate from real external inference.
@@ -152,3 +155,5 @@ The tree bridges existing completed pathway milestones into lifetime history wit
 An inferred-only capability uses an inferred status and advisory relationship rather than `DEMONSTRATES`. Self-completion does not satisfy capability evidence in reverse planning. Personal record provenance is kept separate from ESCO taxonomy provenance. Related ESCO occupation nodes can themselves expand into requirements and further shared-skill continuations.
 
 See [validation and remaining gates](living-tree-validation.md) for measured test results and the explicit distinction between local implementation and live external verification.
+
+The RPG renderer and résumé/relationship changes are audited in [rpg-inference-audit.md](rpg-inference-audit.md). Editorial directions explicitly distinguish their broader ESCO references from exact occupational equivalence.
