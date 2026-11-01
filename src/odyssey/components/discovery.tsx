@@ -550,7 +550,7 @@ export function SavedRoadmaps({
             </article>
           ))}
         </div>
-      ) : (
+      ) : workspace.living?.goals.length ? null : (
         <div className="empty-state">
           <SlidersHorizontal />
           <h2>Your first roadmap is waiting.</h2>

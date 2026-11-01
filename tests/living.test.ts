@@ -369,3 +369,129 @@ test("course imports cannot replace identity nodes or hide unresolved prerequisi
   };
   assert.throws(() => buildWorld(w, catalogue), /unknown course/);
 });
+
+test("occupations continue into source-derived adjacent careers and the Guide can explain alternatives", () => {
+  const w = ppe(),
+    g = buildWorld(w, catalogue);
+  assert.ok(
+    g.edges.some(
+      (e) => e.from === "goal:consulting" && e.relation === "TRANSFERABLE_TO",
+    ),
+  );
+  const next = g.edges.find(
+    (e) => e.from === "goal:consulting" && e.relation === "TRANSFERABLE_TO",
+  )!.to;
+  w.living!.expanded.push(next);
+  const expanded = buildWorld(w, catalogue);
+  assert.ok(
+    expanded.edges.some(
+      (e) => e.from === next && e.relation === "TRANSFERABLE_TO",
+    ),
+  );
+  const answer = deterministicGuide(
+    g,
+    "goal:consulting",
+    "Show me another pathway",
+    w.living!.goals,
+  );
+  assert.ok(
+    answer.nodeIds.some((id) =>
+      ["Occupation", "EmployerRole", "GraduateProgramme"].includes(
+        g.nodes.find((n) => n.id === id)!.kind,
+      ),
+    ),
+  );
+  assert.match(answer.answer, /not a guaranteed|None is a guaranteed/);
+  assert.ok(
+    g.edges.some((e) => e.from === "goal:mba" && e.to === "goal:strategy"),
+  );
+});
+
+test("recovery milestone history is visible without inventing original dates or verified capabilities", () => {
+  const w = ppe(),
+    o = catalogue.occupations.find((o) =>
+      o.label.includes("artificial intelligence engineer"),
+    )!;
+  w.paths = [
+    {
+      id: "legacy-path",
+      occupationId: o.id,
+      title: o.label,
+      createdAt: "2026-10-29T00:00:00Z",
+      updatedAt: "2026-10-31T00:00:00Z",
+      completed: ["topic:python"],
+      working: [],
+      expanded: [],
+      routeChoices: {},
+    },
+  ];
+  const before = JSON.stringify(w),
+    g = buildWorld(w, catalogue),
+    n = g.nodes.find(
+      (n) => n.id === "legacy-progress:legacy-path:topic:python",
+    )!;
+  assert.ok(n);
+  assert.equal(n.status, "historical");
+  assert.equal(n.date, undefined);
+  assert.match(n.summary, /Original completion date was not stored/);
+  assert.equal(n.evidence[0].status, "self-reported");
+  assert.equal(JSON.stringify(w), before);
+  assert.ok(
+    visibleWorld(g, { ...w.living!, mode: "history" }).nodes.some(
+      (x) => x.id === n.id,
+    ),
+  );
+});
+
+test("large real-catalogue worlds keep initial disclosure bounded and identifiers reusable", () => {
+  const w = emptyWorkspace();
+  w.living = {
+    ...emptyLiving(),
+    goals: catalogue.occupations.slice(0, 40).map((o) => "occupation:" + o.id),
+  };
+  const start = performance.now(),
+    g = buildWorld(w, catalogue),
+    elapsed = Math.round(performance.now() - start);
+  assert.ok(g.nodes.length > 300);
+  assert.equal(new Set(g.nodes.map((n) => n.id)).size, g.nodes.length);
+  const initial = visibleWorld(g, { ...w.living, goals: [] });
+  assert.ok(initial.nodes.length < 25);
+  assert.ok(
+    g.edges.every(
+      (e) =>
+        g.nodes.some((n) => n.id === e.from) &&
+        g.nodes.some((n) => n.id === e.to),
+    ),
+  );
+  console.log(
+    `living-public-catalogue-benchmark nodes=${g.nodes.length} edges=${g.edges.length} buildMs=${elapsed}`,
+  );
+});
+
+test("AI-inferred mappings and self-checked topics do not satisfy capability evidence requirements", () => {
+  const w = ppe();
+  w.person.assertions = w.person.assertions.map((a) => ({
+    ...a,
+    verification: "inferred",
+  }));
+  let g = buildWorld(w, catalogue);
+  const cap = g.nodes.find(
+    (n) => n.kind === "Capability" && n.status === "inferred",
+  )!;
+  assert.ok(cap);
+  assert.ok(!reversePlan(g, ["goal:consulting"]).supported.includes(cap.id));
+  const edge = g.edges.find((e) => e.from === "person" && e.to === cap.id)!;
+  assert.equal(edge.relation, "RELATED_TO");
+  assert.notEqual(edge.source.kind, "esco");
+  w.living!.progress = [
+    {
+      nodeId: cap.id,
+      status: "completed",
+      at: new Date().toISOString(),
+      evidence: "",
+    },
+  ];
+  g = buildWorld(w, catalogue);
+  assert.ok(!reversePlan(g, ["goal:consulting"]).supported.includes(cap.id));
+  assert.ok(w.person.assertions.every((a) => a.verification === "inferred"));
+});

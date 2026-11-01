@@ -893,3 +893,8 @@
 .tree-search-results {display:flex;gap:7px;flex-wrap:wrap;padding:0 0 14px;}
 .tree-search-results .secondary {font-size:10px;min-height:38px;white-space:normal;text-align:left;}
 .living-node.kind-Internship {border-left:4px double var(--roadmaps-secondary);border-radius:4px 10px;}
+.living-records {margin:24px 0;}
+.living-records>h2 {margin-bottom:10px;}
+.living-records .progress-path {margin:13px 0;}
+.living-records blockquote {padding:12px;border-left:2px solid var(--roadmaps-secondary);background:var(--roadmaps-tint);font-size:12px;overflow-wrap:anywhere;}
+.living-node.state-inferred {border-style:dashed;border-color:var(--roadmaps-control-border);}

@@ -42,7 +42,7 @@ export function detectCourseCycles(courses: CourseRecord[]) {
     throw new Error("Duplicate course identifier");
   for (const c of courses) {
     if (
-      /^(?:person$|programme$|cap:|subject:|goal:|project:|quest:|evidence:|record-course:|opportunity:|occupation:)/.test(
+      /^(?:person$|programme$|cap:|subject:|goal:|project:|quest:|evidence:|record-course:|legacy-progress:|opportunity:|occupation:)/.test(
         c.id,
       )
     )

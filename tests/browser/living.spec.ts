@@ -86,6 +86,10 @@ for (const width of [390, 1440]) {
     await expect(page.getByLabel("Route comparison")).toContainText(
       "Shared preparation",
     );
+    await page.goto("/roadmaps");
+    await expect(page.getByLabel("Living goals")).toContainText(
+      "Harvard Business School",
+    );
   });
   test(`Living journey B interdisciplinary PPE risk, semester planning and simulation ${width}px`, async ({
     page,
@@ -194,6 +198,10 @@ for (const width of [390, 1440]) {
       JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!),
     );
     expect(state.person).toEqual(original);
+    await page.goto("/progress");
+    await expect(page.getByLabel("Living quest progress")).toContainText(
+      "Fictional research proposal note",
+    );
     expect(
       state.living.progress.find(
         (p: { nodeId: string }) => p.nodeId === "goal:doctoral",

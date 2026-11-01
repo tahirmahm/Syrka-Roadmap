@@ -32,6 +32,101 @@ export function deterministicGuide(
       n.id,
       ...related.map((e) => (e.from === n.id ? e.to : e.from)),
     ].slice(0, 7);
+  const intentReply = (
+    answer: string,
+    targets: typeof graph.nodes,
+  ): GuideAnswer => ({
+    answer,
+    nodeIds: targets.slice(0, 7).map((n) => n.id),
+    actions: targets
+      .slice(0, 3)
+      .map((n) => ({
+        nodeId: n.id,
+        instruction:
+          n.actions[0]?.deliverable ||
+          "Inspect the evidence, source and uncertainty before choosing this route.",
+      })),
+    assumptions: [
+      "These are graph-backed exploration options, not eligibility decisions.",
+      "Formal requirements and availability need current official confirmation.",
+    ],
+    provider: "deterministic",
+    notice: "Source-grounded local guide. No external AI request was needed.",
+  });
+  if (/another|alternative|different|compare/i.test(question)) {
+    const alternatives = related
+      .filter((e) =>
+        [
+          "TRANSFERABLE_TO",
+          "ALTERNATIVE_PATH_TO",
+          "SUPPORTS_APPLICATION_TO",
+          "RELATED_TO",
+        ].includes(e.relation),
+      )
+      .map((e) =>
+        graph.nodes.find(
+          (other) => other.id === (e.from === n.id ? e.to : e.from),
+        )!,
+      )
+      .filter(
+        (other) =>
+          other &&
+          [
+            "Occupation",
+            "EmployerRole",
+            "GraduateProgramme",
+            "ResearchPathway",
+          ].includes(other.kind),
+      );
+    if (alternatives.length)
+      return intentReply(
+        `From ${n.label}, inspect ${alternatives
+          .slice(0, 4)
+          .map((n) => n.label)
+          .join(
+            ", ",
+          )}. Each connection records whether it is shared capability transfer, an alternative background or application support. None is a guaranteed progression or formal admission rule.`,
+        alternatives,
+      );
+  }
+  if (/semester|elective|course combination/i.test(question)) {
+    const courses = graph.nodes.filter(
+      (n) => n.kind === "UniversityCourse" && plan.available.includes(n.id),
+    );
+    if (courses.length)
+      return intentReply(
+        `Consider ${courses
+          .slice(0, 4)
+          .map((n) => n.label)
+          .join(
+            ", ",
+          )} against your active goals. Use Semester lab to check recorded prerequisites and the credit limit. Fictional records are teaching fixtures, not actual offerings; enrolment and complete timetable checks remain unverified.`,
+        courses,
+      );
+  }
+  if (/reusable project|useful project|project should/i.test(question)) {
+    const projects = graph.nodes
+      .filter((n) => n.kind === "Project" && n.source.kind === "editorial")
+      .sort(
+        (a, b) =>
+          graph.edges.filter(
+            (e) => e.from === b.id && e.relation === "CONTRIBUTES_TO",
+          ).length -
+          graph.edges.filter(
+            (e) => e.from === a.id && e.relation === "CONTRIBUTES_TO",
+          ).length,
+      );
+    if (projects.length)
+      return intentReply(
+        `Explore ${projects
+          .slice(0, 3)
+          .map((n) => n.label)
+          .join(
+            ", ",
+          )}. Their graph connections show which destinations can use the same artifact. Assess the actual deliverable and feedback rather than treating project completion as verified mastery.`,
+        projects,
+      );
+  }
   const research = /research|master|academic|graduate|doctor/i.test(
     question + " " + n.label,
   );

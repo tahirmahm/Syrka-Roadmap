@@ -80,6 +80,7 @@ const icons: Record<NodeKind, typeof Compass> = {
 const statusLabel: Record<NodeStatus, string> = {
   verified: "Verified evidence",
   reported: "Reported evidence",
+  inferred: "Candidate mapping · needs review",
   working: "In progress",
   available: "Suggested action",
   prerequisites: "Prerequisites unconfirmed",

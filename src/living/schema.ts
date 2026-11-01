@@ -132,6 +132,7 @@ export type NodeKind = (typeof nodeKinds)[number];
 export type NodeStatus =
   | "verified"
   | "reported"
+  | "inferred"
   | "working"
   | "available"
   | "prerequisites"

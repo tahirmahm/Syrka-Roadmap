@@ -1,6 +1,12 @@
 import type { Catalogue, Workspace } from "../odyssey/types";
+import { buildRoadmap } from "../odyssey/graph";
 import { capabilityBrain } from "../odyssey/capability-model";
-import { discover, normalize, searchOccupations } from "../odyssey/catalogue";
+import {
+  discover,
+  normalize,
+  searchOccupations,
+  relatedOccupations,
+} from "../odyssey/catalogue";
 import {
   capabilitySeeds,
   courseSeeds,
@@ -26,6 +32,8 @@ const indices = new WeakMap<
     skills: Map<string, Catalogue["skills"][number]>;
     labels: Map<string, Catalogue["skills"][number]>;
     queries: Map<string, Catalogue["occupations"][number] | undefined>;
+    related: Map<string, ReturnType<typeof relatedOccupations>>;
+    topics: Map<string, ReturnType<typeof buildRoadmap>["topics"]>;
   }
 >();
 function sourceIndex(data: Catalogue) {
@@ -35,6 +43,8 @@ function sourceIndex(data: Catalogue) {
       skills: new Map(data.skills.map((s) => [s.id, s])),
       labels: new Map(data.skills.map((s) => [normalize(s.label), s])),
       queries: new Map(),
+      related: new Map(),
+      topics: new Map(),
     };
     indices.set(data, i);
   }
@@ -140,13 +150,42 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
         ["institution-verified", "employer-verified"].includes(a.status),
       )
         ? "verified"
-        : "reported";
+        : n.evidence.some((a) => a.status !== "inferred")
+          ? "reported"
+          : "inferred";
       link(
         "person",
         n.id,
-        "DEMONSTRATES",
-        "Supporting claim; scope and verification are shown in the evidence panel.",
-        n.source,
+        n.status === "inferred" ? "RELATED_TO" : "DEMONSTRATES",
+        n.status === "inferred"
+          ? "Candidate mapping awaits human review; it does not demonstrate this capability."
+          : "Supporting claim; scope and verification are shown in the evidence panel.",
+        {
+          kind: n.evidence.some((e) =>
+            [
+              "document-supported",
+              "institution-verified",
+              "employer-verified",
+            ].includes(e.status),
+          )
+            ? "user-document"
+            : "self-reported",
+          reference: n.evidence
+            .map((a) => a.id)
+            .join(", ")
+            .slice(0, 2000),
+          version: "syrka.capabilities/1",
+          checkedAt: null,
+          quality: n.evidence.some((e) =>
+            [
+              "document-supported",
+              "institution-verified",
+              "employer-verified",
+            ].includes(e.status),
+          )
+            ? "document-supported"
+            : "advisory",
+        },
       );
     }
     n.actions = [
@@ -461,6 +500,55 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
         resource: o?.source.url,
       },
     ];
+    if (o) {
+      if (!index.related.has(o.id))
+        index.related.set(o.id, relatedOccupations(data, o.id, 2));
+      for (const r of index.related.get(o.id) || []) {
+        const id = "occupation:" + r.occupation.id;
+        if (id === n.id) continue;
+        const target = add(
+          base(
+            id,
+            r.occupation.label,
+            "Occupation",
+            r.occupation.description,
+            r.occupation.domain,
+            {
+              kind: "esco",
+              reference: r.occupation.source.recordId,
+              url: r.occupation.source.url,
+              version: r.occupation.source.version,
+              checkedAt: null,
+              quality: "source-backed",
+            },
+          ),
+        );
+        target.occupationId = r.occupation.id;
+        target.requirement = "unknown";
+        target.skillIds = r.occupation.essential;
+        target.actions = [
+          {
+            title: "Explore the adjacent destination",
+            deliverable:
+              "Expand its source requirements and compare your evidence before choosing a route.",
+            criteria:
+              "Shared skills imply neither promotion nor formal eligibility.",
+            resource: target.source.url,
+          },
+        ];
+        link(
+          n.id,
+          id,
+          "TRANSFERABLE_TO",
+          `${r.shared} shared essential source skills. This is inferred occupational adjacency, not guaranteed progression or eligibility.`,
+          {
+            ...editorial,
+            reference: "Computed ESCO essential-skill overlap",
+            version: data.version,
+          },
+        );
+      }
+    }
     return n;
   }
   destinationSeeds.forEach((d) =>
@@ -578,6 +666,32 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
     mba.id,
     "SUPPORTS_APPLICATION_TO",
     "Relevant professional experience may support an application. McKinsey employment is neither required nor sufficient for MBA admission.",
+  );
+  const strategy = occupation(
+    "goal:strategy",
+    "Corporate strategy exploration",
+    "business manager",
+    "Enterprise",
+    [1, 8, 11],
+    ["project:finance"],
+  );
+  link(
+    mba.id,
+    strategy.id,
+    "RELATED_TO",
+    "Graduate study and prior professional experience can motivate a strategy career; the MBA is not assumed required or sufficient.",
+  );
+  link(
+    strategy.id,
+    "goal:enterprise",
+    "TRANSFERABLE_TO",
+    "Strategy experience may inform entrepreneurship. This is advisory, not a prescribed sequence.",
+  );
+  link(
+    mba.id,
+    "goal:enterprise",
+    "ALTERNATIVE_PATH_TO",
+    "Entrepreneurship is another possible future; a particular degree is not assumed mandatory.",
   );
   link(
     "goal:consulting",
@@ -774,6 +888,122 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
         n.source,
       );
   }
+  // Project legacy learning milestones without turning checkboxes into capability claims.
+  let legacyVisible = 0;
+  const legacyTotal = w.paths.reduce((n, p) => n + p.completed.length, 0);
+  for (const path of [...w.paths].sort((a, b) =>
+    b.updatedAt.localeCompare(a.updatedAt),
+  )) {
+    if (legacyVisible >= 500) break;
+    const o = data.occupations.find((o) => o.id === path.occupationId);
+    if (o && !index.topics.has(o.id))
+      index.topics.set(
+        o.id,
+        buildRoadmap(
+          o,
+          data.skills.filter(
+            (s) => o.essential.includes(s.id) || o.optional.includes(s.id),
+          ),
+          [],
+        ).topics,
+      );
+    const topics = o ? index.topics.get(o.id) || [] : [];
+    const target = o
+      ? add(
+          base(
+            "occupation:" + o.id,
+            o.label,
+            "Occupation",
+            o.description,
+            o.domain,
+            {
+              kind: "esco",
+              reference: o.source.recordId,
+              url: o.source.url,
+              version: o.source.version,
+              checkedAt: null,
+              quality: "source-backed",
+            },
+          ),
+        )
+      : null;
+    if (target) {
+      target.occupationId = o!.id;
+      target.requirement = "unknown";
+      target.skillIds = o!.essential;
+    }
+    for (const id of path.completed) {
+      if (legacyVisible >= 500) break;
+      legacyVisible++;
+      const topic = topics.find((t) => t.id === id),
+        source: Provenance = {
+          kind: "self-reported",
+          reference: "Recovery roadmap " + path.id,
+          version: "workspace-2",
+          checkedAt: null,
+          quality: "advisory",
+        };
+      const n = add(
+        base(
+          "legacy-progress:" + path.id + ":" + id,
+          (topic?.label || id) + " · " + path.title,
+          "ProgressMilestone",
+          `Previously self-recorded learning milestone. Original completion date was not stored; roadmap last saved ${path.updatedAt}. Completion does not establish verified proficiency.`,
+          "History",
+          source,
+        ),
+      );
+      n.status = "historical";
+      n.skillIds = topic?.skillIds || [];
+      const notes = (path.evidenceNotes || [])
+        .filter((note) => note.topicId === id)
+        .map((note) => note.note)
+        .join(" ");
+      n.evidence = [
+        {
+          id: path.id + ":" + id,
+          text:
+            notes ||
+            "Self-recorded topic completion; supporting evidence still needs review.",
+          quote: notes,
+          status: "self-reported",
+        },
+      ];
+      n.actions = [
+        {
+          title: "Review the old learning milestone",
+          deliverable:
+            "Open the detailed roadmap, inspect any artifact or note and record what the evidence actually demonstrates.",
+          criteria:
+            "The original date and verified proficiency must not be inferred from a checkbox.",
+        },
+      ];
+      link(
+        "person",
+        n.id,
+        "RELATED_TO",
+        "Preserved recovery-branch learning history.",
+        source,
+      );
+      for (const skillId of n.skillIds)
+        if (index.skills.has(skillId))
+          link(
+            n.id,
+            capability(skillId).id,
+            "RELATED_TO",
+            "This topic concerns the capability, but self-marked completion alone does not demonstrate mastery.",
+            source,
+          );
+      if (target)
+        link(
+          n.id,
+          target.id,
+          "CONTRIBUTES_TO",
+          "Self-recorded learning toward this destination, not verified requirement satisfaction.",
+          source,
+        );
+    }
+  }
   for (const p of state.progress) {
     const n = nodes.get(p.nodeId);
     if (n) {
@@ -793,6 +1023,11 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
         date: p.at,
       });
     }
+  }
+  for (const id of state.expanded) {
+    const n = nodes.get(id);
+    if (n?.status === "available" && !state.goals.includes(id))
+      n.status = "explored";
   }
   state.plannedCourses.forEach((id) => {
     const n = nodes.get(id);
@@ -814,9 +1049,13 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
     version: "syrka.living/1",
     nodes: [...nodes.values()],
     edges: validEdges,
-    notice: w.person.fictional
-      ? "Fictional personal records and course fixtures. No real university offering, employer vacancy or admission eligibility is asserted."
-      : "Evidence-backed starting point. Preparation edges are advisory unless a source explicitly identifies a requirement; unknown eligibility is kept separate.",
+    notice:
+      (legacyTotal > legacyVisible
+        ? `Showing ${legacyVisible} of ${legacyTotal} old milestones; all original records remain in My Roadmaps. `
+        : "") +
+      (w.person.fictional
+        ? "Fictional personal records and course fixtures. No real university offering, employer vacancy or admission eligibility is asserted."
+        : "Evidence-backed starting point. Preparation edges are advisory unless a source explicitly identifies a requirement; unknown eligibility is kept separate."),
     catalogueVersion: data.version,
   };
 }
@@ -853,8 +1092,15 @@ export function reversePlan(
     order.push(id);
   }
   goalIds.forEach((id) => visit(id, []));
-  const supported = order.filter((id) =>
-    ["verified", "reported", "historical"].includes(byId.get(id)!.status),
+  const supported = order.filter(
+    (id) =>
+      ["verified", "reported", "historical"].includes(byId.get(id)!.status) &&
+      (!["Capability", "KnowledgeDomain"].includes(byId.get(id)!.kind) ||
+        byId
+          .get(id)!
+          .evidence.some(
+            (e) => e.status !== "inferred" && !e.id.startsWith("progress:"),
+          )),
   );
   const simulated = order.filter((id) => hypothetical.includes(id));
   const missing = order.filter(
@@ -1014,7 +1260,7 @@ export function visibleWorld(
     graph.nodes
       .filter(
         (n) =>
-          n.evidence.length ||
+          n.evidence.some((e) => e.status !== "inferred") ||
           ["historical", "reported", "verified"].includes(n.status),
       )
       .forEach((n) => visible.add(n.id));

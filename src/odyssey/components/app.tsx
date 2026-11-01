@@ -53,6 +53,7 @@ const DocumentReview = dynamic(() =>
   import("./document-review").then((m) => m.DocumentReview),
 );
 import { AccountWorkspace } from "./account-workspace";
+import { LivingRecords } from "@/living/records";
 import { LivingTree } from "@/living/tree";
 import { ThemeToggle } from "@/living/theme";
 import { livingDemo, type DemoScenario } from "@/living/demos";
@@ -998,6 +999,18 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
                 }}
                 onDiscover={() => discover("")}
               />
+              <LivingRecords
+                key={storageKey}
+                workspace={workspace}
+                mode="goals"
+                onOpen={(id) => {
+                  updateLiving({
+                    selected: id,
+                    expanded: [...new Set([...livingState.expanded, id])],
+                  });
+                  navigate("tree");
+                }}
+              />
               {workspace.savedOccupations.length > 0 && (
                 <section className="profile-settings">
                   <h2>Saved for later</h2>
@@ -1077,7 +1090,10 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
                     {workspace.paths.reduce(
                       (n, p) => n + p.completed.length,
                       0,
-                    )}
+                    ) +
+                      (workspace.living?.progress.filter(
+                        (p) => p.status === "completed",
+                      ).length || 0)}
                   </strong>
                   <span>self-reported completions</span>
                 </div>
@@ -1090,6 +1106,18 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
                   <span>capability assertions</span>
                 </div>
               </div>
+              <LivingRecords
+                key={storageKey}
+                workspace={workspace}
+                mode="progress"
+                onOpen={(id) => {
+                  updateLiving({
+                    selected: id,
+                    expanded: [...new Set([...livingState.expanded, id])],
+                  });
+                  navigate("tree");
+                }}
+              />
               {workspace.paths.map((p) => (
                 <section className="progress-path" key={p.id}>
                   <div className="section-title">
