@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useMobile, trapFocus } from "../hooks";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -95,6 +95,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
   const mobile = useMobile();
 
   const [storageKey, setStorageKey] = useState(STORAGE_KEY);
+  const workspaceOwner = useRef(storageKey);
   const backupKey =
     storageKey === STORAGE_KEY
       ? "syrka-roadmaps:personal-backup"
@@ -221,8 +222,10 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
     [bundle],
   );
   const commit = useCallback(
-    (fn: (w: Workspace) => Workspace, event: string, recordId?: string) =>
+    (fn: (w: Workspace) => Workspace, event: string, recordId?: string) => {
+      if (workspaceOwner.current !== storageKey) return;
       setWorkspace((w) => {
+        if (workspaceOwner.current !== storageKey) return w;
         const next = fn(w);
         return {
           ...next,
@@ -235,8 +238,9 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
             },
           ].slice(-500),
         };
-      }),
-    [],
+      });
+    },
+    [storageKey],
   );
   const navigate = (v: OdysseyView) => {
     setView(v);
@@ -358,6 +362,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
     setLoading(true);
     try {
       const vocab = await getVocabulary();
+      if (workspaceOwner.current !== storageKey) return;
       if (
         !workspace.person.fictional &&
         (workspace.person.claims.length ||
@@ -402,6 +407,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
       "profile.updated",
     );
   const onRestore = (w: Workspace) => {
+    if (workspaceOwner.current !== storageKey) return;
     setWorkspace(w);
     setBlocked(false);
     setNotice("Workspace restored. Uploaded issuer claims remain unverified.");
@@ -442,6 +448,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
         setHasBackup(true);
       }
       const demo = livingDemo(await getVocabulary(), scenario);
+      if (workspaceOwner.current !== storageKey) return;
       setWorkspace({
         ...demo,
         living: {
@@ -666,6 +673,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
             workspace={workspace}
             onOpen={(ownerId, remote) => {
               const key = "syrka-roadmaps:account:" + ownerId;
+              workspaceOwner.current = key;
               if (key !== storageKey) {
                 setDocumentMode(null);
                 setEvidenceDraft("");
@@ -676,7 +684,10 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
                 setQuery("");
                 setSearch("");
               }
-              const cached = localStorage.getItem(key);
+              let cached: string | null = null;
+              try {
+                cached = localStorage.getItem(key);
+              } catch {}
               setStorageKey(key);
               setWorkspace(
                 remote ||
@@ -686,6 +697,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               setBlocked(false);
             }}
             onLeave={() => {
+              workspaceOwner.current = STORAGE_KEY;
               if (storageKey !== STORAGE_KEY) {
                 setDocumentMode(null);
                 setEvidenceDraft("");
@@ -697,9 +709,14 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
                 setSearch("");
               }
               if (storageKey !== STORAGE_KEY)
-                localStorage.removeItem(backupKey);
+                try {
+                  localStorage.removeItem(backupKey);
+                } catch {}
               setStorageKey(STORAGE_KEY);
-              const guest = localStorage.getItem(STORAGE_KEY);
+              let guest: string | null = null;
+              try {
+                guest = localStorage.getItem(STORAGE_KEY);
+              } catch {}
               setWorkspace(
                 (guest && parseWorkspace(guest)) || emptyWorkspace(),
               );
@@ -761,6 +778,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               key={storageKey + ":" + workspace.person.id}
               workspace={workspace}
               workspaceScope={storageKey + ":" + workspace.person.id}
+              canAccessWorkspace={() => workspaceOwner.current === storageKey}
               onState={updateLiving}
               onUpload={() => {
                 setEvidenceDraft("");
@@ -1051,6 +1069,13 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
           )}
           {view === "profile" && (
             <ProfilePanel
+              key={storageKey + ":" + workspace.person.id}
+              canAccessWorkspace={() => workspaceOwner.current === storageKey}
+              accountOwnerId={
+                storageKey.startsWith("syrka-roadmaps:account:")
+                  ? storageKey.slice("syrka-roadmaps:account:".length)
+                  : null
+              }
               person={workspace.person}
               workspace={workspace}
               onChange={setPerson}
@@ -1471,16 +1496,28 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               <button
                 className="primary"
                 onClick={() => {
-                  localStorage.removeItem(STORAGE_KEY);
-                  localStorage.removeItem("syrka-roadmaps:v1");
-                  localStorage.removeItem(backupKey);
+                  window.dispatchEvent(new Event("syrka-local-reset"));
+                  workspaceOwner.current = STORAGE_KEY;
+                  setStorageKey(STORAGE_KEY);
+                  let cleared = true;
+                  try {
+                    localStorage.removeItem(STORAGE_KEY);
+                    localStorage.removeItem("syrka-roadmaps:v1");
+                    localStorage.removeItem(backupKey);
+                    if (storageKey !== STORAGE_KEY)
+                      localStorage.removeItem(storageKey);
+                  } catch {
+                    cleared = false;
+                  }
                   setHasBackup(false);
                   setWorkspace(emptyWorkspace());
                   setBlocked(false);
                   setResetOpen(false);
                   navigate("home");
                   setNotice(
-                    "Local records deleted. Original document files were never retained.",
+                    cleared
+                      ? "Local records deleted. Your account snapshot was retained and cloud saving is paused."
+                      : "Private interface reset, but browser storage could not be cleared. Clear this site's stored data to finish removal.",
                   );
                 }}
               >
@@ -1548,6 +1585,13 @@ function JSONImport({
 }) {
   const [consent, setConsent] = useState(false),
     [error, setError] = useState("");
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   return (
     <div className="modal-backdrop">
       <div
@@ -1598,8 +1642,9 @@ function JSONImport({
                 return;
               }
               try {
-                const raw = await file.text(),
-                  data = JSON.parse(raw);
+                const raw = await file.text();
+                if (!mounted.current) return;
+                const data = JSON.parse(raw);
                 if (data.version === 2 || (data.version === 1 && data.profile))
                   onWorkspace(importWorkspace(raw));
                 else if (

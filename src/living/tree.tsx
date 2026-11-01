@@ -215,6 +215,7 @@ export function LivingTree(props: {
   onResume: () => void;
   onReviewEvidence: (text: string) => void;
   workspaceScope: string;
+  canAccessWorkspace: () => boolean;
 }) {
   return (
     <ReactFlowProvider>
@@ -234,6 +235,7 @@ function TreeWorkspace({
   onResume,
   onReviewEvidence,
   workspaceScope,
+  canAccessWorkspace,
 }: Parameters<typeof LivingTree>[0]) {
   const mobile = useMobile(),
     flow = useReactFlow();
@@ -2265,6 +2267,7 @@ function TreeWorkspace({
             )}
             {panel === "inbox" && (
               <IntegrationInbox
+                canAccessWorkspace={canAccessWorkspace}
                 state={journey}
                 ownerId={workspace.person.id}
                 onChange={saveJourney}

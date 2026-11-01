@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ArrowUpRight,
   Check,
@@ -26,17 +26,26 @@ import { downloadJSON } from "../odyssey/client";
 const apps = ["campus", "mail", "calendar", "sessions", "workspace"] as const;
 export function IntegrationInbox({
   state,
+  canAccessWorkspace,
   ownerId,
   onChange,
   graph,
   now,
 }: {
   state: JourneyState;
+  canAccessWorkspace?: () => boolean;
   ownerId: string;
   onChange: (state: JourneyState) => void;
   graph?: WorldGraph | null;
   now?: string;
 }) {
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [text, setText] = useState(""),
     [format, setFormat] = useState<"json" | "ics">("json"),
     [consent, setConsent] = useState(false),
@@ -573,6 +582,11 @@ export function IntegrationInbox({
               ]),
             );
             const digest = await crypto.subtle.digest("SHA-256", encoded);
+            if (
+              !mounted.current ||
+              (canAccessWorkspace && !canAccessWorkspace())
+            )
+              return;
             const key =
               "roadmaps:calendar:" +
               Array.from(new Uint8Array(digest), (b) =>

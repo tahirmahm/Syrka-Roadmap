@@ -25,8 +25,12 @@ export function ProfilePanel({
   onDocument,
   onJSONImport,
   onReset,
+  accountOwnerId,
+  canAccessWorkspace,
 }: {
   person: Person;
+  accountOwnerId: string | null;
+  canAccessWorkspace: () => boolean;
   workspace: Workspace;
   onChange: (p: Person) => void;
   onDocument: (academic: boolean) => void;
@@ -63,12 +67,22 @@ export function ProfilePanel({
     setResults([]);
   };
   const cloudAction = async () => {
+    if (!accountOwnerId) {
+      setNotice(
+        "Open your account workspace before deleting its private cloud backup.",
+      );
+      return;
+    }
     setCloudBusy(true);
     try {
       const r = await jsonRequest<{ deleted: boolean }>("/api/workspace", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Roadmaps-Owner": accountOwnerId,
+        },
       });
+      if (!canAccessWorkspace()) return;
       if (r.deleted) window.dispatchEvent(new Event("syrka-account-deleted"));
       setNotice(
         "Private cloud backup deleted. Local work and your account are retained.",
@@ -596,7 +610,7 @@ export function ProfilePanel({
               </p>
               <button
                 className="text-button"
-                disabled={!cloudConsent || cloudBusy}
+                disabled={!cloudConsent || cloudBusy || !accountOwnerId}
                 onClick={() => {
                   if (
                     window.confirm(

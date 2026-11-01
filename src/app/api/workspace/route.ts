@@ -1,3 +1,4 @@
+import { expectedWorkspaceOwner } from "@/odyssey/server/workspace-owner";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
@@ -31,13 +32,21 @@ async function session() {
   } = await db.auth.getUser();
   return user && !error ? { db, user } : null;
 }
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const s = await session();
     if (!s)
       return reply(
         { error: "Sign in to open your private account workspace." },
         401,
+      );
+    if (!expectedWorkspaceOwner(req.headers, s.user.id, false))
+      return reply(
+        {
+          error:
+            "Account changed while this request was pending. Reopen your own workspace.",
+        },
+        409,
       );
     const r = await s.db
       .from("workspace_snapshots")
@@ -80,6 +89,14 @@ export async function PUT(req: NextRequest) {
   try {
     const s = await session();
     if (!s) return reply({ error: "Sign in before saving account data." }, 401);
+    if (!expectedWorkspaceOwner(req.headers, s.user.id))
+      return reply(
+        {
+          error:
+            "Account changed or intended owner is missing. Your existing workspace was not modified.",
+        },
+        409,
+      );
     const x = payload.parse(await boundedJSON(req, 2_000_000));
     const state = parseWorkspace(JSON.stringify(x.state));
     if (!state || state.person.fictional)
@@ -157,6 +174,14 @@ export async function DELETE(req: NextRequest) {
       return reply(
         { error: "Sign in to delete your private account snapshot." },
         401,
+      );
+    if (!expectedWorkspaceOwner(req.headers, s.user.id))
+      return reply(
+        {
+          error:
+            "Account changed or intended owner is missing. No snapshot was deleted.",
+        },
+        409,
       );
     const r = await s.db
       .from("workspace_snapshots")
