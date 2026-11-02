@@ -90,7 +90,10 @@ for (const width of [390, 1440]) {
     await expect(
       page.locator(".radial-branch-node.is-selected"),
     ).toBeAttached();
-    await page.getByRole("button", { name: /^Show preparation/ }).click();
+    await page
+      .locator(".tree-inspector")
+      .getByRole("button", { name: /^Show preparation/ })
+      .click();
     await expect(
       page.getByRole("button", { name: /^Collapse branch/ }),
     ).toBeVisible();

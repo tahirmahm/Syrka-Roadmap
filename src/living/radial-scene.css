@@ -663,6 +663,7 @@ body:has(.radial-scene),
   display: none;
 }
 .radial-scene .journey-dock {
+  display: block;
   position: relative;
   left: auto;
   right: auto;

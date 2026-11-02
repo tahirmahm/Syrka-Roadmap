@@ -199,7 +199,7 @@ function eligible(node: WorldNode) {
     !node.id.startsWith("record-course:") &&
     !node.id.startsWith("legacy-progress:") &&
     normalize(node.domain) !== "history" &&
-    (capability || (node.status !== "historical" && !node.dimensions?.history))
+    (capability || node.status !== "historical")
   );
 }
 function stableId(value: string) {
@@ -523,13 +523,13 @@ export function projectRadialBranch(
       if (i === 0 && previouslyVisible)
         ids.sort(
           (a, b) =>
-            Number(previouslyVisible.has(a)) -
-            Number(previouslyVisible.has(b)),
+            Number(previouslyVisible.has(a)) - Number(previouslyVisible.has(b)),
         );
       for (const id of ids) includeRequested(id, request.id);
     }
     for (const root of domain.rootIds)
-      for (const child of (children.get(root) || []).slice(0, 2)) include(child);
+      for (const child of (children.get(root) || []).slice(0, 2))
+        include(child);
   };
   let previouslyVisible: Set<string> | undefined;
   if (requests.length) {

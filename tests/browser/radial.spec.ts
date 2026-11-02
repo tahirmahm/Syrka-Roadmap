@@ -411,6 +411,22 @@ for (const width of [390, 1440]) {
           await page.locator(".react-flow__viewport").getAttribute("style"),
         ).not.toMatch(/NaN|Infinity/);
       }
+      // Today reuses the contextual panel; its real action must remain usable on phones.
+      await page.getByRole("button", { name: /^Today ·/ }).click();
+      await expect(page.locator(".tree-inspector")).toHaveCount(1);
+      const todayDock = page.locator(".tree-inspector").getByRole("complementary", {
+        name: "Today and this week quest dock",
+        exact: true,
+      });
+      await expect(todayDock).toBeVisible();
+      await expect(
+        todayDock.getByRole("button", { name: "Continue essay", exact: true }),
+      ).toBeVisible();
+      await expect(page.locator(".journey-action-surface")).toHaveCount(0);
+      await page
+        .getByRole("button", { name: "Close tree inspector", exact: true })
+        .click();
+      await expect(page.locator(".journey-dock")).toHaveCount(0);
       // Pick a node that has undisclosed preparation; the count is explicit and no data is silently dropped.
       const candidates = branch(page)
         .locator(

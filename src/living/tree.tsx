@@ -518,7 +518,7 @@ function TreeWorkspace({
     nav.quiet ||
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const focus = (id: string, preserve = true) => {
-    const p = shown.positions.get(id);
+    const p = flow.getNode(id)?.position || shown.positions.get(id);
     if (!p) return;
     const viewport = flow.getViewport();
     const box = canvas.current?.getBoundingClientRect();
@@ -900,10 +900,39 @@ function TreeWorkspace({
   };
   useEffect(() => {
     if (!nodeRecords.length || cameraReady.current || wheelOpen) return;
-    cameraReady.current = true;
+    const epoch = motionEpoch.current;
     const t = setTimeout(() => {
+      if (epoch !== motionEpoch.current) return;
+      cameraReady.current = true;
       const camera = initialCamera.current;
-      if (camera?.width || (camera && !mobile)) void applyCamera(camera);
+      if (camera?.width || (camera && !mobile))
+        void applyCamera(camera).then(() => {
+          if (epoch !== motionEpoch.current) return;
+          const id = nav.selected || nav.routeId;
+          const p = id
+            ? flow.getNode(id)?.position || shown.positions.get(id)
+            : null;
+          const box = canvas.current?.getBoundingClientRect();
+          const view = flow.getViewport();
+          const sheet = inspector.current?.getBoundingClientRect();
+          if (!id || !p || !box) return;
+          const x = (p.x + 28) * view.zoom + view.x,
+            y = (p.y + 28) * view.zoom + view.y;
+          const availableHeight =
+            mobile &&
+            sheet &&
+            sheet.top > box.top + 40 &&
+            sheet.left < box.right - 20
+              ? sheet.top - box.top
+              : box.height;
+          if (
+            x < 40 ||
+            x > box.width - 40 ||
+            y < 40 ||
+            y > availableHeight - 65
+          )
+            focus(id);
+        });
       else {
         const box = canvas.current?.getBoundingClientRect();
         const ys = [...shown.positions.values()].map((p) => p.y);

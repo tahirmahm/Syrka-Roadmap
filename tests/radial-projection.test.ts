@@ -83,7 +83,9 @@ test("the actual fictional PPE profile anchors analysis at evidenced subjects de
     expanded: [foundations[0].id],
     goalIds: workspace.living!.goals,
   });
-  assert.ok(foundations.every((n) => projection.nodes.some((v) => v.id === n.id)));
+  assert.ok(
+    foundations.every((n) => projection.nodes.some((v) => v.id === n.id)),
+  );
   assert.ok(projection.nodes.length <= 16);
   assert.ok(projection.displayEdges.every((e) => g.edges.includes(e)));
   assert.ok(
@@ -120,7 +122,10 @@ test("a newer PPE preparation expansion reveals new canonical records at a full 
   assert.ok(previous.hiddenByNode[destination] > 0);
   const existing = new Set(previous.nodes.map((n) => n.id)),
     additions = opened.nodes.filter((n) => !existing.has(n.id));
-  assert.ok(additions.length > 0, "opening preparation must add records, not only reorder the same IDs");
+  assert.ok(
+    additions.length > 0,
+    "opening preparation must add records, not only reorder the same IDs",
+  );
   assert.ok(
     additions.some((n) =>
       g.edges.some(
@@ -133,7 +138,10 @@ test("a newer PPE preparation expansion reveals new canonical records at a full 
   assert.ok(opened.nodes.length <= 16);
   assert.ok(opened.nodes.some((n) => n.id === statistics));
   assert.ok(opened.nodes.some((n) => n.id === destination));
-  assert.equal(new Set(opened.nodes.map((n) => n.id)).size, opened.nodes.length);
+  assert.equal(
+    new Set(opened.nodes.map((n) => n.id)).size,
+    opened.nodes.length,
+  );
   assert.deepEqual(ids(collapsed.nodes), ids(previous.nodes));
   assert.ok(opened.hiddenCount > 0);
   assert.ok(opened.displayEdges.every((e) => g.edges.includes(e)));
@@ -470,4 +478,37 @@ test("selected deep canonical nodes remain inspectable and can disclose actual n
   assert.ok(p.nodes.some((n) => n.id === "chain:29"));
   assert.ok(p.nodes.length <= 12);
   assert.ok(p.displayEdges.every((e) => g.edges.includes(e)));
+});
+
+test("a dated self-reported milestone remains navigable without becoming an awarded qualification", () => {
+  const dated = node("goal:dated", "Research", "ResearchPathway");
+  dated.status = "reported";
+  dated.evidence = [
+    {
+      id: "progress:goal:dated",
+      text: "I completed my research preparation note",
+      quote: "",
+      status: "self-reported",
+      date: "2026-11-02T08:00:00Z",
+    },
+  ];
+  dated.dimensions = {
+    progress: "completed",
+    evidence: "none",
+    feasibility: "unknown",
+    reality: "actual",
+    history: true,
+    eligibility: "unknown",
+  };
+  const g = graph([dated, node("archive", "Research", "Project")]);
+  g.nodes[1].status = "historical";
+  const before = structuredClone(g);
+  const p = projectRadialBranch(g, { domainId: "research" });
+  assert.ok(p.nodes.some((n) => n.id === dated.id));
+  assert.ok(!p.nodes.some((n) => n.id === "archive"));
+  assert.equal(
+    p.nodes.find((n) => n.id === dated.id)!.dimensions?.eligibility,
+    "unknown",
+  );
+  assert.deepEqual(g, before);
 });
