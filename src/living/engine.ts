@@ -429,7 +429,11 @@ export function buildWorld(w: Workspace, data: Catalogue): WorldGraph {
     );
   }
   const goalIds = new Set(
-    [...state.goals, ...state.expanded]
+    [
+      ...state.goals,
+      ...(state.investigatedOccupations || []),
+      ...state.expanded,
+    ]
       .filter((id) => id.startsWith("occupation:"))
       .map((id) => id.slice(11)),
   );

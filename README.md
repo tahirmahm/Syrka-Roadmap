@@ -53,6 +53,20 @@ For the CONNECT 403 investigation and protected Vercel-side probe, see [Qwen dia
 Existing Vercel project: https://syrkaroadmap.vercel.app. See [deployment](docs/deployment.md), [architecture](docs/architecture.md), [audit](docs/v2-audit.md) and [validation](docs/validation.md). Canonical `www.syrka.co/roadmaps` routing requires a separately approved change in the domain-owning project.
 
 
+## Radial discipline wheel
+
+The normal Home / Journey entry now opens a light segmented discipline wheel on
+a black stage. One selected discipline discloses a bounded preparation tree;
+node details, source evidence and Today / This week reuse one contextual panel.
+The full evidence graph, reviewed profile and occupational catalogue remain
+underneath. Explicit expansion controls reveal further preparation without
+turning progress into verified credentials.
+
+See [radial presentation and validation](docs/radial-discipline-wheel.md) for
+navigation migration, disclosure limits, test results, media and deployment
+boundaries. The implementation is on `feature/radial-discipline-wheel`; no
+production merge or changes to other Syrka applications are included.
+
 ## Living Career Tree and actionable Odyssey progression
 
 The Living Tree remains the shared academic/professional map. The current

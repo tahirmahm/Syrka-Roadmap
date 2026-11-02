@@ -1,5 +1,29 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+
+async function openTools(page: Page) {
+  if (
+    !(await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .isVisible())
+  )
+    await page
+      .getByRole("button", { name: "Explore & tools", exact: true })
+      .click();
+}
+async function closeTools(page: Page) {
+  const close = page.getByRole("button", { name: "Close tools", exact: true });
+  if (await close.isVisible()) await close.click();
+}
+async function revealNodeDetails(page: Page, name: string | RegExp) {
+  const summary = page
+    .getByLabel("Living node inspector", { exact: true })
+    .locator("summary")
+    .filter({ hasText: name })
+    .first();
+  if ((await summary.locator("..").getAttribute("open")) === null)
+    await summary.click();
+}
 async function load(page: Page, label: string) {
   await page.goto("/tree");
   await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
@@ -11,36 +35,35 @@ async function load(page: Page, label: string) {
     await page
       .getByRole("button", { name: "Switch to light theme", exact: true })
       .click();
-  await page.locator(".tree-universe-search summary").click();
+  await openTools(page);
+  const destinations = page.locator(".tree-universe-search");
+  if ((await destinations.getAttribute("open")) === null)
+    await destinations.locator("summary").click();
   await page.getByRole("button", { name: label, exact: true }).click();
-  await expect(page.locator(".tree-player")).toContainText("fictional");
-  await page
-    .getByRole("button", { name: "Explore & tools", exact: true })
-    .click();
-  await expect(page.locator(".tree-player")).toContainText("fictional");
-  await expect(page.locator(".tree-footnote")).toContainText(
-    "Fictional personal records",
-  );
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!).person
+            .fictional,
+      ),
+    )
+    .toBe(true);
+  await closeTools(page);
+  await expect(
+    page.getByLabel("Discipline wheel", { exact: true }),
+  ).toBeVisible();
   await expect(page.locator(".tree-notice")).toHaveCount(0);
 }
 async function inspect(page: Page, label: string) {
   if (!(await page.getByLabel("Search the living tree").isVisible()))
-    await page
-      .getByRole("button", { name: "Explore & tools", exact: true })
-      .click();
+    await openTools(page);
   await page.getByLabel("Search the living tree").fill(label);
   await page
     .getByRole("button", { name: "Open search result " + label, exact: true })
     .click();
   await expect(page.getByLabel("Living node inspector")).toContainText(label);
-  if (
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .isVisible()
-  )
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .click();
+  await closeTools(page);
 }
 async function close(page: Page) {
   await page
@@ -53,43 +76,44 @@ for (const width of [390, 1440]) {
   }, info) => {
     await page.setViewportSize({ width, height: 1000 });
     await load(page, "PPE → Consulting → MBA");
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .click();
+    await expect(page.locator(".radial-scene")).toHaveClass(/radial-overview/);
     await expect(
-      page.getByLabel("Progression universe", { exact: true }),
+      page.getByLabel("Discipline wheel", { exact: true }),
     ).toBeVisible();
+    await expect(page.locator(".tree-canvas")).toHaveCount(0);
     await expect(page.getByLabel("Living tree reading mode")).toHaveCount(0);
     await page.screenshot({
-      path: info.outputPath("constellation-before.png"),
+      path: info.outputPath("discipline-wheel-before.png"),
       fullPage: true,
     });
-    const scene = await page
-      .getByLabel("Progression universe", { exact: true })
-      .boundingBox();
-    expect(scene!.width).toBeGreaterThan(width * 0.85);
-    expect(scene!.height).toBeGreaterThan(1000 * 0.85);
-    const beforeNodes = Number(
-      await page.locator(".tree-canvas").getAttribute("data-disclosed-count"),
-    );
     await inspect(page, "McKinsey · Business Analyst");
-    await expect(page.locator(".orbit-node.is-selected")).toBeAttached();
+    await expect(
+      page.locator(".radial-branch-node.is-selected"),
+    ).toBeAttached();
+    await page.getByRole("button", { name: /^Show preparation/ }).click();
+    await expect(
+      page.getByRole("button", { name: /^Collapse branch/ }),
+    ).toBeVisible();
     await expect
-      .poll(async () =>
-        Number(
-          await page
-            .locator(".tree-canvas")
-            .getAttribute("data-disclosed-count"),
+      .poll(() =>
+        page.evaluate(
+          () =>
+            JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!).living
+              .navigation.expanded,
         ),
       )
-      .toBeGreaterThan(beforeNodes);
+      .toContain("goal:mckinsey");
+    await expect(
+      page.getByRole("region", { name: /preparation tree$/ }),
+    ).toBeVisible();
     await page.screenshot({
-      path: info.outputPath("constellation-expanded.png"),
+      path: info.outputPath("discipline-branch-expanded.png"),
       fullPage: true,
     });
     await expect(page.getByLabel("Living node inspector")).toContainText(
       "NOT been verified",
     );
+    await revealNodeDetails(page, /^Related paths and shared preparation/);
     await page
       .getByRole("button", {
         name: /SUPPORTS APPLICATION TO.*Harvard Business School/s,
@@ -98,6 +122,7 @@ for (const width of [390, 1440]) {
     await expect(page.getByLabel("Living node inspector")).toContainText(
       "Harvard Business School · MBA",
     );
+    await revealNodeDetails(page, /^Related paths and shared preparation/);
     await expect(page.getByLabel("Living node inspector")).toContainText(
       "neither required nor sufficient",
     );
@@ -106,6 +131,7 @@ for (const width of [390, 1440]) {
         name: /RECOMMENDED PREPARATION.*Verify graduate admissions/s,
       }),
     ).toBeVisible();
+    await revealNodeDetails(page, "Application preparation draft");
     await page
       .getByLabel("Application preparation notes")
       .fill("Fictional admissions questions and evidence plan");
@@ -139,12 +165,8 @@ for (const width of [390, 1440]) {
       .withTags(["wcag2a", "wcag2aa"])
       .analyze();
     expect(axe.violations).toEqual([]);
-    await page
-      .getByRole("button", { name: "Explore & tools", exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Compare routes", exact: true })
-      .click();
+    await openTools(page);
+    await page.getByRole("button", { name: "Compare", exact: true }).click();
     await expect(page.getByLabel("Route comparison")).toContainText(
       "Shared preparation",
     );
@@ -167,12 +189,14 @@ for (const width of [390, 1440]) {
     const before = await page.evaluate(
       () => JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!).person,
     );
+    await revealNodeDetails(page, "Goals, comparison and simulation");
     await page
       .getByRole("button", { name: "What if I complete this?", exact: true })
       .click();
     await expect(page.locator(".simulation-banner")).toContainText(
       "hypothetical",
     );
+    await revealNodeDetails(page, "Completion criteria and progress notes");
     await expect(
       page.getByRole("button", { name: "Record completion", exact: true }),
     ).toBeDisabled();
@@ -189,14 +213,7 @@ for (const width of [390, 1440]) {
     await page
       .getByRole("button", { name: "Exit simulation", exact: true })
       .click();
-    if (
-      !(await page
-        .getByRole("button", { name: "Semester lab", exact: true })
-        .isVisible())
-    )
-      await page
-        .getByRole("button", { name: "Explore & tools", exact: true })
-        .click();
+    await openTools(page);
     await page
       .getByRole("button", { name: "Semester lab", exact: true })
       .click();
@@ -214,14 +231,8 @@ for (const width of [390, 1440]) {
       .first()
       .click();
     await page.reload();
-    if (
-      !(await page
-        .getByRole("button", { name: "Semester lab", exact: true })
-        .isVisible())
-    )
-      await page
-        .getByRole("button", { name: "Explore & tools", exact: true })
-        .click();
+    await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+    await openTools(page);
     await page
       .getByRole("button", { name: "Semester lab", exact: true })
       .click();
@@ -240,9 +251,11 @@ for (const width of [390, 1440]) {
       () => JSON.parse(localStorage.getItem("syrka-roadmaps:v2")!).person,
     );
     await inspect(page, "Doctoral research transition");
+    await revealNodeDetails(page, "Source, scope and uncertainty");
     await expect(page.getByLabel("Living node inspector")).toContainText(
       "do not assume a second undergraduate",
     );
+    await revealNodeDetails(page, "Completion criteria and progress notes");
     await page
       .getByLabel("Quest evidence note")
       .fill("Fictional research proposal note");
@@ -251,33 +264,29 @@ for (const width of [390, 1440]) {
       .click();
     await expect(page.locator(".tree-toast")).toContainText("self-reported");
     await close(page);
-    await page
-      .getByRole("button", { name: "Explore & tools", exact: true })
-      .click();
-    await page.getByRole("tab", { name: "History", exact: true }).click();
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .click();
+    await openTools(page);
+    await page.getByRole("button", { name: "History", exact: true }).click();
     await expect(
-      page.getByLabel("Progression universe", { exact: true }),
-    ).toBeVisible();
-    await page
-      .getByRole("button", { name: "Explore & tools", exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Show reading tree", exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .click();
-    await expect(page.locator(".tree-stage")).toContainText("tax advisor");
+      page.getByLabel("Evidence inventory", { exact: true }),
+    ).toContainText("tax advisor");
     await page.screenshot({
       path: info.outputPath("history.png"),
       fullPage: true,
     });
+    await close(page);
+    await openTools(page);
     await page
-      .getByRole("button", { name: "Explore & tools", exact: true })
+      .getByRole("button", { name: "Show reading tree", exact: true })
       .click();
+    await closeTools(page);
+    await expect(page.getByLabel("Living tree reading mode")).toContainText(
+      "Doctoral research transition",
+    );
+    await page.screenshot({
+      path: info.outputPath("research-outline.png"),
+      fullPage: true,
+    });
+    await openTools(page);
     await page
       .getByRole("button", { name: "Syrka Guide", exact: true })
       .click();
@@ -321,6 +330,7 @@ for (const width of [390, 1440]) {
       ),
     ).toBe(false);
     await inspect(page, "Investigate a question you care about");
+    await revealNodeDetails(page, "Completion criteria and progress notes");
     await expect(page.getByLabel("Living node inspector")).toContainText(
       "Credit sources",
     );
@@ -333,9 +343,12 @@ for (const width of [390, 1440]) {
       ),
     ).toEqual(goals);
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page
-      .getByRole("button", { name: "Open next action", exact: true })
-      .focus();
+    await page.getByRole("button", { name: /^Today ·/ }).click();
+    const dock = page.getByRole("complementary", {
+      name: "Today and this week quest dock",
+      exact: true,
+    });
+    await dock.locator(".journey-next-action .primary").focus();
     await page.keyboard.press("Enter");
     await expect(
       page.getByRole("region", { name: "Action work surface", exact: true }),

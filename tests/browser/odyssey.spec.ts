@@ -18,6 +18,9 @@ async function load(page: Page, label = "PPE → Consulting → MBA") {
   await page.clock.setFixedTime(new Date(CLOCK));
   await page.goto("/tree");
   await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
   await page.locator(".tree-universe-search summary").click();
   await page.getByRole("button", { name: label, exact: true }).click();
   await expect(page.locator(".tree-player")).toContainText("fictional");
@@ -30,7 +33,26 @@ async function load(page: Page, label = "PPE → Consulting → MBA") {
     await page
       .getByRole("button", { name: "Dismiss message", exact: true })
       .click();
+  await expect(
+    page.getByRole("region", { name: "Discipline wheel", exact: true }),
+  ).toBeVisible();
+  await today(page);
+}
+async function today(page: Page) {
+  if (!(await dock(page).isVisible()))
+    await page.getByRole("button", { name: /^Today ·/ }).click();
   await expect(dock(page)).toBeVisible();
+}
+async function commands(page: Page) {
+  const summary = page.getByText("Goals, comparison and simulation", {
+    exact: true,
+  });
+  if (
+    !(await summary.evaluate(
+      (e) => (e.parentElement as HTMLDetailsElement).open,
+    ))
+  )
+    await summary.click();
 }
 async function close(page: Page) {
   await page
@@ -69,12 +91,7 @@ async function inspect(page: Page, label: string) {
   await expect(page.locator(".tree-inspector")).toContainText(label);
 }
 async function inbox(page: Page) {
-  if (
-    await page
-      .getByRole("button", { name: "Close tree inspector", exact: true })
-      .isVisible()
-  )
-    await close(page);
+  await today(page);
   await dock(page)
     .getByRole("button", { name: "Open integration inbox", exact: true })
     .click();
@@ -105,7 +122,7 @@ async function review(page: Page, payload: unknown, pretty = false) {
 }
 
 for (const width of [390, 1440])
-  test(`Odyssey A: next action visible, one activation opens real work, draft and self-report persist (${width}px fictional)`, async ({
+  test(`Odyssey A: Today opens on request, one activation opens real work, draft and self-report persist (${width}px fictional)`, async ({
     page,
   }, info) => {
     await page.setViewportSize({ width, height: 1000 });
@@ -124,7 +141,7 @@ for (const width of [390, 1440])
       fullPage: true,
     });
     const original = (await state(page)).person;
-    // One activation from the initially visible dock opens its actual local work surface.
+    // The wheel's compact Today control opens this dock; one further activation opens actual work.
     await dock(page)
       .getByRole("button", { name: "Continue essay", exact: true })
       .click();
@@ -263,10 +280,8 @@ for (const width of [390, 1440])
         (record) => record.name === "User-authored work note.txt",
       ),
     ).toBe(true);
-    await expect(
-      page.getByLabel("Progression universe", { exact: true }),
-    ).toBeVisible();
-    await expect(dock(page)).toBeVisible();
+    await expect(page.locator(".radial-branch")).toBeVisible();
+    await today(page);
     await page.screenshot({
       path: info.outputPath("reviewed-work-return-to-route.png"),
       fullPage: true,
@@ -318,6 +333,7 @@ test("Odyssey A source update: reviewed extension reranks work, duplicate does n
     updated.actions.find((a) => a.source.recordId === "ppe-essay")?.deadline,
   ).toMatchObject({ kind: "instant", at: deadline });
   await close(page);
+  await today(page);
   await expect(
     dock(page).locator(".journey-alternative-title").first(),
   ).toHaveText("Prepare for the internship interview");
@@ -348,14 +364,22 @@ test("Odyssey B: pin, shared collapse, recursive child and Back preserve route c
   await load(page);
   const person = (await state(page)).person;
   await inspect(page, "McKinsey · Business Analyst");
+  await commands(page);
   await page.getByRole("button", { name: "Pin route", exact: true }).click();
   const pinned = (await state(page)).living!.navigation!;
   expect(pinned.pinned).toContain("goal:mckinsey");
   await inspect(page, "Statistics");
   const child = (await state(page)).living!.navigation!;
-  expect(child.selected).toMatch(/^cap:|^subject:/);
-  expect(child.routeId).toBe("goal:mckinsey");
-  expect(child.camera.zoom).toBeCloseTo(pinned.camera.zoom, 2);
+  const statistic = person.assertions.find(
+    (assertion) => assertion.label.toLowerCase() === "statistics",
+  );
+  expect(statistic).toBeDefined();
+  expect(child.selected).toBe("cap:" + statistic!.skillId);
+  expect(pinned.domainId).toBe("professional");
+  expect(child.domainId).toBe("analysis");
+  expect(child.routeId).toBeNull();
+  expect(child.pinned).toContain("goal:mckinsey");
+  expect(child.camera.zoom).toBe(1);
   await page.goBack();
   await expect(page.locator(".tree-inspector")).toContainText(
     "McKinsey · Business Analyst",
@@ -375,12 +399,24 @@ test("Odyssey B: pin, shared collapse, recursive child and Back preserve route c
     2,
   );
   await inspect(page, "Geopolitical risk analysis");
+  if (
+    await page
+      .locator(".tree-inspector")
+      .getByRole("button", { name: /^Show preparation/ })
+      .count()
+  )
+    await page
+      .locator(".tree-inspector")
+      .getByRole("button", { name: /^Show preparation/ })
+      .click();
   await page
-    .getByRole("button", { name: "Collapse branch", exact: true })
+    .locator(".tree-inspector")
+    .getByRole("button", { name: /^Collapse branch/ })
     .click();
   const collapsed = (await state(page)).living!.navigation!;
   expect(collapsed.expanded).not.toContain("goal:risk");
   expect(collapsed.pinned).toContain("goal:mckinsey");
+  await inspect(page, "Statistics");
   await close(page);
   await page
     .getByRole("button", { name: "Explore & tools", exact: true })
@@ -405,6 +441,7 @@ test("Odyssey C: preview and OSINT simulation leave actual evidence and adopted 
   await load(page);
   const before = await state(page);
   await inspect(page, "Geopolitical risk analysis");
+  await commands(page);
   await page
     .getByRole("button", { name: "Try this route", exact: true })
     .click();
@@ -412,6 +449,7 @@ test("Odyssey C: preview and OSINT simulation leave actual evidence and adopted 
     "goals and actual evidence unchanged",
   );
   await inspect(page, "OSINT research");
+  await commands(page);
   await page
     .getByRole("button", { name: "What if I complete this?", exact: true })
     .click();
@@ -726,22 +764,10 @@ test("Odyssey performance fixture: 1000 nodes and 2500 edges stay bounded, with 
   try {
     await page.reload();
     await expect(page.locator(".tree-notice")).toHaveCount(0);
-    await expect(page.locator(".tree-canvas")).toHaveAttribute(
-      "data-disclosed-count",
-      "150",
-    );
-    await expect(page.locator(".journey-hidden-notice")).toContainText(
-      "850 more nodes",
-    );
-    expect(
-      await page.locator(".react-flow__node-living").count(),
-    ).toBeLessThanOrEqual(150);
-    await page
-      .getByRole("button", { name: "Explore & tools", exact: true })
-      .click();
-    await page
-      .getByLabel("Search the living tree", { exact: true })
-      .fill("Synthetic consulting destination");
+    await expect(
+      page.getByRole("region", { name: "Discipline wheel", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".react-flow__node-living")).toHaveCount(0);
     await page.evaluate(() => {
       const values: {
         input: number;
@@ -779,16 +805,43 @@ test("Odyssey performance fixture: 1000 nodes and 2500 edges stay bounded, with 
           ),
         ).observe({ entryTypes: ["longtask"] });
     });
-    await page
-      .getByRole("button", {
-        name: "Open search result Synthetic consulting destination",
-        exact: true,
-      })
-      .click();
+    const sector = page
+      .getByRole("region", { name: "Discipline wheel", exact: true })
+      .getByRole("button", { name: /^Open Research/ });
+    const sectorBox = await sector.boundingBox(),
+      captionBox = await sector.locator(".wheel-sector-caption").boundingBox();
+    await sector.click({
+      position: {
+        x: captionBox!.x + captionBox!.width / 2 - sectorBox!.x,
+        y: captionBox!.y + captionBox!.height / 2 - sectorBox!.y,
+      },
+    });
     await expect(page.locator("[data-semantic-scale]")).toHaveAttribute(
       "data-semantic-scale",
       "route",
     );
+    const disclosed = Number(
+        await page
+          .locator(".radial-branch")
+          .getAttribute("data-visible-node-count"),
+      ),
+      hidden = Number(
+        await page
+          .locator(".radial-branch")
+          .getAttribute("data-hidden-node-count"),
+      ),
+      total = Number(
+        await page
+          .locator(".radial-branch")
+          .getAttribute("data-domain-total-count"),
+      );
+    expect(disclosed).toBeGreaterThan(0);
+    expect(disclosed).toBeLessThanOrEqual(18);
+    expect(total).toBe(999);
+    expect(disclosed + hidden).toBe(total);
+    expect(
+      await page.locator(".react-flow__node-living").count(),
+    ).toBeLessThanOrEqual(18);
     const metrics = await page.evaluate(
       () =>
         (
@@ -799,6 +852,10 @@ test("Odyssey performance fixture: 1000 nodes and 2500 edges stay bounded, with 
     );
     expect(metrics.feedback).not.toBeNull();
     expect(metrics.feedback!).toBeLessThan(1000);
+    await inspect(page, "Synthetic consulting destination");
+    await expect(page.locator(".tree-inspector")).toContainText(
+      "Synthetic consulting destination",
+    );
     await close(page);
     if (
       await page
@@ -830,7 +887,9 @@ test("Odyssey performance fixture: 1000 nodes and 2500 edges stay bounded, with 
     const measurement = {
       fixtureNodes: 1000,
       fixtureEdges: 2500,
-      detailedVisible: 150,
+      detailedVisible: disclosed,
+      hiddenInDiscipline: hidden,
+      sourceRecordsOutsideDiscipline: fixture.nodes.length - total,
       mutationAcknowledgementMs: finalMetrics.feedback,
       longTaskDurationsMs: finalMetrics.longTasks,
       driverPanSequenceMs: panSequenceMs,
@@ -1014,7 +1073,7 @@ test("Odyssey blocked priority: a feasible declared dependency replaces a disabl
   );
   await page.reload();
   await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
-  await expect(dock(page)).toBeVisible();
+  await today(page);
   await expect(dock(page).locator(".journey-next-action")).toContainText(
     "Read feedback before revising the essay",
   );

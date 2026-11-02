@@ -140,9 +140,18 @@ for (const width of [390, 1440]) {
       await expect(
         page.getByRole("button", { name: "Resume my roadmap" }),
       ).toBeVisible();
-      await expect(
-        page.locator(".living-node,.tree-reading-node").first(),
-      ).toBeVisible();
+      await page
+        .getByRole("button", { name: "Close tools", exact: true })
+        .click();
+      const wheel = page.getByLabel("Discipline wheel", { exact: true });
+      await expect(wheel).toBeVisible();
+      await wheel
+        .getByRole("button", { name: /^Open / })
+        .first()
+        .click();
+      await expect(page.locator(".radial-branch-node").first()).toBeVisible();
+      await page.getByRole("button", { name: "Wheel", exact: true }).click();
+      await expect(wheel).toBeVisible();
       await page.screenshot({
         path: info.outputPath("overview.png"),
         fullPage: true,

@@ -2,6 +2,19 @@ import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { zipSync, strToU8 } from "fflate";
+async function openDestinations(page: Page) {
+  if (
+    !(await page
+      .getByRole("button", { name: "Close tools", exact: true })
+      .isVisible())
+  )
+    await page
+      .getByRole("button", { name: "Explore & tools", exact: true })
+      .click();
+  const destinations = page.locator(".tree-universe-search");
+  if ((await destinations.getAttribute("open")) === null)
+    await destinations.locator("summary").click();
+}
 async function nav(page: Page, label: string) {
   if (
     (page.viewportSize()?.width || 1440) < 768 ||
@@ -18,18 +31,7 @@ async function nav(page: Page, label: string) {
 async function choose(page: Page, query: string) {
   await page.goto("/");
   await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
-  await page
-    .getByRole("button", { name: "Explore & tools", exact: true })
-    .click();
-  if (
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .isVisible()
-  )
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .click();
-  await page.locator(".tree-universe-search summary").click();
+  await openDestinations(page);
   await page.getByLabel("Search career destinations").fill(query);
   await page
     .getByRole("button", { name: "Explore destinations", exact: true })
@@ -314,18 +316,7 @@ test("fictional coursework links to source competency with provenance", async ({
 }) => {
   await page.goto("/");
   await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
-  await page
-    .getByRole("button", { name: "Explore & tools", exact: true })
-    .click();
-  if (
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .isVisible()
-  )
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .click();
-  await page.locator(".tree-universe-search summary").click();
+  await openDestinations(page);
   await page
     .getByRole("button", { name: "Load fictional demonstration", exact: true })
     .click();
@@ -827,18 +818,7 @@ test("labelled simulated AI outage preserves profile and progress and supplies d
 }) => {
   await page.goto("/");
   await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
-  await page
-    .getByRole("button", { name: "Explore & tools", exact: true })
-    .click();
-  if (
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .isVisible()
-  )
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .click();
-  await page.locator(".tree-universe-search summary").click();
+  await openDestinations(page);
   await page
     .getByRole("button", { name: "Load fictional demonstration", exact: true })
     .click();
@@ -929,18 +909,7 @@ test("career guidance uses deterministic evidence when AI is unavailable (fixtur
 }) => {
   await page.goto("/");
   await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
-  await page
-    .getByRole("button", { name: "Explore & tools", exact: true })
-    .click();
-  if (
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .isVisible()
-  )
-    await page
-      .getByRole("button", { name: "Close tools", exact: true })
-      .click();
-  await page.locator(".tree-universe-search summary").click();
+  await openDestinations(page);
   await page
     .getByRole("button", { name: "Load fictional demonstration", exact: true })
     .click();

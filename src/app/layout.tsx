@@ -6,6 +6,7 @@ import "@/living/styles.css";
 import "@/living/constellation.css";
 import "@/journey/journey.css";
 import "@/living/journey-scene.css";
+import "@/living/radial-scene.css";
 export const metadata: Metadata = {
   title: "Syrka Roadmaps · The Living Career Tree",
   description:

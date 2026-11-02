@@ -60,6 +60,7 @@ export const livingStateSchema = z.object({
   theme: z.enum(["light", "dark"]).optional(),
   mode: z.enum(["explore", "history", "goal"]).default("explore"),
   goals: ids.default([]),
+  investigatedOccupations: ids.optional(),
   expanded: ids.default([]),
   selected: z.string().max(250).nullable().optional(),
   view: z

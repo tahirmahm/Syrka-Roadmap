@@ -792,6 +792,7 @@ export function OdysseyApp({ initialView = "home" }: { initialView?: string }) {
               onDemo={(scenario) => void loadLivingDemo(scenario)}
               onLegacyDemo={() => void loadDemo()}
               onProfile={() => navigate("profile")}
+              onNavigation={() => setDrawer(true)}
               onOccupation={(id) => void selectOccupation(id)}
               onResume={() => navigate("roadmap")}
             />

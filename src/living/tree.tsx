@@ -1,11 +1,9 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
-  Background,
   Controls,
-  MiniMap,
   Handle,
   Position,
   useReactFlow,
@@ -45,6 +43,7 @@ import {
   Link as LinkIcon,
   FileBadge,
   Orbit,
+  MoreHorizontal,
 } from "lucide-react";
 import { useMobile, trapFocus } from "../odyssey/hooks";
 import { downloadJSON, jsonRequest } from "../odyssey/client";
@@ -59,16 +58,19 @@ import {
   type CourseRecord,
 } from "./schema";
 import { reversePlan, simulate, planSemester } from "./engine";
-import { nodeSize, regionOf, regions, focusNetwork } from "./spatial";
+import { focusNetwork } from "./spatial";
 import {
   emptyNavigation,
+  migrateRadialNavigation,
   navigationReducer,
-  visibleNavigation,
   type NavigationEvent,
   type NavigationState,
 } from "./navigation";
 import { resizedCamera, type SceneCamera } from "./camera";
-import { routeLayout } from "./route-layout";
+import { radialDomains, projectRadialBranch } from "./radial-projection";
+import { DisciplineWheel, appearancePalette } from "./discipline-wheel";
+import { ThemeToggle } from "./theme";
+import { hasEvidenceSupport } from "./node-state";
 import {
   emptyJourney,
   journeyActionSchema,
@@ -128,78 +130,86 @@ type TreeNode = Node<
     hypothetical: boolean;
     faded: boolean;
     goal: boolean;
+    hidden: number;
+    relevance?: string;
     onSelect: (id: string) => void;
     onFocus: (id: string) => void;
+    onExpand: (id: string) => void;
   },
   "living"
 >;
 function LivingNode({ data }: NodeProps<TreeNode>) {
   const n = data.record,
     Icon = icons[n.kind],
-    size = nodeSize(n);
+    size = 56;
   return (
     <div
-      className={`living-node orbit-node tier-${size} region-${regionOf(n)} kind-${n.kind} state-${data.hypothetical ? "hypothetical" : n.status} ${data.selected ? "is-selected" : ""} ${data.faded ? "is-faded" : ""} ${data.goal ? "is-goal" : ""}`}
+      className={`living-node radial-branch-node kind-${n.kind} state-${data.hypothetical ? "hypothetical" : n.status} ${data.selected ? "is-selected" : ""} ${data.goal ? "is-goal" : ""} ${data.relevance ? "has-relevance" : ""}`}
+      data-canonical-id={n.id}
+      data-hidden-preparation-count={data.hidden}
+      data-relevance-reason={data.relevance || undefined}
+      data-relevant={data.relevance ? "true" : undefined}
       style={
         {
           width: size,
           height: size,
-          "--region": regions[regionOf(n)].color,
         } as React.CSSProperties
       }
     >
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={Position.Left} />
       <button
         aria-label={`Inspect ${n.label}`}
-        aria-expanded={data.expanded}
+        aria-haspopup="dialog"
         onClick={() => data.onSelect(n.id)}
-        onDoubleClick={() => data.onFocus(n.id)}
         title={`${n.label} · ${statusLabel[n.status]}`}
       >
-        <span className="orbit-ring" aria-hidden="true" />
-        <Icon size={size > 90 ? 32 : size > 60 ? 25 : 21} strokeWidth={1.4} />
-        <span className="orbit-state" aria-hidden="true">
-          {data.hypothetical ? (
-            <FlaskConical size={12} />
-          ) : n.status === "verified" ? (
-            <Check size={12} />
-          ) : n.status === "working" ? (
-            <Play size={12} />
-          ) : data.goal ? (
-            <Target size={12} />
-          ) : data.expanded ? (
-            <span>−</span>
-          ) : (
-            <Plus size={11} />
-          )}
-        </span>
-        <strong className="orbit-label">{n.label}</strong>
+        <span className="radial-selection-ring" aria-hidden="true" />
+        <Icon size={23} strokeWidth={1.5} />
+        {(data.hypothetical ||
+          n.status === "verified" ||
+          n.status === "working" ||
+          data.goal) && (
+          <span className="orbit-state" aria-hidden="true">
+            {data.hypothetical ? (
+              <FlaskConical size={12} />
+            ) : n.status === "verified" ? (
+              <Check size={12} />
+            ) : n.status === "working" ? (
+              <Play size={12} />
+            ) : data.goal ? (
+              <Target size={12} />
+            ) : null}
+          </span>
+        )}
+        <strong className="radial-node-label">{n.label}</strong>
         <span className="sr-only">
           {data.goal ? "Future goal · " : ""}
           {statusLabel[n.status]} · {categoryLabel(n.kind)}
         </span>
       </button>
-      <Handle type="source" position={Position.Bottom} />
+      {(data.hidden > 0 || data.expanded) && (
+        <button
+          className="radial-expand-node"
+          aria-label={`${data.expanded ? "Collapse" : "Show"} preparation for ${n.label}`}
+          aria-expanded={data.expanded}
+          onClick={() => data.onExpand(n.id)}
+        >
+          {data.expanded ? "−" : "+"}
+          <span className="sr-only">{data.hidden} undisclosed connections</span>
+        </button>
+      )}
+      <Handle type="source" position={Position.Right} />
     </div>
   );
 }
 function ConstellationEdge(props: EdgeProps) {
-  const data = props.data as
-    { sourceSize: number; targetSize: number } | undefined;
-  const ss = data?.sourceSize || 70,
-    ts = data?.targetSize || 70;
-  const a = { x: props.sourceX, y: props.sourceY - ss / 2 },
-    b = { x: props.targetX, y: props.targetY + ts / 2 };
-  const dx = b.x - a.x,
-    dy = b.y - a.y,
-    length = Math.max(1, Math.hypot(dx, dy)),
-    ux = dx / length,
-    uy = dy / length;
-  const start = { x: a.x + (ux * ss) / 2, y: a.y + (uy * ss) / 2 },
-    end = { x: b.x - (ux * ts) / 2, y: b.y - (uy * ts) / 2 };
-  const bend = Math.min(65, length * 0.13);
-  const path = `M ${start.x} ${start.y} Q ${(start.x + end.x) / 2 - uy * bend} ${(start.y + end.y) / 2 + ux * bend} ${end.x} ${end.y}`;
-  return <BaseEdge path={path} style={props.style} />;
+  const bend = Math.max(42, Math.abs(props.targetX - props.sourceX) * 0.45);
+  const path = `M ${props.sourceX} ${props.sourceY} C ${props.sourceX + bend} ${props.sourceY}, ${props.targetX - bend} ${props.targetY}, ${props.targetX} ${props.targetY}`;
+  return (
+    <g data-edge-from={props.source} data-edge-to={props.target}>
+      <BaseEdge path={path} style={props.style} />
+    </g>
+  );
 }
 const nodeTypes = { living: LivingNode };
 const edgeTypes = { constellation: ConstellationEdge };
@@ -211,6 +221,7 @@ export function LivingTree(props: {
   onDemo: (scenario: DemoScenario) => void;
   onLegacyDemo: () => void;
   onProfile: () => void;
+  onNavigation: () => void;
   onOccupation: (id: string) => void;
   onResume: () => void;
   onReviewEvidence: (text: string) => void;
@@ -231,6 +242,7 @@ function TreeWorkspace({
   onDemo,
   onLegacyDemo,
   onProfile,
+  onNavigation,
   onOccupation,
   onResume,
   onReviewEvidence,
@@ -244,72 +256,26 @@ function TreeWorkspace({
     [workspace.living],
   );
   const nav = useMemo(
-    () => state.navigation || emptyNavigation(state),
+    () => migrateRadialNavigation(state.navigation || emptyNavigation(state)),
     [state],
   );
+  const navigationRef = useRef(nav);
+  useEffect(() => {
+    navigationRef.current = nav;
+  }, [nav]);
   const onState = (patch: Partial<LivingState>) => persistState(patch);
-  const dispatch = (event: NavigationEvent, browser = true) => {
-    const box = canvas.current?.getBoundingClientRect();
-    const anchorId =
-      event.type === "OPEN_NODE" && event.goal
-        ? event.id
-        : event.type === "PREVIEW_ROUTE"
-          ? event.id
-          : null;
-    const point = anchorId ? positions.current.get(anchorId) : null;
-    const base = {
-      ...nav,
-      ...(anchorId && point
-        ? {
-            anchors: Object.fromEntries(
-              [
-                ...Object.entries(nav.anchors || {}).filter(
-                  ([id]) => id !== anchorId,
-                ),
-                [anchorId, point],
-              ].slice(-100),
-            ),
-          }
-        : {}),
-      camera: {
-        ...flow.getViewport(),
-        ...(box ? { width: box.width, height: box.height } : {}),
-      },
-    };
-    const next = navigationReducer(base, event);
-    persistState({
-      navigation: next,
-      selected: next.selected,
-      expanded: next.expanded,
-      view: next.camera,
-    });
-    if (
-      browser &&
-      !["SET_CAMERA", "CLOSE", "SET_QUIET", "SET_FOCUS"].includes(event.type)
-    ) {
-      window.history.pushState(
-        {
-          ...window.history.state,
-          odyssey: { owner: workspaceScope, navigation: next },
-        },
-        "",
-        window.location.href,
-      );
-    }
-    return next;
-  };
   const [graph, setGraph] = useState<WorldGraph | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [query, setQuery] = useState(""),
     [careerQuery, setCareerQuery] = useState(""),
+    [pendingOccupation, setPendingOccupation] = useState<string | null>(null),
     [searchResults, setSearchResults] = useState<Occupation[]>([]),
     [domain, setDomain] = useState(""),
     [institution, setInstitution] = useState(""),
     [status, setStatus] = useState(""),
     [reading, setReading] = useState(false),
     [toolsOpen, setToolsOpen] = useState(false),
-    [fullscreen, setFullscreen] = useState(false),
     [zoom, setZoom] = useState(0.85),
     [panel, setPanel] = useState<
       | "node"
@@ -320,6 +286,7 @@ function TreeWorkspace({
       | "action"
       | "inbox"
       | "edge"
+      | "today"
       | null
     >(
       nav.inspectorOpen
@@ -350,11 +317,10 @@ function TreeWorkspace({
     origin = useRef<HTMLElement | null>(null),
     motionEpoch = useRef(0),
     canvas = useRef<HTMLDivElement>(null),
-    overviewPositions = useRef(new Map<string, { x: number; y: number }>()),
-    routePositions = useRef(
-      new Map<string, Map<string, { x: number; y: number }>>(),
-    ),
-    positions = useRef(new Map<string, { x: number; y: number }>());
+    cameraReady = useRef(false),
+    initialCamera = useRef<SceneCamera | undefined>(
+      nav.domainId ? nav.camera : undefined,
+    );
   const profileKey = JSON.stringify({
     person: workspace.person,
     living: {
@@ -379,7 +345,12 @@ function TreeWorkspace({
         : undefined,
       selected: undefined,
       expanded: undefined,
-      investigated: state.expanded.filter((id) => id.startsWith("occupation:")),
+      investigated: [
+        ...new Set([
+          ...(state.investigatedOccupations || []),
+          ...state.expanded.filter((id) => id.startsWith("occupation:")),
+        ]),
+      ],
       theme: undefined,
       mode: undefined,
     },
@@ -435,6 +406,94 @@ function TreeWorkspace({
     () => new Map(graph?.nodes.map((n) => [n.id, n]) || []),
     [graph],
   );
+  const domains = useMemo(() => (graph ? radialDomains(graph) : []), [graph]);
+  const activeDomain = domains.find((d) => d.id === nav.domainId) || null;
+  const wheelOpen = !activeDomain;
+  const shown = useMemo(() => {
+    const projection =
+      graph && nav.domainId
+        ? projectRadialBranch(graph, {
+            domainId: nav.domainId,
+            expanded: nav.expanded,
+            selectedId: nav.selected,
+            goalIds: state.goals,
+            budget: mobile ? 12 : 16,
+          })
+        : null;
+    return {
+      nodes: projection?.nodes || [],
+      edges: projection?.displayEdges || [],
+      positions:
+        projection?.positions || new Map<string, { x: number; y: number }>(),
+      hiddenCount: projection?.hiddenCount || 0,
+      hiddenRequired: projection?.hiddenRequirements.length || 0,
+      hiddenRequirements: projection?.hiddenRequirements || [],
+      hiddenByBranch:
+        projection?.hiddenByNode || ({} as Record<string, number>),
+      relevance: projection?.relevance || new Map<string, string>(),
+      roots: projection?.roots || [],
+    };
+  }, [graph, nav.domainId, nav.expanded, nav.selected, state.goals, mobile]);
+  const dispatch = (event: NavigationEvent, browser = true) => {
+    const box = canvas.current?.getBoundingClientRect();
+    const anchorId =
+      event.type === "OPEN_NODE" && event.goal
+        ? event.id
+        : event.type === "PREVIEW_ROUTE"
+          ? event.id
+          : null;
+    const point = anchorId ? shown.positions.get(anchorId) : null;
+    const base = {
+      ...navigationRef.current,
+      ...(anchorId && point
+        ? {
+            anchors: Object.fromEntries(
+              [
+                ...Object.entries(nav.anchors || {}).filter(
+                  ([id]) => id !== anchorId,
+                ),
+                [anchorId, point],
+              ].slice(-100),
+            ),
+          }
+        : {}),
+      camera: {
+        ...flow.getViewport(),
+        ...(box ? { width: box.width, height: box.height } : {}),
+      },
+    };
+    const next = navigationReducer(base, event);
+    navigationRef.current = next;
+    const investigations = [
+      ...new Set([
+        ...(state.investigatedOccupations || []),
+        ...state.expanded.filter((id) => id.startsWith("occupation:")),
+      ]),
+    ].slice(-500);
+    persistState({
+      navigation: next,
+      selected: next.selected,
+      expanded: next.expanded,
+      view: next.camera,
+      ...(investigations.length
+        ? { investigatedOccupations: investigations }
+        : {}),
+    });
+    if (
+      browser &&
+      !["SET_CAMERA", "CLOSE", "SET_QUIET", "SET_FOCUS"].includes(event.type)
+    ) {
+      window.history.pushState(
+        {
+          ...window.history.state,
+          odyssey: { owner: workspaceScope, navigation: next },
+        },
+        "",
+        window.location.href,
+      );
+    }
+    return next;
+  };
   const focusedIds = useMemo(
     () =>
       graph
@@ -446,37 +505,61 @@ function TreeWorkspace({
         : null,
     [graph, state.selected, state.mode, state.goals],
   );
-  const selected = graphById.get(state.selected || "") || null;
+  const selected = graphById.get(nav.selected || "") || null;
+  const SelectedIcon = selected ? icons[selected.kind] : Compass;
+  const [preparationDrafts, setPreparationDrafts] = useState<
+    Record<string, ApplicationDraft>
+  >({});
   useEffect(() => {
-    if (panel) inspector.current?.focus();
+    if (panel) inspector.current?.focus({ preventScroll: true });
   }, [panel, state.selected]);
   const reduced = () =>
     reducedMotion ||
     nav.quiet ||
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const focus = (id: string, preserve = true) => {
-    const p = positions.current.get(id);
+    const p = shown.positions.get(id);
     if (!p) return;
-    const size = graph?.nodes.find((n) => n.id === id);
     const viewport = flow.getViewport();
-    const inset = 0;
-    void flow.setCenter(
-      p.x + (size ? nodeSize(size) / 2 : 35) + inset / viewport.zoom,
-      p.y + 35 + (mobile && panel ? 180 : 0),
-      {
-        zoom: preserve ? viewport.zoom : mobile ? 0.65 : 0.85,
-        duration: reduced() ? 0 : 280,
-      },
-    );
+    const box = canvas.current?.getBoundingClientRect();
+    const sheet = inspector.current?.getBoundingClientRect();
+    const nextZoom = preserve ? Math.max(0.8, viewport.zoom) : 1;
+    const usableHeight =
+      mobile &&
+      box &&
+      sheet &&
+      sheet.top > box.top + 40 &&
+      sheet.left < box.right - 20
+        ? sheet.top - box.top
+        : box?.height;
+    const shift =
+      box && usableHeight ? (box.height - usableHeight) / 2 / nextZoom : 0;
+    void flow.setCenter(p.x + 28, p.y + 28 + shift, {
+      zoom: nextZoom,
+      duration: reduced() ? 0 : 280,
+      interpolate: "linear",
+    });
   };
   const choose = (id: string) => {
+    motionEpoch.current++;
+    void flow.setViewport(flow.getViewport(), { duration: 0 });
     setQuery("");
-    setRelatedLimit(24);
+    setToolsOpen(false);
+    const destinationDomain = domains.find((d) => d.nodeIds.includes(id))?.id;
+    if (destinationDomain && destinationDomain !== nav.domainId) {
+      cameraReady.current = false;
+      initialCamera.current = undefined;
+    }
+    setRelatedLimit(12);
     origin.current = document.activeElement as HTMLElement;
     const n = graph?.nodes.find((n) => n.id === id);
     dispatch({
       type: "OPEN_NODE",
       id,
+      domainId:
+        domains.find((d) => d.nodeIds.includes(id))?.id ||
+        nav.domainId ||
+        undefined,
       goal:
         !!n &&
         [
@@ -497,9 +580,12 @@ function TreeWorkspace({
     const epoch = motionEpoch.current;
     setTimeout(() => {
       if (epoch === motionEpoch.current) focus(id);
-    }, 60);
+    }, 160);
   };
   const restore = (next: NavigationState) => {
+    navigationRef.current = next;
+    initialCamera.current = next.camera;
+    cameraReady.current = false;
     if (next.scale === "action")
       setActionId(next.selected?.replace(/^action:/, "") || null);
     setPanel(
@@ -514,10 +600,12 @@ function TreeWorkspace({
     const box = canvas.current?.getBoundingClientRect();
     void flow.setViewport(
       box ? resizedCamera(next.camera, box.width, box.height) : next.camera,
-      { duration: reduced() ? 0 : 240 },
+      { duration: reduced() ? 0 : 240, interpolate: "linear" },
     );
   };
   const back = () => {
+    motionEpoch.current++;
+    void flow.setViewport(flow.getViewport(), { duration: 0 });
     if (
       window.history.state?.odyssey?.owner === workspaceScope &&
       nav.history.length
@@ -526,16 +614,22 @@ function TreeWorkspace({
     else restore(dispatch({ type: "BACK" }, false));
   };
   const close = () => {
+    motionEpoch.current++;
+    void flow.setViewport(flow.getViewport(), { duration: 0 });
     setPanel(null);
     dispatch({ type: "CLOSE" }, false);
-    if (origin.current?.isConnected) origin.current.focus();
+    if (origin.current?.isConnected)
+      origin.current.focus({ preventScroll: true });
     else
       document
-        .querySelector<HTMLButtonElement>('[aria-label="Return to character"]')
-        ?.focus();
+        .querySelector<HTMLButtonElement>('[aria-label="Wheel"]')
+        ?.focus({ preventScroll: true });
   };
   useEffect(() => {
-    if (window.history.state?.odyssey?.owner !== workspaceScope)
+    if (
+      window.history.state?.odyssey?.owner !== workspaceScope ||
+      window.history.state?.odyssey?.navigation?.radialVersion !== 1
+    )
       window.history.replaceState(
         {
           ...window.history.state,
@@ -551,73 +645,85 @@ function TreeWorkspace({
     const pop = (e: PopStateEvent) => {
       const entry = e.state?.odyssey;
       if (entry?.owner === workspaceScope) {
+        const next = migrateRadialNavigation(
+          entry.navigation,
+          graph ? radialDomains(graph).map((d) => d.id) : undefined,
+        );
+        navigationRef.current = next;
+        initialCamera.current = next.camera;
+        cameraReady.current = false;
         persistState({
-          navigation: entry.navigation,
-          selected: entry.navigation.selected,
-          expanded: entry.navigation.expanded,
-          view: entry.navigation.camera,
+          navigation: next,
+          selected: next.selected,
+          expanded: next.expanded,
+          view: next.camera,
         });
-        if (entry.navigation.scale === "action")
-          setActionId(
-            entry.navigation.selected?.replace(/^action:/, "") || null,
-          );
+        if (next.scale === "action")
+          setActionId(next.selected?.replace(/^action:/, "") || null);
         setPanel(
-          entry.navigation.inspectorOpen
-            ? entry.navigation.edgeId
+          next.inspectorOpen
+            ? next.edgeId
               ? "edge"
-              : entry.navigation.scale === "action"
+              : next.scale === "action"
                 ? "action"
                 : "node"
             : null,
         );
         const box = canvas.current?.getBoundingClientRect();
         void flow.setViewport(
-          box
-            ? resizedCamera(entry.navigation.camera, box.width, box.height)
-            : entry.navigation.camera,
+          box ? resizedCamera(next.camera, box.width, box.height) : next.camera,
           { duration: 0 },
         );
       }
     };
     window.addEventListener("popstate", pop);
     return () => window.removeEventListener("popstate", pop);
-  }, [workspaceScope, persistState, flow]);
-  const visibilitySignature = JSON.stringify([
-    nav.scale,
-    nav.selected,
-    nav.routeId,
-    nav.expanded,
-    nav.pinned,
-    nav.previewRouteId,
-    nav.focus,
-  ]);
-  const shown = useMemo(() => {
-    if (!graph)
-      return {
-        nodes: [],
-        edges: [],
-        hiddenCount: 0,
-        hiddenRequired: 0,
-        hiddenByBranch: {} as Record<string, number>,
-      };
-    const view = visibleNavigation(graph, nav, state.goals);
-    if (state.mode !== "history") return view;
-    const nodes = view.nodes.filter(
-      (n) =>
-        n.id === "person" ||
-        n.evidence.length ||
-        n.dimensions?.history ||
-        ["historical", "reported", "verified", "working"].includes(n.status),
+  }, [workspaceScope, persistState, flow, graph]);
+  const openHydratedOccupation = useEffectEvent((id: string) => choose(id));
+  useEffect(() => {
+    if (pendingOccupation && graphById.has(pendingOccupation)) {
+      const id = pendingOccupation;
+      queueMicrotask(() => {
+        openHydratedOccupation(id);
+        setPendingOccupation(null);
+      });
+    }
+  }, [pendingOccupation, graphById]);
+  useEffect(() => {
+    if (!graph || !state.navigation?.domainId) return;
+    const valid = migrateRadialNavigation(
+      state.navigation,
+      domains.map((d) => d.id),
     );
-    const ids = new Set(nodes.map((n) => n.id));
-    return {
-      ...view,
-      nodes,
-      edges: view.edges.filter((e) => ids.has(e.from) && ids.has(e.to)),
-    };
-    // Numeric camera movement and quiet preference do not change graph disclosure.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graph, visibilitySignature, state.goals, state.mode]);
+    if (valid.domainId !== state.navigation.domainId) {
+      persistState({
+        navigation: valid,
+        selected: valid.selected,
+        expanded: valid.expanded,
+        view: valid.camera,
+      });
+      queueMicrotask(() => setPanel(null));
+    }
+  }, [graph, domains, state.navigation, persistState]);
+  const openDiscipline = (id: string) => {
+    const d = domains.find((domain) => domain.id === id);
+    if (!d) return;
+    motionEpoch.current++;
+    setPanel(null);
+    setToolsOpen(false);
+    setReading(false);
+    setQuery("");
+    dispatch({ type: "OPEN_DISCIPLINE", id, rootId: d.rootIds[0] });
+    cameraReady.current = false;
+    initialCamera.current = undefined;
+  };
+  const showWheel = () => {
+    motionEpoch.current++;
+    dispatch({ type: "SHOW_WHEEL" });
+    setPanel(null);
+    setToolsOpen(false);
+    setReading(false);
+  };
   const baseJourney = useMemo(
     () =>
       state.journey?.ownerId === workspace.person.id
@@ -658,6 +764,8 @@ function TreeWorkspace({
     if (value.ownerId === workspace.person.id) onState({ journey: value });
   };
   const openAction = (id: string) => {
+    motionEpoch.current++;
+    void flow.setViewport(flow.getViewport(), { duration: 0 });
     if (simulation.length || nav.previewRouteId) {
       setToast(
         "Exit simulation or discard the route preview before editing actual work.",
@@ -677,7 +785,18 @@ function TreeWorkspace({
     setToolsOpen(false);
     setPanel("action");
     setSheetDetail(true);
-    dispatch({ type: "OPEN_NODE", id: "action:" + id, action: true });
+    dispatch({
+      type: "OPEN_NODE",
+      id: "action:" + id,
+      action: true,
+      domainId: domains.find(
+        (d) =>
+          d.nodeIds.includes("action:" + id) ||
+          journey.actions
+            .find((a) => a.id === id)
+            ?.nodeIds.some((n) => d.nodeIds.includes(n)),
+      )?.id,
+    });
   };
   const openNodeWork = (n: WorldNode) => {
     const found = journey.actions.find((a) => a.nodeIds.includes(n.id));
@@ -729,7 +848,12 @@ function TreeWorkspace({
     setPanel("action");
     setToolsOpen(false);
     setSheetDetail(true);
-    dispatch({ type: "OPEN_NODE", id: "action:" + a.id, action: true });
+    dispatch({
+      type: "OPEN_NODE",
+      id: "action:" + a.id,
+      action: true,
+      domainId: domains.find((d) => d.nodeIds.includes(n.id))?.id,
+    });
   };
   const activeIds = useMemo(
     () => new Set(shown.nodes.map((n) => n.id)),
@@ -739,67 +863,34 @@ function TreeWorkspace({
     graph && simulation.length
       ? simulate(graph, simulation, state.goals)
       : null;
-  const [nodeRecords, setNodeRecords] = useState<TreeNode[]>([]);
-  useEffect(() => {
-    if (graph) {
-      const key = nav.routeId || nav.selected || "route";
-      const prior =
-        nav.scale === "overview"
-          ? overviewPositions.current
-          : routePositions.current.get(key) || overviewPositions.current;
-      positions.current = routeLayout(graph, shown.nodes, nav, prior).positions;
-      if (nav.scale === "overview")
-        overviewPositions.current = positions.current;
-      else routePositions.current.set(key, positions.current);
-    }
-    const network = focusedIds;
-    const records = shown.nodes.map((n) => ({
-      id: n.id,
-      type: "living" as const,
-      position: positions.current.get(n.id)!,
-      data: {
-        record: n,
-        selected: n.id === state.selected,
-        expanded: state.expanded.includes(n.id),
-        hypothetical: !!(
-          sim?.hypothetical.includes(n.id) ||
-          sim?.potentialEvidence.includes(n.id)
-        ),
-        faded: !!(
-          (network && !network.has(n.id)) ||
-          (domain && domain !== n.domain) ||
-          (institution && institution !== n.institution) ||
-          (status && status !== n.status)
-        ),
-        goal: state.goals.includes(n.id),
-        onSelect: choose,
-        onFocus: focus,
-      },
-    }));
-    let live = true;
-    queueMicrotask(() => {
-      if (live) setNodeRecords(records);
-    });
-    return () => {
-      live = false;
-    };
-    // Positions are incrementally allocated and retained while clusters expand.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    shown.nodes,
-    state.selected,
-    state.expanded,
-    simulation,
-    domain,
-    institution,
-    status,
-    nav.quiet,
-    reducedMotion,
-  ]);
-  const cameraReady = useRef(false),
-    initialCamera = useRef<SceneCamera | undefined>(
-      state.navigation?.camera || state.view,
-    );
+  const nodeRecords = shown.nodes.map((n) => ({
+    id: n.id,
+    type: "living" as const,
+    width: 56,
+    height: 56,
+    position: shown.positions.get(n.id)!,
+    data: {
+      record: n,
+      selected: n.id === nav.selected,
+      hidden: shown.hiddenByBranch[n.id] || 0,
+      relevance: shown.relevance.get(n.id),
+      onExpand: (id: string) => dispatch({ type: "TOGGLE_BRANCH", id }),
+      expanded: nav.expanded.includes(n.id),
+      hypothetical: !!(
+        sim?.hypothetical.includes(n.id) ||
+        sim?.potentialEvidence.includes(n.id)
+      ),
+      faded: !!(
+        (focusedIds && !focusedIds.has(n.id)) ||
+        (domain && domain !== n.domain) ||
+        (institution && institution !== n.institution) ||
+        (status && status !== n.status)
+      ),
+      goal: state.goals.includes(n.id),
+      onSelect: choose,
+      onFocus: focus,
+    },
+  }));
   const applyCamera = (camera: SceneCamera) => {
     const box = canvas.current?.getBoundingClientRect();
     return flow.setViewport(
@@ -808,26 +899,39 @@ function TreeWorkspace({
     );
   };
   useEffect(() => {
-    if (!nodeRecords.length || cameraReady.current) return;
+    if (!nodeRecords.length || cameraReady.current || wheelOpen) return;
     cameraReady.current = true;
     const t = setTimeout(() => {
       const camera = initialCamera.current;
       if (camera?.width || (camera && !mobile)) void applyCamera(camera);
       else {
-        const p =
-          positions.current.get(nav.selected || "person") ||
-          positions.current.get("person");
-        if (p)
-          void flow.setCenter(p.x + 40, p.y + 40, {
-            zoom: camera?.zoom || (mobile ? 0.65 : 0.85),
-            duration: 0,
-          });
+        const box = canvas.current?.getBoundingClientRect();
+        const ys = [...shown.positions.values()].map((p) => p.y);
+        const height = ys.length ? Math.max(...ys) + 115 : 500;
+        const rootId = nav.routeId || shown.roots[0];
+        const root = shown.positions.get(rootId);
+        const preparationOnLeft = shown.edges.some(
+          (edge) => edge.to === rootId,
+        );
+        void flow.setViewport(
+          {
+            x:
+              mobile && root
+                ? (box?.width || 390) * (preparationOnLeft ? 0.72 : 0.28) -
+                  root.x -
+                  28
+                : 65,
+            y: Math.max(24, ((box?.height || 700) - height) / 2),
+            zoom: 1,
+          },
+          { duration: 0 },
+        );
       }
     }, 120);
     return () => clearTimeout(t);
     // Initial framing is performed once; user navigation owns subsequent camera movement.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodeRecords.length]);
+  }, [nodeRecords.length, nav.domainId, wheelOpen]);
   useEffect(() => {
     const el = canvas.current;
     if (!el) return;
@@ -849,7 +953,7 @@ function TreeWorkspace({
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [flow, reading]);
+  }, [flow, reading, wheelOpen]);
   const edges = useMemo(
     () =>
       shown.edges
@@ -860,10 +964,10 @@ function TreeWorkspace({
           target: e.to,
           type: "constellation",
           data: {
-            sourceSize: nodeSize(graphById.get(e.from)!),
-            targetSize: nodeSize(graphById.get(e.to)!),
+            sourceSize: 56,
+            targetSize: 56,
           },
-          className: `constellation-edge ${["reported", "verified", "historical"].includes(graphById.get(e.from)?.status || "") ? "is-earned" : ""} ${simulation.includes(e.from) ? "is-simulated" : ""}`,
+          className: `radial-edge ${e.requirement === "formal" ? "is-formal" : "is-advisory"} ${simulation.includes(e.from) ? "is-hypothetical" : ""}`,
           animated: false,
           markerEnd: {
             type: MarkerType.ArrowClosed,
@@ -892,15 +996,7 @@ function TreeWorkspace({
           },
           label: undefined,
         })),
-    [
-      shown.edges,
-      activeIds,
-      graphById,
-      simulation,
-      graph,
-      state.selected,
-      focusedIds,
-    ],
+    [shown.edges, activeIds, simulation, graph, state.selected, focusedIds],
   );
   const plan = useMemo(
     () => (graph ? reversePlan(graph, state.goals, simulation) : null),
@@ -989,7 +1085,7 @@ function TreeWorkspace({
   };
   return (
     <section
-      className={`living-tree immersive-tree ${toolsOpen ? "tools-open" : ""} ${fullscreen ? "distraction-free" : ""} ${panel ? "has-inspector" : ""} ${sheetDetail ? "sheet-detail" : "sheet-peek"} ${nav.quiet || reducedMotion ? "quiet-presentation" : ""}`}
+      className={`living-tree immersive-tree radial-scene ${wheelOpen ? "radial-overview" : "radial-branch"} ${panel ? "radial-inspector-open" : ""} ${toolsOpen ? "tools-open" : ""} ${panel ? "has-inspector" : ""} ${sheetDetail ? "sheet-detail" : "sheet-peek"} ${nav.quiet || reducedMotion ? "quiet-presentation" : ""}`}
       onKeyDown={(e) => {
         if (e.key === "Escape") {
           if (toolsOpen) setToolsOpen(false);
@@ -999,9 +1095,34 @@ function TreeWorkspace({
         }
       }}
       data-semantic-scale={nav.scale}
+      data-domain-id={nav.domainId || ""}
+      data-visible-node-count={shown.nodes.length}
+      data-hidden-required-count={shown.hiddenRequired}
+      data-hidden-node-count={shown.hiddenCount}
+      data-domain-total-count={activeDomain?.count || 0}
+      style={
+        {
+          "--radial-accent": activeDomain
+            ? appearancePalette[activeDomain.appearance].accent
+            : "#aaa",
+        } as React.CSSProperties
+      }
       aria-label="The Living Career Tree"
     >
-      <div className="scene-hud">
+      <header className="radial-header">
+        <button
+          className="icon-button"
+          aria-label="Open navigation"
+          onClick={onNavigation}
+        >
+          <Menu size={19} />
+        </button>
+        <span className="radial-brand">
+          <Brand />{" "}
+          <span>
+            SYRKA <b>Roadmaps</b>
+          </span>
+        </span>
         <button
           className="icon-button"
           aria-label="Back to previous tree context"
@@ -1011,131 +1132,81 @@ function TreeWorkspace({
           <ArrowLeft size={18} />
         </button>
         <button
-          className="secondary"
-          onClick={() => setToolsOpen(!toolsOpen)}
-          aria-expanded={toolsOpen}
+          className="secondary radial-home"
+          aria-label="Wheel"
+          onClick={showWheel}
         >
-          <Menu size={16} /> {toolsOpen ? "Close tools" : "Explore & tools"}
+          Wheel
         </button>
-        <span>
-          <Brand /> SYRKA <b>ROADMAPS</b>
+        <span className="radial-breadcrumb">
+          {activeDomain?.label || "Your path"}
         </span>
+        {workspace.person.fictional && (
+          <span className="radial-fictional">Fictional demonstration</span>
+        )}
         <button
           className="icon-button"
-          aria-label="Open next action"
+          aria-label="Search the tree"
           onClick={() => {
-            const next = rankActions(
-              journey.actions,
-              new Date(),
-              journey.timezone,
-              state.goals,
-            ).find(
-              (r) =>
-                actionAvailability(r.action, journey.actions, new Date())
-                  .actionable,
-            );
-            if (next) openAction(next.action.id);
-            else if (selected) openNodeWork(selected);
-            else choose("project:starter");
-          }}
-        >
-          <Play size={17} />
-        </button>
-        <button
-          className="icon-button"
-          aria-label="Return to character"
-          onClick={() => {
-            dispatch({ type: "HOME" });
             setPanel(null);
-            focus("person", false);
+            setToolsOpen(true);
+            setTimeout(
+              () =>
+                document
+                  .querySelector<HTMLInputElement>(
+                    '[aria-label="Search the living tree"]',
+                  )
+                  ?.focus(),
+              0,
+            );
           }}
         >
-          <Target size={18} />
+          <Search size={18} />
         </button>
         <button
-          className="icon-button"
-          aria-label="Fit constellation"
-          onClick={() =>
-            void flow.fitView({ padding: 0.18, duration: reduced() ? 0 : 300 })
-          }
-        >
-          <MapIcon size={18} />
-        </button>
-        <button
-          className="icon-button"
-          aria-label="Toggle distraction-free exploration"
-          aria-pressed={fullscreen}
-          onClick={() => setFullscreen(!fullscreen)}
-        >
-          <Layers size={18} />
-        </button>
-      </div>
-      <div className="journey-context-hud">
-        <div role="tablist" aria-label="Journey scales">
-          {(["overview", "route", "action"] as const).map((scale) => (
-            <button
-              key={scale}
-              role="tab"
-              aria-selected={nav.scale === scale}
-              onClick={() => {
-                if (scale === "action") {
-                  if (selected) openNodeWork(selected);
-                  else if (journey.actions[0])
-                    openAction(journey.actions[0].id);
-                } else if (scale === "route" && !nav.routeId && state.goals[0])
-                  choose(state.goals[0]);
-                else dispatch({ type: "SET_SCALE", scale });
-              }}
-            >
-              {scale === "overview"
-                ? "Overview"
-                : scale === "route"
-                  ? "Route"
-                  : "Action"}
-            </button>
-          ))}
-        </div>
-        <span className="active-journey-goal">
-          {nav.previewRouteId
-            ? "Preview · "
-            : nav.routeId && !state.goals.includes(nav.routeId)
-              ? "Exploring · "
-              : "Goal · "}
-          {graph?.nodes.find((n) => n.id === (nav.routeId || state.goals[0]))
-            ?.label || "Explore your next chapter"}
-        </span>
-        <button
-          className="text-button"
+          className="secondary radial-today"
+          aria-label={`Today · ${rankActions(journey.actions, new Date(), journey.timezone, state.goals).filter((r) => actionAvailability(r.action, journey.actions, new Date()).actionable).length} actions`}
+          aria-expanded={panel === "today"}
           onClick={() => {
-            onState({ mode: state.mode === "history" ? "explore" : "history" });
-          }}
-        >
-          History
-        </button>
-        <button
-          className="text-button"
-          onClick={() => {
-            setPanel("compare");
+            setPanel(panel === "today" ? null : "today");
             setToolsOpen(false);
+            setSheetDetail(true);
           }}
         >
-          Compare
+          <CalendarDays size={16} />
+          Today{" "}
+          <span>
+            {
+              rankActions(
+                journey.actions,
+                new Date(),
+                journey.timezone,
+                state.goals,
+              ).filter(
+                (r) =>
+                  actionAvailability(r.action, journey.actions, new Date())
+                    .actionable,
+              ).length
+            }
+          </span>
         </button>
-      </div>
-      <QuestDock
-        state={journey}
-        ownerId={workspace.person.id}
-        graph={graph}
-        goals={state.goals}
-        onChange={saveJourney}
-        onOpenAction={openAction}
-        onSelectNode={choose}
-        onOpenInbox={() => {
-          setPanel("inbox");
-          setToolsOpen(false);
-          setSheetDetail(true);
-        }}
-      />
+        <ThemeToggle
+          value={state.theme}
+          onChange={(theme) => onState({ theme })}
+        />
+        <button
+          className="icon-button"
+          aria-label={toolsOpen ? "Close tools" : "Explore & tools"}
+          aria-expanded={toolsOpen}
+          onClick={() => {
+            setToolsOpen(!toolsOpen);
+            setPanel(null);
+          }}
+        >
+          <MoreHorizontal size={21} />
+          <span className="sr-only">More</span>
+        </button>
+      </header>
       {nav.previewRouteId && (
         <div className="journey-preview-banner" role="status">
           Hypothetical route · goals and actual evidence unchanged{" "}
@@ -1154,20 +1225,11 @@ function TreeWorkspace({
           </button>
         </div>
       )}
-      {shown.hiddenCount > 0 && (
-        <p className="journey-hidden-notice" role="status">
-          {shown.hiddenCount} more nodes · {shown.hiddenRequired} formal
-          prerequisites outside this view. Search or use the accessible outline
-          to inspect them.
-        </p>
-      )}
       <div className="tree-tools-overlay">
         <div className="tree-masthead">
           <div>
-            <span className="eyebrow">
-              SYRKA ODYSSEY / YOUR LIFE IS THE SKILL TREE
-            </span>
-            <h1>The Living Career Tree</h1>
+            <span className="eyebrow">Explore and manage</span>
+            <h1>Your path</h1>
           </div>
           <div className="tree-entry-actions">
             <button className="secondary" onClick={onUpload}>
@@ -1177,11 +1239,22 @@ function TreeWorkspace({
             <button
               className="icon-button"
               aria-label="Open evidence inventory"
-              onClick={() => setPanel("inventory")}
+              onClick={() => {
+                setPanel("inventory");
+                setToolsOpen(false);
+                setSheetDetail(true);
+              }}
             >
               <Backpack size={18} />
             </button>
-            <button className="secondary" onClick={() => setPanel("guide")}>
+            <button
+              className="secondary"
+              onClick={() => {
+                setPanel("guide");
+                setToolsOpen(false);
+                setSheetDetail(true);
+              }}
+            >
               <Sparkles size={16} />
               Syrka Guide
             </button>
@@ -1221,6 +1294,52 @@ function TreeWorkspace({
               Resume my roadmap <ArrowRight size={14} />
             </button>
           )}
+        </div>
+        <div className="radial-more-actions">
+          <button
+            className="secondary"
+            onClick={() => {
+              setPanel("compare");
+              setToolsOpen(false);
+            }}
+          >
+            Compare
+          </button>
+          <button
+            className="secondary"
+            onClick={() => {
+              onState({ mode: "history" });
+              setPanel("inventory");
+              setToolsOpen(false);
+            }}
+          >
+            History
+          </button>
+          <button
+            className="secondary"
+            onClick={() => {
+              setPanel("inbox");
+              setToolsOpen(false);
+            }}
+          >
+            Import actions
+          </button>
+          <button className="secondary" onClick={onProfile}>
+            Profile & privacy
+          </button>
+          <button
+            className="secondary"
+            onClick={() =>
+              downloadJSON(workspace, "syrka-roadmaps-workspace.json")
+            }
+          >
+            Export workspace
+          </button>
+          <p className="small">
+            {workspace.person.fictional
+              ? "Fictional demonstration. No institution verified these records."
+              : "Private local workspace. Documents remain on your device unless you explicitly authorise processing."}
+          </p>
         </div>
         <div className="tree-toolbar">
           <div className="tree-mode" role="tablist" aria-label="Tree modes">
@@ -1274,7 +1393,14 @@ function TreeWorkspace({
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
-          <button className="secondary" onClick={() => setPanel("academic")}>
+          <button
+            className="secondary"
+            onClick={() => {
+              setPanel("academic");
+              setToolsOpen(false);
+              setSheetDetail(true);
+            }}
+          >
             <CalendarDays size={15} />
             Semester lab
           </button>
@@ -1334,7 +1460,14 @@ function TreeWorkspace({
           >
             Reset filters
           </button>
-          <button className="text-button" onClick={() => setPanel("compare")}>
+          <button
+            className="text-button"
+            onClick={() => {
+              setPanel("compare");
+              setToolsOpen(false);
+              setSheetDetail(true);
+            }}
+          >
             Compare routes
           </button>
         </div>
@@ -1394,6 +1527,86 @@ function TreeWorkspace({
               ))}
           </div>
         )}
+        <details
+          className={`tree-universe-search ${toolsOpen ? "radial-tools-destinations" : ""}`}
+          inert={!toolsOpen}
+        >
+          <summary>Destinations & fictional demonstrations</summary>
+          <form
+            className="destination-search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onDiscover(careerQuery);
+            }}
+          >
+            <Search size={18} />
+            <input
+              aria-label="Search career destinations"
+              placeholder="Search the full occupational catalogue…"
+              value={careerQuery}
+              onChange={(e) => setCareerQuery(e.target.value)}
+            />
+            <button className="primary" aria-label="Explore destinations">
+              <ArrowRight size={17} />
+            </button>
+          </form>
+          {careerQuery &&
+            searchResults.map((o) => (
+              <button
+                className="connection-row"
+                key={o.id}
+                onClick={() => {
+                  const id = "occupation:" + o.id;
+                  onState({
+                    investigatedOccupations: [
+                      ...new Set([
+                        ...(state.investigatedOccupations || []),
+                        ...state.expanded.filter((value) =>
+                          value.startsWith("occupation:"),
+                        ),
+                        id,
+                      ]),
+                    ].slice(-500),
+                  });
+                  setPendingOccupation(id);
+                  setCareerQuery("");
+                }}
+              >
+                <span>
+                  <small>{o.domain} · source-backed occupation</small>
+                  <strong>{o.label}</strong>
+                </span>
+                <Plus size={16} />
+              </button>
+            ))}
+          <div className="tree-demo-routes">
+            {(
+              [
+                "ppe-consulting",
+                "ppe-risk",
+                "tax-research",
+                "student",
+              ] as DemoScenario[]
+            ).map((id) => (
+              <button className="secondary" key={id} onClick={() => onDemo(id)}>
+                {id === "ppe-consulting"
+                  ? "PPE → Consulting → MBA"
+                  : id === "ppe-risk"
+                    ? "PPE → Geopolitical Risk"
+                    : id === "tax-research"
+                      ? "Tax adviser → Academic Research"
+                      : "Student · limited experience"}
+              </button>
+            ))}
+            <button
+              className="text-button"
+              aria-label="Load fictional demonstration"
+              onClick={onLegacyDemo}
+            >
+              Original fictional demonstration
+            </button>
+          </div>
+        </details>
       </div>
       {loading && (
         <p role="status" className="tree-notice">
@@ -1424,149 +1637,156 @@ function TreeWorkspace({
           </button>
         </div>
       )}
-      <div className="tree-stage">
-        {isReading ? (
-          <div
-            className="tree-reading"
-            role="region"
-            aria-label="Living tree reading mode"
-          >
-            {(
-              graph?.nodes.filter(
-                (n) =>
-                  state.mode !== "history" ||
-                  n.id === "person" ||
-                  n.dimensions?.history ||
-                  n.evidence.length ||
-                  ["historical", "reported", "verified", "working"].includes(
-                    n.status,
-                  ),
-              ) || shown.nodes
-            ).map((n) => {
-              const Icon = icons[n.kind];
-              return (
-                <button
-                  key={n.id}
-                  className={`tree-reading-node state-${n.status}`}
-                  aria-label={`Inspect ${n.label}`}
-                  onClick={() => choose(n.id)}
-                  aria-expanded={state.expanded.includes(n.id)}
-                >
-                  <Icon size={22} />
-                  <span>
-                    <small>
-                      {categoryLabel(n.kind)} · {statusLabel[n.status]}
-                    </small>
-                    <strong>{n.label}</strong>
-                    <em>
-                      {n.source.kind === "fixture"
-                        ? "Fictional fixture; not a current offering"
-                        : n.requirement === "unknown"
-                          ? "Eligibility unverified"
-                          : n.domain}
-                    </em>
-                  </span>
-                  <ChevronRight size={17} />
-                </button>
-              );
-            })}
+      <div className="tree-stage radial-stage">
+        {wheelOpen ? (
+          <div className="radial-wheel-overview">
+            <DisciplineWheel
+              domains={domains}
+              activeDomainId={null}
+              onSelectDomain={openDiscipline}
+            />
+            {!loading && !domains.length && (
+              <p className="radial-empty">
+                Add a background or explore a fictional example from More.
+                Uncategorised records remain in your evidence inventory.
+              </p>
+            )}
           </div>
         ) : (
-          <div
-            ref={canvas}
-            className="tree-canvas"
-            onPointerDownCapture={() => {
-              motionEpoch.current++;
-              void flow.setViewport(flow.getViewport(), { duration: 0 });
-            }}
-            data-disclosed-count={shown.nodes.length}
-            style={{ "--scene-zoom": zoom } as React.CSSProperties}
-            role="region"
-            aria-label="Progression universe"
-            onKeyDown={(e) => {
-              if (["ArrowDown", "ArrowUp"].includes(e.key) && e.altKey) {
-                e.preventDefault();
-                const idx = shown.nodes.findIndex(
-                    (n) => n.id === state.selected,
-                  ),
-                  n =
-                    shown.nodes[
-                      (idx +
-                        (e.key === "ArrowDown" ? 1 : shown.nodes.length - 1)) %
-                        shown.nodes.length
-                    ];
-                if (n) {
-                  choose(n.id);
-                  focus(n.id);
-                }
-              }
-            }}
-          >
-            <ReactFlow
-              nodes={nodeRecords}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              defaultViewport={state.view || nav.camera}
-              minZoom={0.12}
-              maxZoom={2.2}
-              nodesDraggable={false}
-              nodesConnectable={false}
-              nodesFocusable={false}
-              edgesFocusable={true}
-              onlyRenderVisibleElements
-              onMove={(_e, v) => setZoom(v.zoom)}
-              onMoveEnd={(_e, v) => {
-                const box = canvas.current?.getBoundingClientRect();
-                const next = navigationReducer(nav, {
-                  type: "SET_CAMERA",
-                  camera: {
-                    ...v,
-                    ...(box ? { width: box.width, height: box.height } : {}),
-                  },
-                });
-                persistState({ view: v, navigation: next });
-              }}
-              onEdgeClick={(_e, e) => {
-                dispatch({ type: "SELECT_EDGE", id: e.id });
-                setPanel("edge");
-                setToolsOpen(false);
-              }}
-              onPaneClick={() => {
-                if (panel && mobile) close();
-              }}
-              onNodeDoubleClick={(_e, n) => focus(n.id)}
-              proOptions={{ hideAttribution: false }}
-            >
-              <Background color="var(--tree-dot)" gap={28} size={1} />
-              <Controls showInteractive={false} />
-              {!mobile && (
-                <MiniMap
-                  pannable
-                  zoomable
-                  nodeColor="var(--tree-minimap-node)"
-                  maskColor="var(--tree-minimap-mask)"
-                  aria-label="Progression minimap"
-                />
-              )}
-            </ReactFlow>
-            <div className="constellation-regions" aria-hidden="true">
-              {regions.map((r, i) => (
-                <span
-                  key={r.id}
-                  className={`region-label region-label-${i}`}
-                  style={{ color: r.color }}
-                >
-                  {r.label}
-                </span>
-              ))}
-            </div>
-            <div className="tree-canvas-caption">
-              Select to reveal connections · double-click to focus · Alt + arrow
-              keys to navigate
-            </div>
+          <div className="radial-wheel-anchor">
+            <DisciplineWheel
+              domains={domains}
+              activeDomainId={nav.domainId}
+              onSelectDomain={openDiscipline}
+              compact
+              onOverview={showWheel}
+            />
           </div>
         )}
+        {!wheelOpen &&
+          (isReading ? (
+            <div
+              className="tree-reading"
+              role="region"
+              aria-label="Living tree reading mode"
+            >
+              {(
+                graph?.nodes.filter(
+                  (n) =>
+                    activeDomain?.nodeIds.includes(n.id) ||
+                    shown.hiddenRequirements.some((r) => r.nodeId === n.id),
+                ) || shown.nodes
+              ).map((n) => {
+                const Icon = icons[n.kind];
+                return (
+                  <button
+                    key={n.id}
+                    className={`tree-reading-node state-${n.status}`}
+                    aria-label={`Inspect ${n.label}`}
+                    onClick={() => choose(n.id)}
+                    aria-expanded={state.expanded.includes(n.id)}
+                  >
+                    <Icon size={22} />
+                    <span>
+                      <small>
+                        {categoryLabel(n.kind)} · {statusLabel[n.status]}
+                      </small>
+                      <strong>{n.label}</strong>
+                      <em>
+                        {n.source.kind === "fixture"
+                          ? "Fictional fixture; not a current offering"
+                          : n.requirement === "unknown"
+                            ? "Eligibility unverified"
+                            : n.domain}
+                      </em>
+                    </span>
+                    <ChevronRight size={17} />
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div
+              ref={canvas}
+              className="tree-canvas"
+              onPointerDownCapture={() => {
+                motionEpoch.current++;
+                void flow.setViewport(flow.getViewport(), { duration: 0 });
+              }}
+              data-disclosed-count={shown.nodes.length}
+              style={{ "--scene-zoom": zoom } as React.CSSProperties}
+              role="region"
+              aria-label={`${activeDomain?.label || "Discipline"} preparation tree`}
+              data-domain-id={nav.domainId || ""}
+              data-visible-node-count={shown.nodes.length}
+              data-hidden-required-count={shown.hiddenRequired}
+              onKeyDown={(e) => {
+                if (["ArrowDown", "ArrowUp"].includes(e.key) && e.altKey) {
+                  e.preventDefault();
+                  const idx = shown.nodes.findIndex(
+                      (n) => n.id === state.selected,
+                    ),
+                    n =
+                      shown.nodes[
+                        (idx +
+                          (e.key === "ArrowDown"
+                            ? 1
+                            : shown.nodes.length - 1)) %
+                          shown.nodes.length
+                      ];
+                  if (n) {
+                    choose(n.id);
+                    focus(n.id);
+                  }
+                }
+              }}
+            >
+              <ReactFlow
+                nodes={nodeRecords}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                defaultViewport={nav.camera}
+                minZoom={0.65}
+                maxZoom={2.2}
+                nodesDraggable={false}
+                nodesConnectable={false}
+                nodesFocusable={false}
+                autoPanOnNodeFocus={false}
+                edgesFocusable={true}
+                onlyRenderVisibleElements
+                onMove={(_e, v) => setZoom(v.zoom)}
+                onMoveEnd={(_e, v) => {
+                  const box = canvas.current?.getBoundingClientRect();
+                  const next = navigationReducer(navigationRef.current, {
+                    type: "SET_CAMERA",
+                    camera: {
+                      ...v,
+                      ...(box ? { width: box.width, height: box.height } : {}),
+                    },
+                  });
+                  navigationRef.current = next;
+                  persistState({ view: v, navigation: next });
+                }}
+                onEdgeClick={(_e, e) => {
+                  dispatch({ type: "SELECT_EDGE", id: e.id });
+                  setPanel("edge");
+                  setToolsOpen(false);
+                }}
+                onPaneClick={() => {
+                  if (panel && mobile) close();
+                }}
+                onNodeDoubleClick={(_e, n) => focus(n.id)}
+                proOptions={{ hideAttribution: false }}
+              >
+                <Controls showInteractive={false} />
+              </ReactFlow>
+              <div className="tree-canvas-caption">
+                Select a topic · + reveals preparation · Alt + arrow keys to
+                navigate
+              </div>
+            </div>
+          ))}
         {panel && (
           <aside
             className="tree-inspector"
@@ -1575,21 +1795,23 @@ function TreeWorkspace({
             role={mobile ? "dialog" : undefined}
             aria-modal={mobile ? true : undefined}
             aria-label={
-              panel === "node"
-                ? "Living node inspector"
-                : panel === "guide"
-                  ? "Syrka Guide"
-                  : panel === "academic"
-                    ? "Academic planner"
-                    : panel === "inventory"
-                      ? "Evidence inventory"
-                      : panel === "inbox"
-                        ? "Integration inbox"
-                        : panel === "action"
-                          ? "Action inspector"
-                          : panel === "edge"
-                            ? "Connection inspector"
-                            : "Route comparison"
+              panel === "today"
+                ? "Today and this week"
+                : panel === "node"
+                  ? "Living node inspector"
+                  : panel === "guide"
+                    ? "Syrka Guide"
+                    : panel === "academic"
+                      ? "Academic planner"
+                      : panel === "inventory"
+                        ? "Evidence inventory"
+                        : panel === "inbox"
+                          ? "Integration inbox"
+                          : panel === "action"
+                            ? "Action inspector"
+                            : panel === "edge"
+                              ? "Connection inspector"
+                              : "Route comparison"
             }
             onKeyDown={(e) => {
               if (e.key === "Escape") {
@@ -1621,7 +1843,13 @@ function TreeWorkspace({
             </div>
             <div className="tree-inspector-heading">
               <span className="eyebrow">
-                {panel === "node" ? "NODE INTELLIGENCE" : panel.toUpperCase()}
+                {panel === "node" && selected
+                  ? categoryLabel(selected.kind)
+                  : panel === "today"
+                    ? "Today / This week"
+                    : panel === "edge"
+                      ? "Relationship"
+                      : panel}
               </span>
               <button
                 className="icon-button"
@@ -1633,25 +1861,85 @@ function TreeWorkspace({
             </div>
             {panel === "node" && selected && (
               <>
-                <nav
-                  className="tree-breadcrumbs"
-                  aria-label="Cluster breadcrumbs"
-                >
-                  <button
-                    className="text-button"
-                    disabled={!nav.history.length}
-                    onClick={back}
-                  >
-                    <ArrowLeft size={14} />
-                    Back
-                  </button>
-                  <span>{categoryLabel(selected.kind)}</span>
-                </nav>
-                <h2>{selected.label}</h2>
+                <div className="radial-node-title">
+                  <SelectedIcon size={25} />
+                  <h2>{selected.label}</h2>
+                </div>
                 <span className={`tree-status state-${selected.status}`}>
                   {statusLabel[selected.status]}
                 </span>
-                <p>{selected.summary}</p>
+                <p>
+                  {selected.summary.length > 160
+                    ? selected.summary.slice(0, 157) + "…"
+                    : selected.summary}
+                </p>
+                <div className="journey-next-action">
+                  <strong>Next action</strong>
+                  <p>
+                    {selected.actions[0]?.deliverable?.slice(0, 140) ||
+                      "Review the source and choose supported preparation."}
+                  </p>
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      openNodeWork(selected);
+                    }}
+                  >
+                    {selected.kind === "UniversityCourse"
+                      ? "Open course work"
+                      : selected.kind === "Project"
+                        ? "Start project"
+                        : [
+                              "EmployerRole",
+                              "GraduateProgramme",
+                              "Opportunity",
+                            ].includes(selected.kind)
+                          ? "Prepare application"
+                          : "Continue preparation"}{" "}
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
+                <div className="radial-preparation-state">
+                  <strong>Preparation</strong>
+                  <p>
+                    {
+                      related.filter(
+                        (e) =>
+                          e.to === selected.id && e.requirement === "formal",
+                      ).length
+                    }{" "}
+                    source-backed required links ·{" "}
+                    {
+                      related.filter(
+                        (e) =>
+                          e.to === selected.id && e.requirement !== "formal",
+                      ).length
+                    }{" "}
+                    helpful / unconfirmed links.
+                  </p>
+                  <p>
+                    {
+                      related.filter(
+                        (e) =>
+                          e.to === selected.id &&
+                          graphById.has(e.from) &&
+                          hasEvidenceSupport(graphById.get(e.from)!) ===
+                            "satisfied",
+                      ).length
+                    }{" "}
+                    with existing evidence support. Other preparation needs
+                    evidence or source confirmation; this is not formal
+                    eligibility.
+                  </p>
+                </div>
+                {shown.relevance.get(selected.id) && (
+                  <details>
+                    <summary>Goal relevance</summary>
+                    <p className="radial-relevance-reason">
+                      {shown.relevance.get(selected.id)}
+                    </p>
+                  </details>
+                )}
                 <div
                   className="journey-node-facts"
                   aria-label="Independent node states"
@@ -1671,21 +1959,21 @@ function TreeWorkspace({
                       : "Actual record / proposed action"}
                   </span>
                 </div>
-                <div className="journey-next-action">
-                  <strong>Next action</strong>
-                  <p>
-                    {selected.actions[0]?.deliverable ||
-                      "Review the source and choose supported preparation."}
-                  </p>
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      openNodeWork(selected);
-                    }}
-                  >
-                    Open work surface <ArrowRight size={15} />
-                  </button>
-                </div>
+                <button
+                  className="secondary radial-show-preparation"
+                  disabled={
+                    !nav.expanded.includes(selected.id) &&
+                    !shown.hiddenByBranch[selected.id]
+                  }
+                  onClick={() =>
+                    dispatch({ type: "TOGGLE_BRANCH", id: selected.id })
+                  }
+                >
+                  {nav.expanded.includes(selected.id)
+                    ? "Collapse branch"
+                    : "Show preparation"}{" "}
+                  <span>({shown.hiddenByBranch[selected.id] || 0} more)</span>
+                </button>
                 {!!selected.requirementGroups?.length && (
                   <details>
                     <summary>
@@ -1706,62 +1994,116 @@ function TreeWorkspace({
                     ))}
                   </details>
                 )}
-                <div className="node-command-row">
-                  <button
-                    className="secondary"
-                    onClick={() => goal(selected.id)}
-                  >
-                    <Target size={15} />
-                    {state.goals.includes(selected.id)
-                      ? "Remove goal"
-                      : "Set as goal"}
-                  </button>
-                  <button
-                    className="secondary"
-                    onClick={() => {
-                      dispatch({ type: "TOGGLE_BRANCH", id: selected.id });
-                    }}
-                  >
-                    {state.expanded.includes(selected.id)
-                      ? "Collapse branch"
-                      : `Expand branch (${shown.hiddenByBranch[selected.id] || related.length})`}
-                  </button>
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      dispatch({ type: "PIN_ROUTE", id: selected.id })
-                    }
-                  >
-                    {nav.pinned.includes(selected.id)
-                      ? "Unpin route"
-                      : "Pin route"}
-                  </button>
-                  <button
-                    className="secondary"
-                    onClick={() => {
-                      dispatch({ type: "PREVIEW_ROUTE", id: selected.id });
-                    }}
-                  >
-                    Try this route
-                  </button>
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      setSimulation((ids) =>
-                        ids.includes(selected.id)
-                          ? ids.filter((x) => x !== selected.id)
-                          : [...ids, selected.id],
-                      )
-                    }
-                  >
-                    <FlaskConical size={15} />
-                    {simulation.includes(selected.id)
-                      ? "Remove simulation"
-                      : "What if I complete this?"}
-                  </button>
-                </div>
+                {(shown.hiddenCount > 0 || shown.hiddenRequired > 0) && (
+                  <details className="radial-hidden-preparation">
+                    <summary>
+                      {shown.hiddenCount} more in this discipline ·{" "}
+                      {shown.hiddenRequired} required preparation records
+                      outside this view
+                    </summary>
+                    <p>
+                      Expand a branch or inspect the outline. Display grouping
+                      never changes the source requirements.
+                    </p>
+                    {shown.hiddenRequirements
+                      .slice(0, relatedLimit)
+                      .map((requirement, index) => (
+                        <div
+                          key={`${requirement.targetId}:${requirement.nodeId}:${index}`}
+                          className="radial-required-record"
+                        >
+                          {graphById.has(requirement.nodeId) ? (
+                            <button
+                              className="text-button"
+                              onClick={() => choose(requirement.nodeId)}
+                            >
+                              {graphById.get(requirement.nodeId)!.label}
+                            </button>
+                          ) : (
+                            <p>Record unavailable: {requirement.nodeId}</p>
+                          )}
+                          <small>
+                            {requirement.operator || requirement.relation} ·{" "}
+                            {requirement.reason} · {requirement.sourceReference}
+                          </small>
+                        </div>
+                      ))}
+                    {shown.hiddenRequirements.length > relatedLimit && (
+                      <button
+                        className="secondary"
+                        onClick={() => setRelatedLimit((limit) => limit + 24)}
+                      >
+                        Show more required records (
+                        {shown.hiddenRequirements.length - relatedLimit})
+                      </button>
+                    )}
+                    <button
+                      className="secondary"
+                      onClick={() => {
+                        setReading(true);
+                        close();
+                      }}
+                    >
+                      Open full discipline outline
+                    </button>
+                  </details>
+                )}
+                <details>
+                  <summary>Goals, comparison and simulation</summary>
+                  <div className="node-command-row">
+                    <button
+                      className="secondary"
+                      onClick={() => goal(selected.id)}
+                    >
+                      <Target size={15} />
+                      {state.goals.includes(selected.id)
+                        ? "Remove goal"
+                        : "Set as goal"}
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() =>
+                        dispatch({ type: "PIN_ROUTE", id: selected.id })
+                      }
+                    >
+                      {nav.pinned.includes(selected.id)
+                        ? "Unpin route"
+                        : "Pin route"}
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() => {
+                        dispatch({
+                          type: "PREVIEW_ROUTE",
+                          id: selected.id,
+                          domainId: domains.find((d) =>
+                            d.nodeIds.includes(selected.id),
+                          )?.id,
+                        });
+                      }}
+                    >
+                      Try this route
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() =>
+                        setSimulation((ids) =>
+                          ids.includes(selected.id)
+                            ? ids.filter((x) => x !== selected.id)
+                            : [...ids, selected.id],
+                        )
+                      }
+                    >
+                      <FlaskConical size={15} />
+                      {simulation.includes(selected.id)
+                        ? "Remove simulation"
+                        : "What if I complete this?"}
+                    </button>
+                  </div>
+                </details>
                 <details>
                   <summary>Source, scope and uncertainty</summary>
+                  <p>{selected.summary}</p>
                   <span className="tree-source-kind">
                     {selected.source.kind} ·{" "}
                     {selected.requirement === "unknown"
@@ -1788,154 +2130,181 @@ function TreeWorkspace({
                 {["EmployerRole", "GraduateProgramme", "Opportunity"].includes(
                   selected.kind,
                 ) && (
-                  <ApplicationPreparation
-                    key={selected.id}
-                    node={selected}
-                    state={state}
-                    workspace={workspace}
-                    onState={onState}
-                    onNotice={setToast}
-                  />
+                  <details>
+                    <summary>Application preparation draft</summary>
+                    <ApplicationPreparation
+                      key={selected.id}
+                      node={selected}
+                      state={state}
+                      workspace={workspace}
+                      onState={onState}
+                      onNotice={setToast}
+                      initialDraft={preparationDrafts[selected.id]}
+                      onDraftChange={(draft) =>
+                        setPreparationDrafts((previous) =>
+                          JSON.stringify(previous[selected.id]) ===
+                          JSON.stringify(draft)
+                            ? previous
+                            : { ...previous, [selected.id]: draft },
+                        )
+                      }
+                    />
+                  </details>
                 )}
-                <section>
-                  <h3>My Passport evidence</h3>
-                  {selected.evidence.length ? (
-                    selected.evidence.map((a, i) => (
-                      <blockquote key={a.id + ":" + i}>
-                        <span>
-                          {a.status} {a.date && " · " + a.date}
-                        </span>
-                        <p>{a.text}</p>
-                        <details>
-                          <summary>Original source quote</summary>
-                          <p>{a.quote || "No literal quotation recorded."}</p>
-                        </details>
-                      </blockquote>
-                    ))
-                  ) : (
-                    <p>
-                      Not demonstrated in the current record. This does not mean
-                      you lack the capability.
-                    </p>
-                  )}
-                </section>
-                <section>
-                  <h3>Preparation and connected subnodes</h3>
-                  {related.slice(0, relatedLimit).map((e) => {
-                    const other = graphById.get(
-                      e.to === selected.id ? e.from : e.to,
-                    );
-                    return other ? (
-                      <button
-                        className="connection-row"
-                        key={e.id}
-                        onClick={() => choose(other.id)}
-                      >
-                        <span>
-                          <small>
-                            {e.relation.replaceAll("_", " ")} · {e.source.kind}
-                          </small>
-                          <strong>{other.label}</strong>
-                          <em>{e.rationale}</em>
-                        </span>
-                        <ChevronRight size={16} />
-                      </button>
-                    ) : null;
-                  })}
-                  {related.length > relatedLimit && (
-                    <div className="journey-more-connections">
+                <details>
+                  <summary>
+                    My Passport evidence ({selected.evidence.length})
+                  </summary>
+                  <section>
+                    <h3>Evidence support</h3>
+                    {selected.evidence.length ? (
+                      selected.evidence.map((a, i) => (
+                        <blockquote key={a.id + ":" + i}>
+                          <span>
+                            {a.status} {a.date && " · " + a.date}
+                          </span>
+                          <p>{a.text}</p>
+                          <details>
+                            <summary>Original source quote</summary>
+                            <p>{a.quote || "No literal quotation recorded."}</p>
+                          </details>
+                        </blockquote>
+                      ))
+                    ) : (
                       <p>
-                        {related.length - relatedLimit} additional connections,
-                        including{" "}
-                        {
-                          related
-                            .slice(relatedLimit)
-                            .filter((e) => e.requirement === "formal").length
-                        }{" "}
-                        sourced formal relationships. Inspect all relevant rules
-                        before assessing eligibility.
+                        Not demonstrated in the current record. This does not
+                        mean you lack the capability.
                       </p>
+                    )}
+                  </section>
+                </details>
+                <details>
+                  <summary>
+                    Related paths and shared preparation ({related.length})
+                  </summary>
+                  <section>
+                    <h3>Also supports / related paths</h3>
+                    {related.slice(0, relatedLimit).map((e) => {
+                      const other = graphById.get(
+                        e.to === selected.id ? e.from : e.to,
+                      );
+                      return other ? (
+                        <button
+                          className="connection-row"
+                          key={e.id}
+                          onClick={() => choose(other.id)}
+                        >
+                          <span>
+                            <small>
+                              {e.relation.replaceAll("_", " ")} ·{" "}
+                              {e.source.kind}
+                            </small>
+                            <strong>{other.label}</strong>
+                            <em>{e.rationale}</em>
+                          </span>
+                          <ChevronRight size={16} />
+                        </button>
+                      ) : null;
+                    })}
+                    {related.length > relatedLimit && (
+                      <div className="journey-more-connections">
+                        <p>
+                          {related.length - relatedLimit} additional
+                          connections, including{" "}
+                          {
+                            related
+                              .slice(relatedLimit)
+                              .filter((e) => e.requirement === "formal").length
+                          }{" "}
+                          sourced formal relationships. Inspect all relevant
+                          rules before assessing eligibility.
+                        </p>
+                        <button
+                          className="secondary"
+                          onClick={() => setRelatedLimit((n) => n + 24)}
+                        >
+                          Show more connections ({related.length - relatedLimit}
+                          )
+                        </button>
+                      </div>
+                    )}
+                    {!related.length && (
+                      <p>
+                        Inspect this evidence record in My Capabilities to add
+                        reviewed relationships.
+                      </p>
+                    )}
+                  </section>
+                </details>
+                <details>
+                  <summary>Completion criteria and progress notes</summary>
+                  <section>
+                    <h3>Next actions and completion criteria</h3>
+                    {(selected.actions.length
+                      ? selected.actions
+                      : [
+                          {
+                            title: "Review this record",
+                            deliverable:
+                              "Inspect the source and explicitly map supported capabilities in My Capabilities.",
+                            criteria:
+                              "Retain provenance; do not infer verification from a title alone.",
+                          },
+                        ]
+                    ).map((a) => (
+                      <article className="quest-card" key={a.title}>
+                        <strong>{a.title}</strong>
+                        <p>{a.deliverable}</p>
+                        <small>{a.criteria}</small>
+                        {a.resource && (
+                          <a href={a.resource} target="_blank" rel="noreferrer">
+                            Original resource <ArrowRight size={13} />
+                          </a>
+                        )}
+                      </article>
+                    ))}
+                    <label>
+                      Evidence reference or private progress note
+                      <textarea
+                        aria-label="Quest evidence note"
+                        value={evidence}
+                        maxLength={2500}
+                        onChange={(e) => setEvidence(e.target.value)}
+                        placeholder="What did you create? Where can it be reviewed?"
+                      />
+                    </label>
+                    <div className="node-command-row">
                       <button
                         className="secondary"
-                        onClick={() => setRelatedLimit((n) => n + 24)}
+                        disabled={!!simulation.length}
+                        onClick={() => progress(selected, "planned")}
                       >
-                        Show more connections ({related.length - relatedLimit})
+                        <Plus size={14} />
+                        Plan quest
+                      </button>
+                      <button
+                        className="secondary"
+                        disabled={!!simulation.length}
+                        onClick={() => openNodeWork(selected)}
+                      >
+                        <Play size={14} />
+                        Start quest
+                      </button>
+                      <button
+                        className="primary"
+                        disabled={!!simulation.length}
+                        onClick={() => progress(selected, "completed")}
+                      >
+                        <Check size={14} />
+                        Record completion
                       </button>
                     </div>
-                  )}
-                  {!related.length && (
-                    <p>
-                      Inspect this evidence record in My Capabilities to add
-                      reviewed relationships.
+                    <p className="small">
+                      Self-recorded completion is not an institutionally
+                      verified credential.
                     </p>
-                  )}
-                </section>
-                <section>
-                  <h3>Next actions and completion criteria</h3>
-                  {(selected.actions.length
-                    ? selected.actions
-                    : [
-                        {
-                          title: "Review this record",
-                          deliverable:
-                            "Inspect the source and explicitly map supported capabilities in My Capabilities.",
-                          criteria:
-                            "Retain provenance; do not infer verification from a title alone.",
-                        },
-                      ]
-                  ).map((a) => (
-                    <article className="quest-card" key={a.title}>
-                      <strong>{a.title}</strong>
-                      <p>{a.deliverable}</p>
-                      <small>{a.criteria}</small>
-                      {a.resource && (
-                        <a href={a.resource} target="_blank" rel="noreferrer">
-                          Original resource <ArrowRight size={13} />
-                        </a>
-                      )}
-                    </article>
-                  ))}
-                  <label>
-                    Evidence reference or private progress note
-                    <textarea
-                      aria-label="Quest evidence note"
-                      value={evidence}
-                      maxLength={2500}
-                      onChange={(e) => setEvidence(e.target.value)}
-                      placeholder="What did you create? Where can it be reviewed?"
-                    />
-                  </label>
-                  <div className="node-command-row">
-                    <button
-                      className="secondary"
-                      disabled={!!simulation.length}
-                      onClick={() => progress(selected, "planned")}
-                    >
-                      <Plus size={14} />
-                      Plan quest
-                    </button>
-                    <button
-                      className="secondary"
-                      disabled={!!simulation.length}
-                      onClick={() => openNodeWork(selected)}
-                    >
-                      <Play size={14} />
-                      Start quest
-                    </button>
-                    <button
-                      className="primary"
-                      disabled={!!simulation.length}
-                      onClick={() => progress(selected, "completed")}
-                    >
-                      <Check size={14} />
-                      Record completion
-                    </button>
-                  </div>
-                  <p className="small">
-                    Self-recorded completion is not an institutionally verified
-                    credential.
-                  </p>
-                </section>
+                  </section>
+                </details>
                 {selected.occupationId && (
                   <button
                     className="secondary"
@@ -2265,6 +2634,21 @@ function TreeWorkspace({
                 </button>
               </>
             )}
+            {panel === "today" && (
+              <QuestDock
+                state={journey}
+                ownerId={workspace.person.id}
+                graph={graph}
+                goals={state.goals}
+                onChange={saveJourney}
+                onOpenAction={openAction}
+                onSelectNode={choose}
+                onOpenInbox={() => {
+                  setPanel("inbox");
+                  setSheetDetail(true);
+                }}
+              />
+            )}
             {panel === "inbox" && (
               <IntegrationInbox
                 canAccessWorkspace={canAccessWorkspace}
@@ -2296,7 +2680,7 @@ function TreeWorkspace({
             )}
             {panel === "edge" && selectedEdge && (
               <section>
-                <h2>Connection intelligence</h2>
+                <h2>Relationship</h2>
                 <p>
                   {graph?.nodes.find((n) => n.id === selectedEdge.from)?.label}{" "}
                   → {graph?.nodes.find((n) => n.id === selectedEdge.to)?.label}
@@ -2375,102 +2759,6 @@ function TreeWorkspace({
           </aside>
         )}
       </div>
-      <div className="tree-next-strip">
-        <Target size={19} />
-        <div>
-          <strong>
-            {state.mode === "history"
-              ? "Your previous chapters stay relevant"
-              : "Your next meaningful action"}
-          </strong>
-          <p>
-            {plan?.available.length
-              ? graph?.nodes.find((n) => n.id === plan.available[0])?.actions[0]
-                  ?.deliverable ||
-                "Inspect the next preparation node and its source."
-              : "Choose a destination, inspect its evidence and preparation, or start with a small project."}
-          </p>
-        </div>
-        <button
-          className="secondary"
-          onClick={() => choose(plan?.available[0] || "project:starter")}
-        >
-          Continue preparation <ArrowRight size={15} />
-        </button>
-      </div>
-      <p className="tree-footnote">
-        {graph?.notice} {simulation.length > 0 && sim?.notice}
-      </p>
-      <details className="tree-universe-search">
-        <summary>Explore another destination or demonstration</summary>
-        <form
-          className="destination-search"
-          onSubmit={(e) => {
-            e.preventDefault();
-            onDiscover(careerQuery);
-          }}
-        >
-          <Search size={18} />
-          <input
-            aria-label="Search career destinations"
-            placeholder="Search the full occupational catalogue…"
-            value={careerQuery}
-            onChange={(e) => setCareerQuery(e.target.value)}
-          />
-          <button className="primary" aria-label="Explore destinations">
-            <ArrowRight size={17} />
-          </button>
-        </form>
-        {careerQuery &&
-          searchResults.map((o) => (
-            <button
-              className="connection-row"
-              key={o.id}
-              onClick={() => {
-                const id = "occupation:" + o.id;
-                onState({
-                  expanded: [...new Set([...state.expanded, id])],
-                  selected: id,
-                });
-                setPanel("node");
-                setCareerQuery("");
-              }}
-            >
-              <span>
-                <small>{o.domain} · source-backed occupation</small>
-                <strong>{o.label}</strong>
-              </span>
-              <Plus size={16} />
-            </button>
-          ))}
-        <div className="tree-demo-routes">
-          {(
-            [
-              "ppe-consulting",
-              "ppe-risk",
-              "tax-research",
-              "student",
-            ] as DemoScenario[]
-          ).map((id) => (
-            <button className="secondary" key={id} onClick={() => onDemo(id)}>
-              {id === "ppe-consulting"
-                ? "PPE → Consulting → MBA"
-                : id === "ppe-risk"
-                  ? "PPE → Geopolitical Risk"
-                  : id === "tax-research"
-                    ? "Tax adviser → Academic Research"
-                    : "Student · limited experience"}
-            </button>
-          ))}
-          <button
-            className="text-button"
-            aria-label="Load fictional demonstration"
-            onClick={onLegacyDemo}
-          >
-            Original fictional demonstration
-          </button>
-        </div>
-      </details>
       {toast && (
         <div className="tree-toast" role="status">
           <span>{toast}</span>
@@ -2606,27 +2894,47 @@ function AcademicProfile({
   );
 }
 
+type ApplicationDraft = {
+  source: string;
+  reviewed: boolean;
+  selected: string[];
+  checks: string[];
+  notes: string;
+};
 function ApplicationPreparation({
   node,
   state,
   workspace,
   onState,
   onNotice,
+  initialDraft,
+  onDraftChange,
 }: {
   node: WorldNode;
   state: LivingState;
   workspace: Workspace;
   onState: (patch: Partial<LivingState>) => void;
   onNotice: (message: string) => void;
+  initialDraft?: ApplicationDraft;
+  onDraftChange: (draft: ApplicationDraft) => void;
 }) {
   const stored = state.applications?.[node.id];
   const [source, setSource] = useState(
-      stored?.sourceUrl || node.source.url || "",
+      initialDraft?.source ?? stored?.sourceUrl ?? node.source.url ?? "",
     ),
-    [reviewed, setReviewed] = useState(!!stored?.sourceReviewedAt),
-    [selected, setSelected] = useState<string[]>(stored?.evidenceIds || []),
-    [checks, setChecks] = useState<string[]>(stored?.completedChecks || []),
-    [notes, setNotes] = useState(stored?.notes || "");
+    [reviewed, setReviewed] = useState(
+      initialDraft?.reviewed ?? !!stored?.sourceReviewedAt,
+    ),
+    [selected, setSelected] = useState<string[]>(
+      initialDraft?.selected || stored?.evidenceIds || [],
+    ),
+    [checks, setChecks] = useState<string[]>(
+      initialDraft?.checks || stored?.completedChecks || [],
+    ),
+    [notes, setNotes] = useState(initialDraft?.notes ?? stored?.notes ?? "");
+  useEffect(() => {
+    onDraftChange({ source, reviewed, selected, checks, notes });
+  }, [source, reviewed, selected, checks, notes, onDraftChange]);
   const tasks = [
     "Inspect the current official requirements",
     "Review the evidence I selected",

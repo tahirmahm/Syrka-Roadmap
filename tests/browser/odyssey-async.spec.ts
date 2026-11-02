@@ -7,11 +7,24 @@ test("closing a pending Passport file import prevents its deferred result replac
   await page.clock.setFixedTime(new Date("2026-11-03T08:00:00.000Z"));
   await page.goto("/tree");
   await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Explore & tools", exact: true })
+    .click();
   await page.locator(".tree-universe-search summary").click();
   await page
     .getByRole("button", { name: "PPE → Consulting → MBA", exact: true })
     .click();
-  await expect(page.locator(".tree-player")).toContainText("fictional");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key)!).person.fictional,
+        KEY,
+      ),
+    )
+    .toBe(true);
+  await expect(
+    page.getByLabel("Discipline wheel", { exact: true }),
+  ).toBeVisible();
   await page.goto("/profile");
   await expect(page.locator("[data-workspace-ready=true]")).toBeVisible();
   const original = (await page.evaluate(
